@@ -55,6 +55,201 @@ export type Database = {
           },
         ]
       }
+      animal_events: {
+        Row: {
+          animal_id: string
+          created_at: string
+          created_by: string | null
+          details: Json | null
+          event_date: string
+          event_type: string
+          id: string
+          notes: string | null
+          organization_id: string
+          weight: number | null
+        }
+        Insert: {
+          animal_id: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json | null
+          event_date?: string
+          event_type: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          weight?: number | null
+        }
+        Update: {
+          animal_id?: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "animal_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "animal_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      animal_lots: {
+        Row: {
+          capacity: number | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          capacity?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          capacity?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "animal_lots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      animals: {
+        Row: {
+          birth_date: string | null
+          breed: string | null
+          category: Database["public"]["Enums"]["animal_category"]
+          color: string | null
+          created_at: string
+          current_weight: number | null
+          entry_date: string | null
+          father_id: string | null
+          id: string
+          last_weight_date: string | null
+          lot_name: string | null
+          mother_id: string | null
+          name: string | null
+          notes: string | null
+          organization_id: string
+          origin: string | null
+          purchase_date: string | null
+          purchase_price: number | null
+          rfid_tag: string | null
+          sex: Database["public"]["Enums"]["animal_sex"]
+          status: Database["public"]["Enums"]["animal_status"]
+          status_date: string | null
+          status_reason: string | null
+          tag_id: string
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          breed?: string | null
+          category: Database["public"]["Enums"]["animal_category"]
+          color?: string | null
+          created_at?: string
+          current_weight?: number | null
+          entry_date?: string | null
+          father_id?: string | null
+          id?: string
+          last_weight_date?: string | null
+          lot_name?: string | null
+          mother_id?: string | null
+          name?: string | null
+          notes?: string | null
+          organization_id: string
+          origin?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          rfid_tag?: string | null
+          sex: Database["public"]["Enums"]["animal_sex"]
+          status?: Database["public"]["Enums"]["animal_status"]
+          status_date?: string | null
+          status_reason?: string | null
+          tag_id: string
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          breed?: string | null
+          category?: Database["public"]["Enums"]["animal_category"]
+          color?: string | null
+          created_at?: string
+          current_weight?: number | null
+          entry_date?: string | null
+          father_id?: string | null
+          id?: string
+          last_weight_date?: string | null
+          lot_name?: string | null
+          mother_id?: string | null
+          name?: string | null
+          notes?: string | null
+          organization_id?: string
+          origin?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          rfid_tag?: string | null
+          sex?: Database["public"]["Enums"]["animal_sex"]
+          status?: Database["public"]["Enums"]["animal_status"]
+          status_date?: string | null
+          status_reason?: string | null
+          tag_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "animals_father_id_fkey"
+            columns: ["father_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "animals_mother_id_fkey"
+            columns: ["mother_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "animals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -219,6 +414,22 @@ export type Database = {
       }
     }
     Enums: {
+      animal_category:
+        | "vaca"
+        | "toro"
+        | "novilla"
+        | "novillo"
+        | "ternera"
+        | "ternero"
+        | "becerra"
+        | "becerro"
+      animal_sex: "macho" | "hembra"
+      animal_status:
+        | "activo"
+        | "vendido"
+        | "muerto"
+        | "descartado"
+        | "trasladado"
       app_role: "admin" | "ganadero" | "tecnico" | "veterinario"
       permission_type: "read" | "write" | "delete"
     }
@@ -348,6 +559,24 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      animal_category: [
+        "vaca",
+        "toro",
+        "novilla",
+        "novillo",
+        "ternera",
+        "ternero",
+        "becerra",
+        "becerro",
+      ],
+      animal_sex: ["macho", "hembra"],
+      animal_status: [
+        "activo",
+        "vendido",
+        "muerto",
+        "descartado",
+        "trasladado",
+      ],
       app_role: ["admin", "ganadero", "tecnico", "veterinario"],
       permission_type: ["read", "write", "delete"],
     },

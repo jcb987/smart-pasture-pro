@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -167,11 +167,28 @@ export function AppSidebar() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Determinar qué grupo contiene la ruta activa
-  const activeGroup = useMemo(() => {
-    const activeItem = menuItems.find(item => isActive(item.url));
-    return activeItem?.group || null;
+  // Estado controlado para mantener múltiples grupos abiertos
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    // Inicializar con el grupo activo abierto
+    const initial: Record<string, boolean> = {};
+    groups.forEach(g => {
+      const groupItems = menuItems.filter(item => item.group === g.id);
+      initial[g.id] = groupItems.some(item => item.url === location.pathname);
+    });
+    return initial;
+  });
+
+  // Cuando cambia la ruta, abrir el grupo correspondiente (sin cerrar los demás)
+  useEffect(() => {
+    const activeItem = menuItems.find(item => item.url === location.pathname);
+    if (activeItem && !openGroups[activeItem.group]) {
+      setOpenGroups(prev => ({ ...prev, [activeItem.group]: true }));
+    }
   }, [location.pathname]);
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   // Navegar sin cerrar la barra lateral en desktop
   const handleNavigation = (url: string) => {
@@ -200,7 +217,6 @@ export function AppSidebar() {
           const groupItems = menuItems.filter((item) => item.group === group.id);
           if (groupItems.length === 0) return null;
 
-          // El grupo se abre si contiene la ruta activa
           const isGroupActive = groupItems.some(item => isActive(item.url));
 
           if (collapsed) {
@@ -232,7 +248,8 @@ export function AppSidebar() {
           return (
             <Collapsible
               key={group.id}
-              defaultOpen={isGroupActive}
+              open={openGroups[group.id]}
+              onOpenChange={() => toggleGroup(group.id)}
             >
               <SidebarGroup>
                 <CollapsibleTrigger asChild>
@@ -244,7 +261,10 @@ export function AppSidebar() {
                   >
                     <span>{group.label}</span>
                     <ChevronDown 
-                      className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" 
+                      className={cn(
+                        'h-4 w-4 transition-transform duration-200',
+                        openGroups[group.id] && 'rotate-180'
+                      )}
                     />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>

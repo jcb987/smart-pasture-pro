@@ -153,8 +153,12 @@ export type Database = {
           created_at: string
           current_weight: number | null
           entry_date: string | null
+          expected_calving_date: string | null
           father_id: string | null
+          first_calving_date: string | null
           id: string
+          last_calving_date: string | null
+          last_service_date: string | null
           last_weight_date: string | null
           lot_name: string | null
           mother_id: string | null
@@ -164,12 +168,14 @@ export type Database = {
           origin: string | null
           purchase_date: string | null
           purchase_price: number | null
+          reproductive_status: string | null
           rfid_tag: string | null
           sex: Database["public"]["Enums"]["animal_sex"]
           status: Database["public"]["Enums"]["animal_status"]
           status_date: string | null
           status_reason: string | null
           tag_id: string
+          total_calvings: number | null
           updated_at: string
         }
         Insert: {
@@ -180,8 +186,12 @@ export type Database = {
           created_at?: string
           current_weight?: number | null
           entry_date?: string | null
+          expected_calving_date?: string | null
           father_id?: string | null
+          first_calving_date?: string | null
           id?: string
+          last_calving_date?: string | null
+          last_service_date?: string | null
           last_weight_date?: string | null
           lot_name?: string | null
           mother_id?: string | null
@@ -191,12 +201,14 @@ export type Database = {
           origin?: string | null
           purchase_date?: string | null
           purchase_price?: number | null
+          reproductive_status?: string | null
           rfid_tag?: string | null
           sex: Database["public"]["Enums"]["animal_sex"]
           status?: Database["public"]["Enums"]["animal_status"]
           status_date?: string | null
           status_reason?: string | null
           tag_id: string
+          total_calvings?: number | null
           updated_at?: string
         }
         Update: {
@@ -207,8 +219,12 @@ export type Database = {
           created_at?: string
           current_weight?: number | null
           entry_date?: string | null
+          expected_calving_date?: string | null
           father_id?: string | null
+          first_calving_date?: string | null
           id?: string
+          last_calving_date?: string | null
+          last_service_date?: string | null
           last_weight_date?: string | null
           lot_name?: string | null
           mother_id?: string | null
@@ -218,12 +234,14 @@ export type Database = {
           origin?: string | null
           purchase_date?: string | null
           purchase_price?: number | null
+          reproductive_status?: string | null
           rfid_tag?: string | null
           sex?: Database["public"]["Enums"]["animal_sex"]
           status?: Database["public"]["Enums"]["animal_status"]
           status_date?: string | null
           status_reason?: string | null
           tag_id?: string
+          total_calvings?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -320,6 +338,98 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reproductive_events: {
+        Row: {
+          animal_id: string
+          birth_type: string | null
+          bull_id: string | null
+          calf_id: string | null
+          calf_sex: string | null
+          calf_weight: number | null
+          created_at: string
+          created_by: string | null
+          estimated_gestation_days: number | null
+          event_date: string
+          event_type: string
+          expected_birth_date: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          pregnancy_result: string | null
+          semen_batch: string | null
+          technician: string | null
+        }
+        Insert: {
+          animal_id: string
+          birth_type?: string | null
+          bull_id?: string | null
+          calf_id?: string | null
+          calf_sex?: string | null
+          calf_weight?: number | null
+          created_at?: string
+          created_by?: string | null
+          estimated_gestation_days?: number | null
+          event_date?: string
+          event_type: string
+          expected_birth_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          pregnancy_result?: string | null
+          semen_batch?: string | null
+          technician?: string | null
+        }
+        Update: {
+          animal_id?: string
+          birth_type?: string | null
+          bull_id?: string | null
+          calf_id?: string | null
+          calf_sex?: string | null
+          calf_weight?: number | null
+          created_at?: string
+          created_by?: string | null
+          estimated_gestation_days?: number | null
+          event_date?: string
+          event_type?: string
+          expected_birth_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          pregnancy_result?: string | null
+          semen_batch?: string | null
+          technician?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reproductive_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reproductive_events_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reproductive_events_calf_id_fkey"
+            columns: ["calf_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reproductive_events_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

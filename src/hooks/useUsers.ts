@@ -148,7 +148,7 @@ export function useUsers() {
       if (action === 'add') {
         const { error } = await supabase
           .from('user_roles')
-          .insert({ user_id: userId, role });
+          .insert({ user_id: userId, role, organization_id: organizationId });
 
         if (error) throw error;
       } else {

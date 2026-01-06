@@ -97,15 +97,42 @@ const TestimonialsSection = () => {
           ))}
         </div>
 
-        {/* Trust Indicators */}
-        <div className="mt-16 pt-12 border-t border-border">
-          <div className="text-center mb-8">
-            <p className="text-muted-foreground">Confiado por ganaderos en</p>
+        {/* Stats Bar */}
+        <div className="mt-16 bg-card rounded-2xl p-8 shadow-lg border border-border/50">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="flex items-center justify-center gap-1 mb-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} size={16} className="text-accent fill-accent" />
+                ))}
+              </div>
+              <div className="text-2xl font-bold text-foreground">4.9/5</div>
+              <div className="text-sm text-muted-foreground">Calificación promedio</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground">10,000+</div>
+              <div className="text-sm text-muted-foreground">Usuarios activos</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground">15+</div>
+              <div className="text-sm text-muted-foreground">Países</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground">98%</div>
+              <div className="text-sm text-muted-foreground">Tasa de renovación</div>
+            </div>
           </div>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60">
-            {["Colombia", "México", "Argentina", "Brasil", "Perú", "Ecuador", "Chile"].map(
+        </div>
+
+        {/* Trust Indicators */}
+        <div className="mt-12 pt-8 border-t border-border">
+          <div className="text-center mb-6">
+            <p className="text-muted-foreground text-sm">Confiado por ganaderos en toda Latinoamérica</p>
+          </div>
+          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12 opacity-60">
+            {["🇨🇴 Colombia", "🇲🇽 México", "🇦🇷 Argentina", "🇧🇷 Brasil", "🇵🇪 Perú", "🇪🇨 Ecuador", "🇨🇱 Chile"].map(
               (country) => (
-                <span key={country} className="text-foreground font-semibold text-lg">
+                <span key={country} className="text-foreground font-medium text-sm">
                   {country}
                 </span>
               )

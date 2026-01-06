@@ -8,6 +8,8 @@ import MobileAppSection from "@/components/sections/MobileAppSection";
 import ProjectionsSection from "@/components/sections/ProjectionsSection";
 import ActionListsSection from "@/components/sections/ActionListsSection";
 import ConnectivitySection from "@/components/sections/ConnectivitySection";
+import SecuritySection from "@/components/sections/SecuritySection";
+import UseCasesSection from "@/components/sections/UseCasesSection";
 import TestimonialsSection from "@/components/sections/TestimonialsSection";
 import CTASection from "@/components/sections/CTASection";
 import Footer from "@/components/layout/Footer";
@@ -26,6 +28,8 @@ const Index = () => {
         <ProjectionsSection />
         <ActionListsSection />
         <ConnectivitySection />
+        <SecuritySection />
+        <UseCasesSection />
         <TestimonialsSection />
         <CTASection />
       </main>

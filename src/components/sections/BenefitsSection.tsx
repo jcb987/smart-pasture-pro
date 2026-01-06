@@ -68,9 +68,14 @@ const BenefitsSection = () => {
               ))}
             </div>
 
-            <Button variant="default" size="lg">
-              Descubre Más Beneficios
-            </Button>
+            <div className="flex flex-wrap gap-4">
+              <Button variant="default" size="lg">
+                Descubre Más Beneficios
+              </Button>
+              <Button variant="outline" size="lg">
+                Solicitar Demo
+              </Button>
+            </div>
           </div>
 
           {/* Right Content - Benefits Cards */}

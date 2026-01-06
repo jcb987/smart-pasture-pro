@@ -1,4 +1,4 @@
-import { Smartphone, Wifi, WifiOff, RefreshCw, Camera, MapPin } from "lucide-react";
+import { Smartphone, Wifi, WifiOff, RefreshCw, Camera, MapPin, Apple, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const MobileAppSection = () => {
@@ -149,14 +149,33 @@ const MobileAppSection = () => {
               ))}
             </div>
 
+            {/* App Store Buttons */}
             <div className="flex flex-wrap gap-4">
-              <Button size="lg">
-                Descargar App
-              </Button>
-              <Button variant="outline" size="lg">
-                Ver Demo
-              </Button>
+              <a 
+                href="#" 
+                className="inline-flex items-center gap-3 px-5 py-3 bg-foreground text-background rounded-xl hover:opacity-90 transition-opacity"
+              >
+                <Apple size={28} />
+                <div className="text-left">
+                  <p className="text-[10px] opacity-80">Disponible en</p>
+                  <p className="font-semibold text-sm">App Store</p>
+                </div>
+              </a>
+              <a 
+                href="#" 
+                className="inline-flex items-center gap-3 px-5 py-3 bg-foreground text-background rounded-xl hover:opacity-90 transition-opacity"
+              >
+                <Play size={28} fill="currentColor" />
+                <div className="text-left">
+                  <p className="text-[10px] opacity-80">Consíguelo en</p>
+                  <p className="font-semibold text-sm">Google Play</p>
+                </div>
+              </a>
             </div>
+
+            <p className="text-sm text-muted-foreground mt-4">
+              Disponible para iOS y Android. Sincroniza con tu cuenta de escritorio.
+            </p>
           </div>
         </div>
       </div>

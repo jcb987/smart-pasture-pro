@@ -1,13 +1,42 @@
 import { Button } from "@/components/ui/button";
-import { Play, ChevronRight, Milk, Beef, Target } from "lucide-react";
+import { Play, ChevronRight, Milk, Beef, Target, Cpu, Smartphone, BarChart3, Wifi } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const HeroSection = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
   const categories = [
     { icon: Milk, label: "Lechería" },
     { icon: Target, label: "Doble Propósito" },
     { icon: Beef, label: "Cría y Recría" },
     { icon: Target, label: "Engorde" },
   ];
+
+  const rotatingMessages = [
+    {
+      icon: BarChart3,
+      text: "Algoritmos inteligentes para detectar problemas",
+    },
+    {
+      icon: Smartphone,
+      text: "App móvil para consultar datos sin Internet",
+    },
+    {
+      icon: Cpu,
+      text: "Compatible con básculas, lectores y sensores",
+    },
+    {
+      icon: Wifi,
+      text: "Sincronización automática con la nube",
+    },
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % rotatingMessages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
@@ -45,10 +74,52 @@ const HeroSection = () => {
           </h1>
 
           {/* Subheading */}
-          <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <p className="text-lg md:text-xl text-primary-foreground/80 mb-6 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: "0.1s" }}>
             Sistematiza y administra tu ganadería con inteligencia artificial. 
             Sin límite de fincas ni animales. Funciona offline y se sincroniza en la nube.
           </p>
+
+          {/* Rotating Messages Banner */}
+          <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.15s" }}>
+            <div className="relative h-12 overflow-hidden">
+              {rotatingMessages.map((msg, index) => {
+                const Icon = msg.icon;
+                return (
+                  <div
+                    key={index}
+                    className={`absolute inset-0 flex items-center justify-center gap-3 transition-all duration-500 ${
+                      index === currentSlide
+                        ? "opacity-100 translate-y-0"
+                        : index < currentSlide
+                        ? "opacity-0 -translate-y-full"
+                        : "opacity-0 translate-y-full"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 px-6 py-2 rounded-full bg-accent/20 backdrop-blur-sm border border-accent/30">
+                      <Icon size={18} className="text-accent" />
+                      <span className="text-primary-foreground font-medium text-sm md:text-base">
+                        {msg.text}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Dots indicator */}
+            <div className="flex justify-center gap-2 mt-3">
+              {rotatingMessages.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    index === currentSlide
+                      ? "bg-accent w-6"
+                      : "bg-primary-foreground/30 hover:bg-primary-foreground/50"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 animate-slide-up" style={{ animationDelay: "0.2s" }}>

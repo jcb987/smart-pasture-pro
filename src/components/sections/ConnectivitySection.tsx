@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { 
   Wifi, 
   WifiOff, 
@@ -6,7 +7,8 @@ import {
   Cloud,
   RefreshCw,
   Cpu,
-  Radio
+  Radio,
+  ChevronRight
 } from "lucide-react";
 
 const ConnectivitySection = () => {
@@ -159,6 +161,14 @@ const ConnectivitySection = () => {
                 </span>
               </div>
             ))}
+          </div>
+
+          {/* CTA inside hardware section */}
+          <div className="text-center mt-10">
+            <Button variant="heroOutline" size="lg">
+              Ver Equipos Compatibles
+              <ChevronRight className="ml-1" />
+            </Button>
           </div>
         </div>
       </div>

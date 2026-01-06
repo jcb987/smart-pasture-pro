@@ -17,7 +17,7 @@ const Usuarios = () => {
     users,
     activityLogs,
     loading,
-    isAdmin,
+    canManageUsers,
     fetchUsers,
     updateUserRole,
     toggleBlockUser,
@@ -61,7 +61,7 @@ const Usuarios = () => {
               Controla accesos, permisos y actividad del sistema
             </p>
           </div>
-          {isAdmin && (
+          {canManageUsers && (
             <Button onClick={() => setCreateDialogOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" />
               Nuevo Usuario
@@ -180,7 +180,7 @@ const Usuarios = () => {
                   <UserCard
                     key={user.id}
                     user={user}
-                    isAdmin={isAdmin}
+                    canManageUsers={canManageUsers}
                     onUpdateRole={updateUserRole}
                     onToggleBlock={toggleBlockUser}
                     onManagePermissions={handleManagePermissions}

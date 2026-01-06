@@ -26,7 +26,7 @@ import { type UserProfile, type AppRole } from '@/hooks/useUsers';
 
 interface UserCardProps {
   user: UserProfile;
-  isAdmin: boolean;
+  canManageUsers: boolean;
   onUpdateRole: (userId: string, role: AppRole, action: 'add' | 'remove') => void;
   onToggleBlock: (userId: string, block: boolean, reason?: string) => void;
   onManagePermissions: (user: UserProfile) => void;
@@ -46,7 +46,7 @@ const roleColors: Record<AppRole, string> = {
   veterinario: 'bg-green-500 text-white',
 };
 
-export function UserCard({ user, isAdmin, onUpdateRole, onToggleBlock, onManagePermissions }: UserCardProps) {
+export function UserCard({ user, canManageUsers, onUpdateRole, onToggleBlock, onManagePermissions }: UserCardProps) {
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [blockReason, setBlockReason] = useState('');
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
@@ -89,7 +89,7 @@ export function UserCard({ user, isAdmin, onUpdateRole, onToggleBlock, onManageP
                 </p>
               </div>
             </div>
-            {isAdmin && (
+            {canManageUsers && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">

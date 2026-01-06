@@ -63,21 +63,13 @@ export function useUsers() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [canManageUsers, setCanManageUsers] = useState(false);
   const { toast } = useToast();
 
-  const checkAdminStatus = async () => {
+  const checkAuthStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
-
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
-
-    return !!data;
+    // Cualquier usuario autenticado puede gestionar usuarios de su finca
+    return !!user;
   };
 
   const fetchUsers = async () => {
@@ -260,8 +252,8 @@ export function useUsers() {
 
   useEffect(() => {
     const init = async () => {
-      const adminStatus = await checkAdminStatus();
-      setIsAdmin(adminStatus);
+      const canManage = await checkAuthStatus();
+      setCanManageUsers(canManage);
       await fetchUsers();
       await fetchActivityLogs();
     };
@@ -272,7 +264,7 @@ export function useUsers() {
     users,
     activityLogs,
     loading,
-    isAdmin,
+    canManageUsers,
     fetchUsers,
     fetchActivityLogs,
     updateUserRole,

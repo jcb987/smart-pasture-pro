@@ -148,12 +148,11 @@ const HeroSection = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-12 border-t border-primary-foreground/10 animate-slide-up" style={{ animationDelay: "0.5s" }}>
+          <div className="flex justify-center gap-12 md:gap-20 mt-16 pt-12 border-t border-primary-foreground/10 animate-slide-up" style={{ animationDelay: "0.5s" }}>
             {[
               { value: "10,000+", label: "Fincas Activas" },
               { value: "2M+", label: "Animales Registrados" },
               { value: "15+", label: "Países" },
-              { value: "99.9%", label: "Uptime" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-3xl md:text-4xl font-bold text-accent mb-1">{stat.value}</div>

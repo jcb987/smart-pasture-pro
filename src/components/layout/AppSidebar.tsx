@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -36,7 +37,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useState } from 'react';
 
 const menuItems = [
   {
@@ -162,23 +162,24 @@ const groups = [
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const collapsed = state === 'collapsed';
-
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    principal: true,
-    produccion: true,
-    gestion: true,
-    analisis: false,
-    finanzas: false,
-    avanzado: false,
-    sistema: false,
-  });
 
   const isActive = (path: string) => location.pathname === path;
 
-  const toggleGroup = (groupId: string) => {
-    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  // Determinar qué grupo contiene la ruta activa
+  const activeGroup = useMemo(() => {
+    const activeItem = menuItems.find(item => isActive(item.url));
+    return activeItem?.group || null;
+  }, [location.pathname]);
+
+  // Navegar sin cerrar la barra lateral en desktop
+  const handleNavigation = (url: string) => {
+    navigate(url);
+    // Solo cerrar en móvil después de navegar
+    if (window.innerWidth < 768) {
+      setOpenMobile(false);
+    }
   };
 
   return (
@@ -199,6 +200,9 @@ export function AppSidebar() {
           const groupItems = menuItems.filter((item) => item.group === group.id);
           if (groupItems.length === 0) return null;
 
+          // El grupo se abre si contiene la ruta activa
+          const isGroupActive = groupItems.some(item => isActive(item.url));
+
           if (collapsed) {
             return (
               <SidebarGroup key={group.id}>
@@ -207,7 +211,7 @@ export function AppSidebar() {
                     {groupItems.map((item) => (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
-                          onClick={() => navigate(item.url)}
+                          onClick={() => handleNavigation(item.url)}
                           isActive={isActive(item.url)}
                           tooltip={item.title}
                           className={cn(
@@ -228,18 +232,19 @@ export function AppSidebar() {
           return (
             <Collapsible
               key={group.id}
-              open={openGroups[group.id]}
-              onOpenChange={() => toggleGroup(group.id)}
+              defaultOpen={isGroupActive}
             >
               <SidebarGroup>
                 <CollapsibleTrigger asChild>
-                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-sidebar-accent/50 rounded-md px-2 py-1.5">
+                  <SidebarGroupLabel 
+                    className={cn(
+                      'flex items-center justify-between cursor-pointer hover:bg-sidebar-accent/50 rounded-md px-2 py-1.5 transition-colors',
+                      isGroupActive && 'text-primary font-medium'
+                    )}
+                  >
                     <span>{group.label}</span>
                     <ChevronDown 
-                      className={cn(
-                        'h-4 w-4 transition-transform',
-                        openGroups[group.id] && 'rotate-180'
-                      )} 
+                      className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" 
                     />
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -249,7 +254,7 @@ export function AppSidebar() {
                       {groupItems.map((item) => (
                         <SidebarMenuItem key={item.title}>
                           <SidebarMenuButton
-                            onClick={() => navigate(item.url)}
+                            onClick={() => handleNavigation(item.url)}
                             isActive={isActive(item.url)}
                             className={cn(
                               'transition-colors',

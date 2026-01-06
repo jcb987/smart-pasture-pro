@@ -1,76 +1,184 @@
+import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Plus, TrendingUp, TrendingDown } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCostos } from '@/hooks/useCostos';
+import { AddTransactionDialog } from '@/components/costos/AddTransactionDialog';
+import { TransactionsTable } from '@/components/costos/TransactionsTable';
+import { FinancialCharts } from '@/components/costos/FinancialCharts';
+import { CostAnalysis } from '@/components/costos/CostAnalysis';
+import { FinancialProjections } from '@/components/costos/FinancialProjections';
+import { 
+  DollarSign, 
+  Plus, 
+  TrendingUp, 
+  TrendingDown, 
+  Wallet,
+  BarChart3,
+  Calculator,
+  FileSpreadsheet,
+  PiggyBank
+} from 'lucide-react';
 
 const Costos = () => {
+  const { summary, isLoading } = useCostos();
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [defaultType, setDefaultType] = useState<'ingreso' | 'egreso'>('ingreso');
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const handleAddIncome = () => {
+    setDefaultType('ingreso');
+    setShowAddDialog(true);
+  };
+
+  const handleAddExpense = () => {
+    setDefaultType('egreso');
+    setShowAddDialog(true);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Costos y Finanzas</h1>
-            <p className="text-muted-foreground">Gestión económica de la finca</p>
+            <p className="text-muted-foreground">Gestión económica y rentabilidad de la finca</p>
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Registro
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleAddIncome} className="bg-green-600 hover:bg-green-700">
+              <TrendingUp className="mr-2 h-4 w-4" />
+              Registrar Ingreso
+            </Button>
+            <Button onClick={handleAddExpense} variant="destructive">
+              <TrendingDown className="mr-2 h-4 w-4" />
+              Registrar Egreso
+            </Button>
+          </div>
         </div>
 
+        {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Ingresos del Mes</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">$45,230</div>
+              <div className="text-2xl font-bold text-green-600">
+                {isLoading ? '...' : formatCurrency(summary.totalIngresos)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {summary.ingresosPorCategoria.length} categorías
+              </p>
             </CardContent>
           </Card>
+
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Egresos del Mes</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Egresos Totales</CardTitle>
+              <TrendingDown className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">$28,450</div>
+              <div className="text-2xl font-bold text-red-600">
+                {isLoading ? '...' : formatCurrency(summary.totalEgresos)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {summary.costosPorCategoria.length} categorías
+              </p>
             </CardContent>
           </Card>
+
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Costo/Litro</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Balance Neto</CardTitle>
+              <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$0.42</div>
+              <div className={`text-2xl font-bold ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {isLoading ? '...' : formatCurrency(summary.balance)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ingresos - Egresos
+              </p>
             </CardContent>
           </Card>
+
           <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Margen Neto</CardTitle>
+              <PiggyBank className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">37%</div>
+              <div className={`text-2xl font-bold ${summary.margenNeto >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {isLoading ? '...' : `${summary.margenNeto.toFixed(1)}%`}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Rentabilidad sobre ingresos
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Gestión Financiera</CardTitle>
-            <CardDescription>
-              Controla ingresos y egresos, costos operativos, estado de resultados (P&G),
-              cálculo de costos por litro de leche o kilo de carne, flujos de caja,
-              márgenes y rentabilidad.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center h-64 border-2 border-dashed border-muted rounded-lg">
-            <div className="text-center text-muted-foreground">
-              <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">Módulo en Desarrollo</p>
-              <p className="text-sm">Próximamente podrás gestionar las finanzas aquí</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="transactions" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="transactions" className="flex items-center gap-2">
+              <FileSpreadsheet className="h-4 w-4" />
+              <span className="hidden sm:inline">Transacciones</span>
+            </TabsTrigger>
+            <TabsTrigger value="charts" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Gráficas</span>
+            </TabsTrigger>
+            <TabsTrigger value="analysis" className="flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              <span className="hidden sm:inline">Análisis</span>
+            </TabsTrigger>
+            <TabsTrigger value="projections" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Proyecciones</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="transactions">
+            <Card>
+              <CardHeader>
+                <CardTitle>Registro de Transacciones</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TransactionsTable />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="charts">
+            <FinancialCharts />
+          </TabsContent>
+
+          <TabsContent value="analysis">
+            <CostAnalysis />
+          </TabsContent>
+
+          <TabsContent value="projections">
+            <FinancialProjections />
+          </TabsContent>
+        </Tabs>
       </div>
+
+      <AddTransactionDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        defaultType={defaultType}
+      />
     </DashboardLayout>
   );
 };

@@ -64,12 +64,24 @@ export function useUsers() {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [canManageUsers, setCanManageUsers] = useState(false);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const checkAuthStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    // Cualquier usuario autenticado puede gestionar usuarios de su finca
-    return !!user;
+    if (!user) return { canManage: false, orgId: null };
+
+    // Obtener organization_id del usuario actual
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    return { 
+      canManage: !!user, 
+      orgId: profile?.organization_id || null 
+    };
   };
 
   const fetchUsers = async () => {
@@ -252,8 +264,9 @@ export function useUsers() {
 
   useEffect(() => {
     const init = async () => {
-      const canManage = await checkAuthStatus();
+      const { canManage, orgId } = await checkAuthStatus();
       setCanManageUsers(canManage);
+      setOrganizationId(orgId);
       await fetchUsers();
       await fetchActivityLogs();
     };
@@ -265,6 +278,7 @@ export function useUsers() {
     activityLogs,
     loading,
     canManageUsers,
+    organizationId,
     fetchUsers,
     fetchActivityLogs,
     updateUserRole,

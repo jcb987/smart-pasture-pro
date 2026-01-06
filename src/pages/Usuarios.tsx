@@ -18,6 +18,7 @@ const Usuarios = () => {
     activityLogs,
     loading,
     canManageUsers,
+    organizationId,
     fetchUsers,
     updateUserRole,
     toggleBlockUser,
@@ -223,6 +224,7 @@ const Usuarios = () => {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onUserCreated={fetchUsers}
+        organizationId={organizationId}
       />
     </DashboardLayout>
   );

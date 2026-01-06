@@ -26,6 +26,7 @@ interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUserCreated: () => void;
+  organizationId: string | null;
 }
 
 const userSchema = z.object({
@@ -33,15 +34,13 @@ const userSchema = z.object({
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
   fullName: z.string().trim().min(2, { message: 'El nombre debe tener al menos 2 caracteres' }),
   phone: z.string().optional(),
-  farmName: z.string().optional(),
 });
 
-export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUserDialogProps) {
+export function CreateUserDialog({ open, onOpenChange, onUserCreated, organizationId }: CreateUserDialogProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [farmName, setFarmName] = useState('');
   const [role, setRole] = useState<AppRole>('ganadero');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,7 +51,6 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUs
     setPassword('');
     setFullName('');
     setPhone('');
-    setFarmName('');
     setRole('ganadero');
     setErrors({});
   };
@@ -61,13 +59,21 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUs
     try {
       setErrors({});
       
+      if (!organizationId) {
+        toast({
+          title: 'Error',
+          description: 'No se encontró la organización. Por favor recarga la página.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       // Validate input
       const validation = userSchema.safeParse({
         email,
         password,
         fullName,
         phone,
-        farmName,
       });
 
       if (!validation.success) {
@@ -83,52 +89,37 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUs
 
       setLoading(true);
 
-      // Create user via Supabase Auth
-      const redirectUrl = `${window.location.origin}/`;
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
+      // Crear el perfil directamente en la base de datos (el usuario se unirá a la organización existente)
+      // Primero insertar en profiles con la organización del dueño
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: crypto.randomUUID(), // ID temporal, se actualizará cuando el usuario se registre
+          full_name: fullName,
+          phone: phone || null,
+          organization_id: organizationId,
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
-      if (data.user) {
-        // Update profile with additional info
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            full_name: fullName,
-            phone: phone || null,
-            farm_name: farmName || null,
-          })
-          .eq('user_id', data.user.id);
+      // Insertar el rol
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: profileData.user_id,
+          role: role,
+          organization_id: organizationId,
+        });
 
-        if (profileError) {
-          console.error('Error updating profile:', profileError);
-        }
-
-        // If role is not default, update it
-        if (role !== 'ganadero') {
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .update({ role })
-            .eq('user_id', data.user.id);
-
-          if (roleError) {
-            console.error('Error updating role:', roleError);
-          }
-        }
+      if (roleError) {
+        console.error('Error creating role:', roleError);
       }
 
       toast({
-        title: 'Usuario creado',
-        description: 'El usuario ha sido creado exitosamente',
+        title: 'Usuario agregado',
+        description: `${fullName} ha sido agregado a tu equipo con el rol de ${role}`,
       });
 
       resetForm();
@@ -150,13 +141,24 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUs
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Crear nuevo usuario</DialogTitle>
+          <DialogTitle>Agregar miembro al equipo</DialogTitle>
           <DialogDescription>
-            Ingresa los datos del nuevo usuario. Recibirá un correo de confirmación.
+            Agrega un nuevo miembro a tu finca. Podrás asignarle un rol y permisos específicos.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Nombre completo *</Label>
+            <Input
+              id="fullName"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Juan Pérez"
+            />
+            {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="email">Correo electrónico *</Label>
             <Input
@@ -182,17 +184,6 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUs
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fullName">Nombre completo *</Label>
-            <Input
-              id="fullName"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Juan Pérez"
-            />
-            {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="phone">Teléfono</Label>
             <Input
               id="phone"
@@ -203,28 +194,21 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUs
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="farmName">Nombre de la finca</Label>
-            <Input
-              id="farmName"
-              value={farmName}
-              onChange={(e) => setFarmName(e.target.value)}
-              placeholder="Finca El Progreso"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="role">Rol</Label>
+            <Label htmlFor="role">Rol en la finca</Label>
             <Select value={role} onValueChange={(value) => setRole(value as AppRole)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Administrador</SelectItem>
                 <SelectItem value="ganadero">Ganadero</SelectItem>
                 <SelectItem value="tecnico">Técnico</SelectItem>
                 <SelectItem value="veterinario">Veterinario</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Define qué puede hacer este miembro en el sistema
+            </p>
           </div>
         </div>
 
@@ -233,7 +217,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUs
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Creando...' : 'Crear usuario'}
+            {loading ? 'Agregando...' : 'Agregar miembro'}
           </Button>
         </DialogFooter>
       </DialogContent>

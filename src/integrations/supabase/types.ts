@@ -268,6 +268,83 @@ export type Database = {
           },
         ]
       }
+      health_events: {
+        Row: {
+          animal_id: string
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          diagnosis: string | null
+          dosage: string | null
+          duration_days: number | null
+          event_date: string
+          event_type: string
+          id: string
+          medication: string | null
+          next_dose_date: string | null
+          notes: string | null
+          organization_id: string
+          outcome: string | null
+          status: string | null
+          treatment: string | null
+          veterinarian: string | null
+          withdrawal_days: number | null
+          withdrawal_end_date: string | null
+        }
+        Insert: {
+          animal_id: string
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          diagnosis?: string | null
+          dosage?: string | null
+          duration_days?: number | null
+          event_date?: string
+          event_type: string
+          id?: string
+          medication?: string | null
+          next_dose_date?: string | null
+          notes?: string | null
+          organization_id: string
+          outcome?: string | null
+          status?: string | null
+          treatment?: string | null
+          veterinarian?: string | null
+          withdrawal_days?: number | null
+          withdrawal_end_date?: string | null
+        }
+        Update: {
+          animal_id?: string
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          diagnosis?: string | null
+          dosage?: string | null
+          duration_days?: number | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          medication?: string | null
+          next_dose_date?: string | null
+          notes?: string | null
+          organization_id?: string
+          outcome?: string | null
+          status?: string | null
+          treatment?: string | null
+          veterinarian?: string | null
+          withdrawal_days?: number | null
+          withdrawal_end_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milk_production: {
         Row: {
           afternoon_liters: number | null
@@ -559,6 +636,62 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaccination_schedule: {
+        Row: {
+          animal_id: string | null
+          applied_date: string | null
+          created_at: string
+          created_by: string | null
+          dose_number: number | null
+          id: string
+          is_applied: boolean | null
+          lot_name: string | null
+          next_application_date: string | null
+          notes: string | null
+          organization_id: string
+          scheduled_date: string
+          vaccine_name: string
+        }
+        Insert: {
+          animal_id?: string | null
+          applied_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          dose_number?: number | null
+          id?: string
+          is_applied?: boolean | null
+          lot_name?: string | null
+          next_application_date?: string | null
+          notes?: string | null
+          organization_id: string
+          scheduled_date: string
+          vaccine_name: string
+        }
+        Update: {
+          animal_id?: string | null
+          applied_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          dose_number?: number | null
+          id?: string
+          is_applied?: boolean | null
+          lot_name?: string | null
+          next_application_date?: string | null
+          notes?: string | null
+          organization_id?: string
+          scheduled_date?: string
+          vaccine_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccination_schedule_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
             referencedColumns: ["id"]
           },
         ]

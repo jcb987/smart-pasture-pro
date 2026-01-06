@@ -3,13 +3,14 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Beef, Plus, Download, AlertTriangle } from 'lucide-react';
+import { Beef, Plus, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import { useAnimals, type Animal, type AnimalFilters } from '@/hooks/useAnimals';
 import { CreateAnimalDialog } from '@/components/animales/CreateAnimalDialog';
 import { AnimalDetailDialog } from '@/components/animales/AnimalDetailDialog';
 import { AnimalsTable } from '@/components/animales/AnimalsTable';
 import { AnimalsFilters } from '@/components/animales/AnimalsFilters';
 import { AddWeightDialog } from '@/components/animales/AddWeightDialog';
+import { ExportDialog } from '@/components/animales/ExportDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,7 @@ const Animales = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [weightDialogOpen, setWeightDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
   
   const [filters, setFilters] = useState<AnimalFilters>({
@@ -102,9 +104,9 @@ const Animales = () => {
             <p className="text-muted-foreground">Registro y control total del hato</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Exportar
+            <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Exportar a Excel
             </Button>
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -265,6 +267,12 @@ const Animales = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        availableLots={stats.lotes}
+      />
     </DashboardLayout>
   );
 };

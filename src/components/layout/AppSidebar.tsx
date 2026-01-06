@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -167,24 +167,18 @@ export function AppSidebar() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Estado controlado para mantener múltiples grupos abiertos
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    // Inicializar con el grupo activo abierto
-    const initial: Record<string, boolean> = {};
-    groups.forEach(g => {
-      const groupItems = menuItems.filter(item => item.group === g.id);
-      initial[g.id] = groupItems.some(item => item.url === location.pathname);
-    });
-    return initial;
+  // Estado controlado para mantener múltiples grupos abiertos - todos abiertos por defecto
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    principal: true,
+    produccion: true,
+    gestion: true,
+    analisis: true,
+    finanzas: true,
+    avanzado: true,
+    sistema: true,
   });
 
-  // Cuando cambia la ruta, abrir el grupo correspondiente (sin cerrar los demás)
-  useEffect(() => {
-    const activeItem = menuItems.find(item => item.url === location.pathname);
-    if (activeItem && !openGroups[activeItem.group]) {
-      setOpenGroups(prev => ({ ...prev, [activeItem.group]: true }));
-    }
-  }, [location.pathname]);
+  // toggleGroup solo cambia el grupo clickeado, sin afectar los demás
 
   const toggleGroup = (groupId: string) => {
     setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));

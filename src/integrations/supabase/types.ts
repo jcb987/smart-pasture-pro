@@ -268,6 +268,213 @@ export type Database = {
           },
         ]
       }
+      feed_consumption: {
+        Row: {
+          animal_id: string | null
+          consumption_date: string
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          feed_id: string
+          id: string
+          lot_name: string | null
+          notes: string | null
+          organization_id: string
+          quantity_kg: number
+        }
+        Insert: {
+          animal_id?: string | null
+          consumption_date?: string
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          feed_id: string
+          id?: string
+          lot_name?: string | null
+          notes?: string | null
+          organization_id: string
+          quantity_kg: number
+        }
+        Update: {
+          animal_id?: string | null
+          consumption_date?: string
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          feed_id?: string
+          id?: string
+          lot_name?: string | null
+          notes?: string | null
+          organization_id?: string
+          quantity_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_consumption_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_consumption_feed_id_fkey"
+            columns: ["feed_id"]
+            isOneToOne: false
+            referencedRelation: "feed_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_diet_ingredients: {
+        Row: {
+          created_at: string
+          diet_id: string
+          feed_id: string
+          id: string
+          quantity_kg: number
+        }
+        Insert: {
+          created_at?: string
+          diet_id: string
+          feed_id: string
+          id?: string
+          quantity_kg: number
+        }
+        Update: {
+          created_at?: string
+          diet_id?: string
+          feed_id?: string
+          id?: string
+          quantity_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_diet_ingredients_diet_id_fkey"
+            columns: ["diet_id"]
+            isOneToOne: false
+            referencedRelation: "feed_diets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_diet_ingredients_feed_id_fkey"
+            columns: ["feed_id"]
+            isOneToOne: false
+            referencedRelation: "feed_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_diets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          daily_cost: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          organization_id: string
+          target_dry_matter: number | null
+          target_energy: number | null
+          target_fdn: number | null
+          target_group: string | null
+          target_lot: string | null
+          target_protein: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          daily_cost?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          target_dry_matter?: number | null
+          target_energy?: number | null
+          target_fdn?: number | null
+          target_group?: string | null
+          target_lot?: string | null
+          target_protein?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          daily_cost?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          target_dry_matter?: number | null
+          target_energy?: number | null
+          target_fdn?: number | null
+          target_group?: string | null
+          target_lot?: string | null
+          target_protein?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      feed_inventory: {
+        Row: {
+          category: string
+          created_at: string
+          current_stock: number | null
+          dry_matter_percentage: number | null
+          energy_mcal: number | null
+          fdn_percentage: number | null
+          id: string
+          min_stock: number | null
+          name: string
+          notes: string | null
+          organization_id: string
+          protein_percentage: number | null
+          supplier: string | null
+          unit: string
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          current_stock?: number | null
+          dry_matter_percentage?: number | null
+          energy_mcal?: number | null
+          fdn_percentage?: number | null
+          id?: string
+          min_stock?: number | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          protein_percentage?: number | null
+          supplier?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          current_stock?: number | null
+          dry_matter_percentage?: number | null
+          energy_mcal?: number | null
+          fdn_percentage?: number | null
+          id?: string
+          min_stock?: number | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          protein_percentage?: number | null
+          supplier?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       health_events: {
         Row: {
           animal_id: string

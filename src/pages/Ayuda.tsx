@@ -7,39 +7,19 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { TutorialContent, moduleTutorials } from '@/components/ayuda/TutorialContent';
 import { 
   HelpCircle, Book, Video, MessageCircle, Phone, Search, 
   FileText, PlayCircle, Mail, ExternalLink, ChevronRight,
-  Smartphone, BarChart3, Heart, Baby, Beef, Scale, Leaf, DollarSign
+  Smartphone, BarChart3, Heart, Baby, Beef, Scale, Leaf, DollarSign,
+  Settings, Users, Dna, Package, ArrowLeftRight, Clock
 } from 'lucide-react';
-
-interface Tutorial {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  category: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
 
 interface FAQItem {
   question: string;
   answer: string;
   category: string;
 }
-
-const tutorials: Tutorial[] = [
-  { id: '1', title: 'Primeros pasos en el sistema', description: 'Configura tu finca y empieza a registrar animales', duration: '5 min', category: 'inicio', icon: Book },
-  { id: '2', title: 'Registro de animales', description: 'Aprende a crear y gestionar tu inventario ganadero', duration: '8 min', category: 'animales', icon: Beef },
-  { id: '3', title: 'Control de peso y producción', description: 'Registra pesajes y producción de leche', duration: '6 min', category: 'produccion', icon: Scale },
-  { id: '4', title: 'Gestión reproductiva', description: 'Inseminaciones, diagnósticos y partos', duration: '10 min', category: 'reproduccion', icon: Baby },
-  { id: '5', title: 'Control sanitario', description: 'Vacunas, tratamientos y eventos de salud', duration: '7 min', category: 'salud', icon: Heart },
-  { id: '6', title: 'Alimentación y dietas', description: 'Configura dietas y registra consumo', duration: '8 min', category: 'alimentacion', icon: Leaf },
-  { id: '7', title: 'Gestión de praderas', description: 'Rotación y medición de forraje', duration: '6 min', category: 'praderas', icon: Leaf },
-  { id: '8', title: 'Costos y finanzas', description: 'Ingresos, gastos y rentabilidad', duration: '9 min', category: 'costos', icon: DollarSign },
-  { id: '9', title: 'Reportes y análisis', description: 'Genera informes detallados', duration: '5 min', category: 'reportes', icon: BarChart3 },
-  { id: '10', title: 'App móvil y sincronización', description: 'Usa el sistema desde el campo', duration: '4 min', category: 'movil', icon: Smartphone },
-];
 
 const faqs: FAQItem[] = [
   {
@@ -94,19 +74,38 @@ const faqs: FAQItem[] = [
   },
 ];
 
+const moduleGuides = [
+  { id: 'inicio', title: 'Primeros Pasos', icon: Book, description: 'Configuración inicial del sistema' },
+  { id: 'animales', title: 'Animales', icon: Beef, description: 'Gestión completa del inventario ganadero' },
+  { id: 'produccion-leche', title: 'Producción de Leche', icon: Scale, description: 'Registro y análisis de producción lechera' },
+  { id: 'produccion-carne', title: 'Producción de Carne', icon: Scale, description: 'Control de peso y ganancia diaria' },
+  { id: 'reproduccion', title: 'Reproducción', icon: Baby, description: 'Ciclo reproductivo y genética' },
+  { id: 'salud', title: 'Salud', icon: Heart, description: 'Control sanitario y tratamientos' },
+  { id: 'alimentacion', title: 'Alimentación', icon: Leaf, description: 'Dietas, inventario y consumo' },
+  { id: 'praderas', title: 'Praderas', icon: Leaf, description: 'Gestión de potreros y rotación' },
+  { id: 'genetica', title: 'Genética', icon: Dna, description: 'Mejoramiento y evaluaciones' },
+  { id: 'costos', title: 'Costos', icon: DollarSign, description: 'Finanzas y rentabilidad' },
+  { id: 'insumos', title: 'Insumos', icon: Package, description: 'Inventario de medicamentos y materiales' },
+  { id: 'reportes', title: 'Reportes', icon: BarChart3, description: 'Informes y exportación' },
+  { id: 'usuarios', title: 'Usuarios', icon: Users, description: 'Gestión de usuarios y permisos' },
+  { id: 'trazabilidad', title: 'Trazabilidad', icon: ArrowLeftRight, description: 'Hoja de vida e intercambio' },
+  { id: 'app-movil', title: 'App Móvil', icon: Smartphone, description: 'Uso sin conexión' },
+  { id: 'configuracion', title: 'Configuración', icon: Settings, description: 'Personalización del sistema' },
+];
+
 const Ayuda = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
-  const filteredTutorials = tutorials.filter(t => 
-    (selectedCategory === 'all' || t.category === selectedCategory) &&
-    (t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     t.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const [selectedTutorial, setSelectedTutorial] = useState<string | null>(null);
 
   const filteredFaqs = faqs.filter(f => 
     f.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
     f.answer.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredModules = moduleGuides.filter(m =>
+    m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const categories = [
@@ -118,6 +117,18 @@ const Ayuda = () => {
     { id: 'salud', label: 'Salud' },
     { id: 'alimentacion', label: 'Alimentación' },
   ];
+
+  // If a tutorial is selected, show the tutorial content
+  if (selectedTutorial) {
+    return (
+      <DashboardLayout>
+        <TutorialContent 
+          moduleId={selectedTutorial} 
+          onBack={() => setSelectedTutorial(null)} 
+        />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -147,7 +158,11 @@ const Ayuda = () => {
               <CardDescription>Guía completa del sistema</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setSelectedTutorial('inicio')}
+              >
                 <FileText className="mr-2 h-4 w-4" />
                 Ver Manual
               </Button>
@@ -201,23 +216,19 @@ const Ayuda = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="tutorials" className="space-y-4">
+        <Tabs defaultValue="guides" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="tutorials">
-              <PlayCircle className="mr-2 h-4 w-4" />
-              Tutoriales
+            <TabsTrigger value="guides">
+              <Book className="mr-2 h-4 w-4" />
+              Guías por Módulo
             </TabsTrigger>
             <TabsTrigger value="faq">
               <HelpCircle className="mr-2 h-4 w-4" />
               Preguntas Frecuentes
             </TabsTrigger>
-            <TabsTrigger value="guides">
-              <Book className="mr-2 h-4 w-4" />
-              Guías por Módulo
-            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="tutorials" className="space-y-4">
+          <TabsContent value="guides" className="space-y-4">
             {/* Filtros de categoría */}
             <div className="flex gap-2 flex-wrap">
               {categories.map((cat) => (
@@ -232,24 +243,43 @@ const Ayuda = () => {
               ))}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              {filteredTutorials.map((tutorial) => {
-                const Icon = tutorial.icon;
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredModules.map((guide) => {
+                const tutorial = moduleTutorials.find(t => t.id === guide.id);
                 return (
-                  <Card key={tutorial.id} className="cursor-pointer hover:border-primary transition-colors">
+                  <Card 
+                    key={guide.id} 
+                    className="cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => setSelectedTutorial(guide.id)}
+                  >
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
-                        <Icon className="h-6 w-6 text-primary" />
-                        <Badge variant="secondary">{tutorial.duration}</Badge>
+                        <guide.icon className="h-8 w-8 text-primary" />
+                        {tutorial && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {tutorial.duration}
+                          </div>
+                        )}
                       </div>
-                      <CardTitle className="text-base">{tutorial.title}</CardTitle>
-                      <CardDescription>{tutorial.description}</CardDescription>
+                      <CardTitle className="text-lg">{guide.title}</CardTitle>
+                      <CardDescription>{guide.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Button variant="ghost" className="w-full justify-between">
-                        Ver tutorial
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-between">
+                        {tutorial && (
+                          <Badge 
+                            variant={tutorial.difficulty === 'básico' ? 'secondary' : tutorial.difficulty === 'intermedio' ? 'default' : 'destructive'}
+                            className="text-xs"
+                          >
+                            {tutorial.difficulty}
+                          </Badge>
+                        )}
+                        <Button variant="ghost" size="sm" className="ml-auto">
+                          Ver guía
+                          <ChevronRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -285,36 +315,6 @@ const Ayuda = () => {
                 </ScrollArea>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="guides" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[
-                { title: 'Animales', icon: Beef, description: 'Gestión completa del inventario ganadero' },
-                { title: 'Producción de Leche', icon: Scale, description: 'Registro y análisis de producción lechera' },
-                { title: 'Producción de Carne', icon: Scale, description: 'Control de peso y ganancia diaria' },
-                { title: 'Reproducción', icon: Baby, description: 'Ciclo reproductivo y genética' },
-                { title: 'Salud', icon: Heart, description: 'Control sanitario y tratamientos' },
-                { title: 'Alimentación', icon: Leaf, description: 'Dietas, inventario y consumo' },
-                { title: 'Praderas', icon: Leaf, description: 'Gestión de potreros y rotación' },
-                { title: 'Costos', icon: DollarSign, description: 'Finanzas y rentabilidad' },
-                { title: 'Reportes', icon: BarChart3, description: 'Informes y exportación' },
-              ].map((guide) => (
-                <Card key={guide.title} className="cursor-pointer hover:border-primary transition-colors">
-                  <CardHeader>
-                    <guide.icon className="h-8 w-8 text-primary mb-2" />
-                    <CardTitle className="text-lg">{guide.title}</CardTitle>
-                    <CardDescription>{guide.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="ghost" className="w-full justify-between">
-                      Leer guía
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </TabsContent>
         </Tabs>
 

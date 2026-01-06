@@ -1053,6 +1053,195 @@ export type Database = {
           },
         ]
       }
+      supplies: {
+        Row: {
+          category: string
+          created_at: string
+          current_stock: number
+          id: string
+          is_active: boolean | null
+          location: string | null
+          min_stock: number
+          name: string
+          notes: string | null
+          organization_id: string
+          supplier: string | null
+          unit: string
+          unit_cost: number | null
+          updated_at: string
+          withdrawal_days: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          current_stock?: number
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          min_stock?: number
+          name: string
+          notes?: string | null
+          organization_id: string
+          supplier?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+          withdrawal_days?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          current_stock?: number
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          min_stock?: number
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          supplier?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+          withdrawal_days?: number | null
+        }
+        Relationships: []
+      }
+      supply_lots: {
+        Row: {
+          created_at: string
+          expiration_date: string | null
+          id: string
+          is_depleted: boolean | null
+          lot_number: string
+          manufacture_date: string | null
+          notes: string | null
+          organization_id: string
+          purchase_date: string | null
+          quantity: number
+          supplier: string | null
+          supply_id: string
+          unit_cost: number | null
+        }
+        Insert: {
+          created_at?: string
+          expiration_date?: string | null
+          id?: string
+          is_depleted?: boolean | null
+          lot_number: string
+          manufacture_date?: string | null
+          notes?: string | null
+          organization_id: string
+          purchase_date?: string | null
+          quantity?: number
+          supplier?: string | null
+          supply_id: string
+          unit_cost?: number | null
+        }
+        Update: {
+          created_at?: string
+          expiration_date?: string | null
+          id?: string
+          is_depleted?: boolean | null
+          lot_number?: string
+          manufacture_date?: string | null
+          notes?: string | null
+          organization_id?: string
+          purchase_date?: string | null
+          quantity?: number
+          supplier?: string | null
+          supply_id?: string
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_lots_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "supplies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_movements: {
+        Row: {
+          animal_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          lot_id: string | null
+          lot_name: string | null
+          movement_date: string
+          movement_type: string
+          notes: string | null
+          organization_id: string
+          quantity: number
+          reason: string | null
+          reference_number: string | null
+          supply_id: string
+          total_cost: number | null
+          unit_cost: number | null
+        }
+        Insert: {
+          animal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lot_id?: string | null
+          lot_name?: string | null
+          movement_date?: string
+          movement_type: string
+          notes?: string | null
+          organization_id: string
+          quantity: number
+          reason?: string | null
+          reference_number?: string | null
+          supply_id: string
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Update: {
+          animal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lot_id?: string | null
+          lot_name?: string | null
+          movement_date?: string
+          movement_type?: string
+          notes?: string | null
+          organization_id?: string
+          quantity?: number
+          reason?: string | null
+          reference_number?: string | null
+          supply_id?: string
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_movements_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_movements_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "supply_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_movements_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "supplies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           created_at: string

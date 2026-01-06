@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -61,12 +63,14 @@ const Navbar = () => {
             <Button
               variant={isScrolled ? "outline" : "heroOutline"}
               size="sm"
+              onClick={() => navigate('/auth')}
             >
               Iniciar Sesión
             </Button>
             <Button
               variant={isScrolled ? "default" : "hero"}
               size="sm"
+              onClick={() => navigate('/auth')}
             >
               Prueba Gratis
             </Button>
@@ -100,10 +104,10 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-4">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
                   Iniciar Sesión
                 </Button>
-                <Button variant="hero" size="sm">
+                <Button variant="hero" size="sm" onClick={() => navigate('/auth')}>
                   Prueba Gratis
                 </Button>
               </div>

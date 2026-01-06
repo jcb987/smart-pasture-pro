@@ -11,6 +11,7 @@ import { AnimalsTable } from '@/components/animales/AnimalsTable';
 import { AnimalsFilters } from '@/components/animales/AnimalsFilters';
 import { AddWeightDialog } from '@/components/animales/AddWeightDialog';
 import { ExportDialog } from '@/components/animales/ExportDialog';
+import { AnimalScanner } from '@/components/animales/AnimalScanner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 const Animales = () => {
   const {
@@ -94,6 +96,16 @@ const Animales = () => {
     });
   };
 
+  const handleAnimalScanned = (tagId: string) => {
+    const animal = animals.find(a => a.tag_id.toUpperCase() === tagId.toUpperCase());
+    if (animal) {
+      setSelectedAnimal(animal);
+      setDetailDialogOpen(true);
+    } else {
+      toast.info(`Animal ${tagId} no encontrado en el sistema`);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -115,9 +127,14 @@ const Animales = () => {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-          <Card>
+        {/* Scanner + Stats */}
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-5">
+          <AnimalScanner 
+            onAnimalFound={handleAnimalScanned} 
+            className="md:col-span-1"
+          />
+          
+          <Card className="md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Hato</CardTitle>
             </CardHeader>
@@ -126,7 +143,7 @@ const Animales = () => {
               <p className="text-xs text-muted-foreground">animales activos</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Hembras</CardTitle>
             </CardHeader>
@@ -137,7 +154,7 @@ const Animales = () => {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Machos</CardTitle>
             </CardHeader>
@@ -148,7 +165,7 @@ const Animales = () => {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Lotes</CardTitle>
             </CardHeader>
@@ -158,18 +175,17 @@ const Animales = () => {
             </CardContent>
           </Card>
         </div>
-
         {/* Alertas */}
         {alertas.length > 0 && (
-          <Card className="border-amber-200 bg-amber-50/50">
+          <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 text-amber-700">
+              <CardTitle className="text-sm font-medium flex items-center gap-2 text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="h-4 w-4" />
                 Alertas ({alertas.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-amber-700">
+              <p className="text-sm text-amber-700 dark:text-amber-400">
                 {alertas.length} animales sin pesaje reciente (más de 30 días)
               </p>
             </CardContent>

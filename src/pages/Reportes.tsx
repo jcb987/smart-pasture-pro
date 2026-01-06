@@ -3,12 +3,13 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileBarChart, Download, ArrowLeft, Sparkles, History } from 'lucide-react';
+import { FileBarChart, ArrowLeft, Sparkles, History, Clock } from 'lucide-react';
 import { useReports, ReportType, ReportFilters, ReportData } from '@/hooks/useReports';
 import { useAnimals } from '@/hooks/useAnimals';
 import { ReportGrid } from '@/components/reportes/ReportCard';
 import { ReportFiltersDialog } from '@/components/reportes/ReportFiltersDialog';
 import { ReportViewer } from '@/components/reportes/ReportViewer';
+import { AutomaticReportsConfig } from '@/components/reportes/AutomaticReportsConfig';
 
 const Reportes = () => {
   const { loading, generateReport, exportToExcel, exportToPDF, REPORT_CONFIGS } = useReports();
@@ -139,6 +140,10 @@ const Reportes = () => {
               <FileBarChart className="mr-2 h-4 w-4" />
               Reportes Predefinidos
             </TabsTrigger>
+            <TabsTrigger value="automaticos">
+              <Clock className="mr-2 h-4 w-4" />
+              Automáticos
+            </TabsTrigger>
             <TabsTrigger value="recientes">
               <History className="mr-2 h-4 w-4" />
               Recientes
@@ -147,6 +152,10 @@ const Reportes = () => {
 
           <TabsContent value="predefinidos" className="mt-6">
             <ReportGrid configs={REPORT_CONFIGS} onSelect={handleSelectReport} />
+          </TabsContent>
+
+          <TabsContent value="automaticos" className="mt-6">
+            <AutomaticReportsConfig />
           </TabsContent>
 
           <TabsContent value="recientes" className="mt-6">

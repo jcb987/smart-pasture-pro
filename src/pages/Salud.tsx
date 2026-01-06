@@ -3,12 +3,13 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Stethoscope, Plus, Syringe, AlertTriangle, Pill, ShieldCheck, Calendar } from 'lucide-react';
+import { Stethoscope, Plus, Syringe, AlertTriangle, Pill, ShieldCheck, Calendar, Brain } from 'lucide-react';
 import { useHealth } from '@/hooks/useHealth';
 import { AddHealthEventDialog } from '@/components/salud/AddHealthEventDialog';
 import { AddVaccinationDialog } from '@/components/salud/AddVaccinationDialog';
 import { HealthEventsTable, VaccinationTable } from '@/components/salud/HealthTables';
 import { HealthAlerts, DiagnosisStatsCard } from '@/components/salud/HealthAlerts';
+import { AIHealthPredictor } from '@/components/ai/AIHealthPredictor';
 
 const Salud = () => {
   const [showEventDialog, setShowEventDialog] = useState(false);
@@ -149,6 +150,10 @@ const Salud = () => {
           <TabsList>
             <TabsTrigger value="events">Tratamientos y Diagnósticos</TabsTrigger>
             <TabsTrigger value="vaccinations">Calendario de Vacunas</TabsTrigger>
+            <TabsTrigger value="ai-prediction">
+              <Brain className="mr-1 h-4 w-4" />
+              Predicción IA
+            </TabsTrigger>
             <TabsTrigger value="stats">Estadísticas</TabsTrigger>
           </TabsList>
 
@@ -166,6 +171,10 @@ const Salud = () => {
               onApply={handleApplyVaccination}
               onDelete={deleteVaccination}
             />
+          </TabsContent>
+
+          <TabsContent value="ai-prediction" className="space-y-4">
+            <AIHealthPredictor />
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-4">

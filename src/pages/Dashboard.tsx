@@ -7,8 +7,7 @@ import {
   Milk, 
   Heart, 
   AlertTriangle, 
-  TrendingUp, 
-  TrendingDown,
+  TrendingUp,
   Calendar,
   Activity,
   Droplets,
@@ -18,6 +17,8 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
+import { WeatherWidget } from '@/components/dashboard/WeatherWidget';
+import { AIChatWidget } from '@/components/ai/AIChatWidget';
 
 // Mock data - In production this would come from the database
 const kpiData = {
@@ -48,6 +49,14 @@ const recentEvents = [
 const Dashboard = () => {
   const navigate = useNavigate();
 
+  const aiContext = {
+    totalAnimals: kpiData.totalAnimales,
+    animalsInLactation: kpiData.hembrasLactancia,
+    dailyProduction: kpiData.produccionDiaria,
+    alertsCount: kpiData.alertasActivas,
+    fertilityRate: kpiData.tasaFertilidad,
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -59,8 +68,10 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Weather + Main KPIs */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <WeatherWidget className="md:col-span-2 lg:col-span-1" />
+          
           <Card className="border-l-4 border-l-primary">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Animales</CardTitle>
@@ -271,6 +282,13 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Chat Widget */}
+      <AIChatWidget 
+        context={aiContext}
+        title="Asistente Ganadero"
+        placeholder="Pregunta sobre tu hato..."
+      />
     </DashboardLayout>
   );
 };

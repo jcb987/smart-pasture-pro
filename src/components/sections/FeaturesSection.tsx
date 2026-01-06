@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { 
   BarChart3, 
   Brain, 
@@ -6,7 +7,8 @@ import {
   Shield, 
   Zap,
   BookOpen,
-  Headphones
+  Headphones,
+  ChevronRight
 } from "lucide-react";
 
 const FeaturesSection = () => {
@@ -147,6 +149,14 @@ const FeaturesSection = () => {
               )}
             </div>
           ))}
+        </div>
+
+        {/* CTA */}
+        <div className="text-center mt-12">
+          <Button size="lg">
+            Explorar Todas las Funciones
+            <ChevronRight className="ml-1" />
+          </Button>
         </div>
       </div>
     </section>

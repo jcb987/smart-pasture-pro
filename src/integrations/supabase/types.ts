@@ -475,6 +475,62 @@ export type Database = {
         }
         Relationships: []
       }
+      forage_measurements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dry_matter_percentage: number | null
+          forage_kg_per_ha: number | null
+          grass_height_cm: number | null
+          id: string
+          measurement_date: string
+          measurement_type: string | null
+          notes: string | null
+          organization_id: string
+          paddock_id: string
+          quality_score: number | null
+          total_forage_kg: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dry_matter_percentage?: number | null
+          forage_kg_per_ha?: number | null
+          grass_height_cm?: number | null
+          id?: string
+          measurement_date?: string
+          measurement_type?: string | null
+          notes?: string | null
+          organization_id: string
+          paddock_id: string
+          quality_score?: number | null
+          total_forage_kg?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dry_matter_percentage?: number | null
+          forage_kg_per_ha?: number | null
+          grass_height_cm?: number | null
+          id?: string
+          measurement_date?: string
+          measurement_type?: string | null
+          notes?: string | null
+          organization_id?: string
+          paddock_id?: string
+          quality_score?: number | null
+          total_forage_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forage_measurements_paddock_id_fkey"
+            columns: ["paddock_id"]
+            isOneToOne: false
+            referencedRelation: "paddocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       health_events: {
         Row: {
           animal_id: string
@@ -631,6 +687,122 @@ export type Database = {
           id?: string
           name?: string
           owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      paddock_rotations: {
+        Row: {
+          animals_count: number | null
+          created_at: string
+          created_by: string | null
+          days_occupied: number | null
+          entry_date: string
+          entry_forage_kg: number | null
+          exit_date: string | null
+          exit_forage_kg: number | null
+          forage_consumed_kg: number | null
+          id: string
+          lot_name: string | null
+          notes: string | null
+          organization_id: string
+          paddock_id: string
+        }
+        Insert: {
+          animals_count?: number | null
+          created_at?: string
+          created_by?: string | null
+          days_occupied?: number | null
+          entry_date: string
+          entry_forage_kg?: number | null
+          exit_date?: string | null
+          exit_forage_kg?: number | null
+          forage_consumed_kg?: number | null
+          id?: string
+          lot_name?: string | null
+          notes?: string | null
+          organization_id: string
+          paddock_id: string
+        }
+        Update: {
+          animals_count?: number | null
+          created_at?: string
+          created_by?: string | null
+          days_occupied?: number | null
+          entry_date?: string
+          entry_forage_kg?: number | null
+          exit_date?: string | null
+          exit_forage_kg?: number | null
+          forage_consumed_kg?: number | null
+          id?: string
+          lot_name?: string | null
+          notes?: string | null
+          organization_id?: string
+          paddock_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paddock_rotations_paddock_id_fkey"
+            columns: ["paddock_id"]
+            isOneToOne: false
+            referencedRelation: "paddocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paddocks: {
+        Row: {
+          area_hectares: number | null
+          created_at: string
+          current_animals: number | null
+          current_status: string | null
+          grass_type: string | null
+          id: string
+          irrigation: boolean | null
+          last_occupation_date: string | null
+          last_rest_start: string | null
+          max_capacity: number | null
+          name: string
+          notes: string | null
+          organization_id: string
+          recommended_rest_days: number | null
+          soil_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          area_hectares?: number | null
+          created_at?: string
+          current_animals?: number | null
+          current_status?: string | null
+          grass_type?: string | null
+          id?: string
+          irrigation?: boolean | null
+          last_occupation_date?: string | null
+          last_rest_start?: string | null
+          max_capacity?: number | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          recommended_rest_days?: number | null
+          soil_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area_hectares?: number | null
+          created_at?: string
+          current_animals?: number | null
+          current_status?: string | null
+          grass_type?: string | null
+          id?: string
+          irrigation?: boolean | null
+          last_occupation_date?: string | null
+          last_rest_start?: string | null
+          max_capacity?: number | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          recommended_rest_days?: number | null
+          soil_type?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -8,6 +8,11 @@ import {
   DollarSign,
   BarChart3
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const AdvantagesSection = () => {
   const capabilities = [
@@ -15,43 +20,66 @@ const AdvantagesSection = () => {
       icon: Package,
       title: "Inventario",
       description: "Control total de animales e insumos en tiempo real",
+      tooltip: "Controla todos tus animales e insumos en tiempo real, con trazabilidad completa.",
+      section: "#animals",
     },
     {
       icon: Milk,
       title: "Producción",
       description: "Seguimiento de leche y/o carne por animal",
+      tooltip: "Registra y analiza producción de leche y/o carne por animal.",
+      section: "#production",
     },
     {
       icon: Heart,
       title: "Reproducción",
       description: "Ciclos reproductivos, celos y fertilidad",
+      tooltip: "Gestiona ciclos reproductivos, celos, inseminaciones y partos.",
+      section: "#reproduction",
     },
     {
       icon: Stethoscope,
       title: "Salud y Mastitis",
       description: "Historial médico, tratamientos y alertas",
+      tooltip: "Historial médico, tratamientos, alertas sanitarias y control de mastitis.",
+      section: "#health",
     },
     {
       icon: Leaf,
       title: "Praderas y Aforo",
       description: "Gestión de pasturas y rotación de potreros",
+      tooltip: "Gestión de pasturas, rotación de potreros y capacidad de carga.",
+      section: "#paddocks",
     },
     {
       icon: Users,
       title: "Grupos y Genética",
       description: "Lotes, linajes y mejoramiento genético",
+      tooltip: "Clasifica animales por lotes, linajes y mejora genética.",
+      section: "#genetics",
     },
     {
       icon: DollarSign,
       title: "Costos y Finanzas",
       description: "Rentabilidad por animal y análisis económico",
+      tooltip: "Controla gastos, rentabilidad por animal y resultados económicos.",
+      section: "#costs",
     },
     {
       icon: BarChart3,
       title: "Reportes",
       description: "Informes personalizables y exportables",
+      tooltip: "Reportes claros, exportables y listos para auditorías.",
+      section: "#reports",
     },
   ];
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.querySelector(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <section id="advantages" className="py-24 bg-background relative overflow-hidden">
@@ -75,24 +103,31 @@ const AdvantagesSection = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {capabilities.map((item, index) => (
-            <div
-              key={item.title}
-              className="group relative bg-card rounded-2xl p-6 border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <item.icon size={28} className="text-primary" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground mb-2">
-                {item.title}
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {item.description}
-              </p>
-              
-              {/* Hover glow effect */}
-              <div className="absolute inset-0 rounded-2xl bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity -z-10" />
-            </div>
+            <Tooltip key={item.title}>
+              <TooltipTrigger asChild>
+                <div
+                  onClick={() => scrollToSection('#features')}
+                  className="group relative bg-card rounded-2xl p-6 border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <item.icon size={28} className="text-primary" />
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {item.description}
+                  </p>
+                  
+                  {/* Hover glow effect */}
+                  <div className="absolute inset-0 rounded-2xl bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity -z-10" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm">{item.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
 

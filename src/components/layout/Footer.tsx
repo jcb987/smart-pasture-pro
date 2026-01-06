@@ -1,39 +1,49 @@
 import { Facebook, Twitter, Instagram, Youtube, Linkedin } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   const footerLinks = {
     producto: [
       { label: "Características", href: "#features" },
       { label: "Beneficios", href: "#benefits" },
-      { label: "Precios", href: "#pricing" },
-      { label: "App Móvil", href: "#app" },
+      { label: "Conectividad", href: "#connectivity" },
+      { label: "App Móvil", href: "#mobile" },
     ],
     recursos: [
-      { label: "Centro de Ayuda", href: "#" },
-      { label: "Tutoriales en Video", href: "#" },
-      { label: "Manual de Usuario", href: "#" },
+      { label: "Centro de Ayuda", href: "/auth", isRoute: true },
+      { label: "Tutoriales en Video", href: "/auth", isRoute: true },
+      { label: "Manual de Usuario", href: "/auth", isRoute: true },
       { label: "Blog", href: "#" },
     ],
     empresa: [
       { label: "Sobre Nosotros", href: "#" },
-      { label: "Contacto", href: "#" },
+      { label: "Contacto", href: "#cta" },
       { label: "Carreras", href: "#" },
       { label: "Socios", href: "#" },
     ],
     legal: [
-      { label: "Términos de Servicio", href: "#" },
-      { label: "Política de Privacidad", href: "#" },
-      { label: "Cookies", href: "#" },
+      { label: "Términos de Servicio", href: "/terminos", isRoute: true },
+      { label: "Política de Privacidad", href: "/privacidad", isRoute: true },
+      { label: "Cookies", href: "/cookies", isRoute: true },
     ],
   };
 
   const socialLinks = [
-    { icon: Facebook, href: "#", label: "Facebook" },
-    { icon: Twitter, href: "#", label: "Twitter" },
-    { icon: Instagram, href: "#", label: "Instagram" },
-    { icon: Youtube, href: "#", label: "Youtube" },
-    { icon: Linkedin, href: "#", label: "LinkedIn" },
+    { icon: Facebook, href: "https://facebook.com/agrodataapp", label: "Facebook" },
+    { icon: Twitter, href: "https://twitter.com/agrodataapp", label: "Twitter" },
+    { icon: Instagram, href: "https://instagram.com/agrodataapp", label: "Instagram" },
+    { icon: Youtube, href: "https://youtube.com/@agrodataapp", label: "Youtube" },
+    { icon: Linkedin, href: "https://linkedin.com/company/agrodataapp", label: "LinkedIn" },
   ];
+
+  const handleAnchorClick = (href: string) => {
+    if (href.startsWith('#')) {
+      const element = document.querySelector(href);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
   return (
     <footer className="bg-foreground py-16">
@@ -41,12 +51,12 @@ const Footer = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-12 mb-12">
           {/* Brand Column */}
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
+            <Link to="/" className="flex items-center gap-2 mb-4">
               <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
                 <span className="text-accent-foreground font-bold text-xl">A</span>
               </div>
               <span className="font-bold text-xl text-background">Agro Data</span>
-            </div>
+            </Link>
             <p className="text-background/60 text-sm mb-6 max-w-xs">
               El sistema de gestión ganadera más completo de Latinoamérica. 
               Optimiza tu producción con tecnología e inteligencia artificial.
@@ -56,6 +66,8 @@ const Footer = () => {
                 <a
                   key={social.label}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-10 h-10 rounded-lg bg-background/10 flex items-center justify-center text-background/60 hover:bg-accent hover:text-accent-foreground transition-all"
                   aria-label={social.label}
                 >
@@ -71,12 +83,21 @@ const Footer = () => {
             <ul className="space-y-3">
               {footerLinks.producto.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-background/60 text-sm hover:text-accent transition-colors"
-                  >
-                    {link.label}
-                  </a>
+                  {link.href.startsWith('#') ? (
+                    <button
+                      onClick={() => handleAnchorClick(link.href)}
+                      className="text-background/60 text-sm hover:text-accent transition-colors text-left"
+                    >
+                      {link.label}
+                    </button>
+                  ) : (
+                    <Link
+                      to={link.href}
+                      className="text-background/60 text-sm hover:text-accent transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -87,12 +108,21 @@ const Footer = () => {
             <ul className="space-y-3">
               {footerLinks.recursos.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-background/60 text-sm hover:text-accent transition-colors"
-                  >
-                    {link.label}
-                  </a>
+                  {link.isRoute ? (
+                    <Link
+                      to={link.href}
+                      className="text-background/60 text-sm hover:text-accent transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => handleAnchorClick(link.href)}
+                      className="text-background/60 text-sm hover:text-accent transition-colors text-left"
+                    >
+                      {link.label}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -103,12 +133,12 @@ const Footer = () => {
             <ul className="space-y-3">
               {footerLinks.empresa.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-background/60 text-sm hover:text-accent transition-colors"
+                  <button
+                    onClick={() => handleAnchorClick(link.href)}
+                    className="text-background/60 text-sm hover:text-accent transition-colors text-left"
                   >
                     {link.label}
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -119,12 +149,12 @@ const Footer = () => {
             <ul className="space-y-3">
               {footerLinks.legal.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
+                  <Link
+                    to={link.href}
                     className="text-background/60 text-sm hover:text-accent transition-colors"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>

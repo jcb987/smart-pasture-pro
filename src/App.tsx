@@ -11,6 +11,11 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
+// Legal pages
+import Terminos from "./pages/legal/Terminos";
+import Privacidad from "./pages/legal/Privacidad";
+import Cookies from "./pages/legal/Cookies";
+
 // Protected pages
 import Dashboard from "./pages/Dashboard";
 import Usuarios from "./pages/Usuarios";
@@ -44,6 +49,11 @@ const App = () => (
             {/* Public routes */}
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+
+            {/* Legal routes */}
+            <Route path="/terminos" element={<Terminos />} />
+            <Route path="/privacidad" element={<Privacidad />} />
+            <Route path="/cookies" element={<Cookies />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

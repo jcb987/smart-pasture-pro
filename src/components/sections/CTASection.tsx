@@ -1,9 +1,25 @@
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Phone, Mail, MessageCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const CTASection = () => {
+  const navigate = useNavigate();
+
+  const handleStartTrial = () => {
+    navigate('/auth');
+  };
+
+  const handleRequestDemo = () => {
+    window.open('https://wa.me/573001234567?text=Hola,%20me%20gustaría%20solicitar%20una%20demo%20de%20Agro%20Data', '_blank');
+  };
+
   return (
-    <section className="py-24 bg-primary relative overflow-hidden">
+    <section id="cta" className="py-24 bg-primary relative overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
@@ -30,38 +46,75 @@ const CTASection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <Button variant="hero" size="xl">
-              Comenzar Prueba Gratis
-              <ChevronRight className="ml-1" />
-            </Button>
-            <Button variant="heroOutline" size="xl">
-              Solicitar Demo
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="hero" size="xl" onClick={handleStartTrial}>
+                  Comenzar Prueba Gratis
+                  <ChevronRight className="ml-1" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="bg-background text-foreground">
+                <p className="text-sm">30 días gratis, sin tarjeta de crédito</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="heroOutline" size="xl" onClick={handleRequestDemo}>
+                  Solicitar Demo
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="bg-background text-foreground">
+                <p className="text-sm">Te mostramos el sistema en una llamada personalizada</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Contact Options */}
           <div className="flex flex-wrap justify-center gap-6 pt-8 border-t border-primary-foreground/20">
-            <a
-              href="#"
-              className="flex items-center gap-2 text-primary-foreground/80 hover:text-accent transition-colors"
-            >
-              <MessageCircle size={20} />
-              <span className="text-sm font-medium">WhatsApp</span>
-            </a>
-            <a
-              href="#"
-              className="flex items-center gap-2 text-primary-foreground/80 hover:text-accent transition-colors"
-            >
-              <Phone size={20} />
-              <span className="text-sm font-medium">Llamar Ahora</span>
-            </a>
-            <a
-              href="#"
-              className="flex items-center gap-2 text-primary-foreground/80 hover:text-accent transition-colors"
-            >
-              <Mail size={20} />
-              <span className="text-sm font-medium">Correo</span>
-            </a>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href="https://wa.me/573001234567"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-primary-foreground/80 hover:text-accent transition-colors"
+                >
+                  <MessageCircle size={20} />
+                  <span className="text-sm font-medium">WhatsApp</span>
+                </a>
+              </TooltipTrigger>
+              <TooltipContent className="bg-background text-foreground">
+                <p className="text-sm">Respuesta inmediata vía WhatsApp</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href="tel:+573001234567"
+                  className="flex items-center gap-2 text-primary-foreground/80 hover:text-accent transition-colors"
+                >
+                  <Phone size={20} />
+                  <span className="text-sm font-medium">Llamar Ahora</span>
+                </a>
+              </TooltipTrigger>
+              <TooltipContent className="bg-background text-foreground">
+                <p className="text-sm">Habla con un asesor ahora mismo</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href="mailto:ventas@agrodata.com"
+                  className="flex items-center gap-2 text-primary-foreground/80 hover:text-accent transition-colors"
+                >
+                  <Mail size={20} />
+                  <span className="text-sm font-medium">Correo</span>
+                </a>
+              </TooltipTrigger>
+              <TooltipContent className="bg-background text-foreground">
+                <p className="text-sm">Envíanos tus preguntas por email</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

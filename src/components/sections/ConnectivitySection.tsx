@@ -10,36 +10,48 @@ import {
   Radio,
   ChevronRight
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useNavigate } from "react-router-dom";
 
 const ConnectivitySection = () => {
+  const navigate = useNavigate();
+
   const connections = [
     {
       icon: Laptop,
       title: "PC Windows",
       description: "Funciona localmente sin dependencia de internet",
+      tooltip: "Instala el software en tu computador y trabaja sin conexión.",
     },
     {
       icon: Smartphone,
       title: "App Móvil",
       description: "Sincroniza datos con tu teléfono o tablet",
+      tooltip: "Lleva el sistema en tu bolsillo al campo.",
     },
     {
       icon: Cloud,
       title: "Nube",
       description: "Respaldo y acceso desde cualquier lugar",
+      tooltip: "Datos seguros y accesibles desde cualquier dispositivo.",
     },
     {
       icon: RefreshCw,
       title: "Multiusuario",
       description: "Trabajo en red local o remoto",
+      tooltip: "Varios usuarios trabajando al mismo tiempo.",
     },
   ];
 
   const hardware = [
-    { icon: Radio, name: "Lectores RFID" },
-    { icon: Cpu, name: "Básculas Electrónicas" },
-    { icon: Radio, name: "Collares Inteligentes" },
-    { icon: Cpu, name: "Equipos de Ordeño" },
+    { icon: Radio, name: "Lectores RFID", tooltip: "Identificación automática de animales." },
+    { icon: Cpu, name: "Básculas Electrónicas", tooltip: "Pesajes precisos sincronizados al sistema." },
+    { icon: Radio, name: "Collares Inteligentes", tooltip: "Monitoreo de actividad y salud." },
+    { icon: Cpu, name: "Equipos de Ordeño", tooltip: "Registro automático de producción." },
   ];
 
   return (
@@ -64,78 +76,98 @@ const ConnectivitySection = () => {
         <div className="bg-card rounded-3xl p-8 md:p-12 shadow-lg border border-border/50 mb-12">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Offline Mode */}
-            <div className="relative">
-              <div className="absolute -top-4 -left-4 w-16 h-16 bg-accent/20 rounded-full blur-xl" />
-              <div className="relative bg-secondary rounded-2xl p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
-                    <WifiOff size={28} className="text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-foreground">Modo Sin Conexión</h3>
-                    <p className="text-muted-foreground text-sm">Funciona 100% offline</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="relative cursor-pointer">
+                  <div className="absolute -top-4 -left-4 w-16 h-16 bg-accent/20 rounded-full blur-xl" />
+                  <div className="relative bg-secondary rounded-2xl p-8 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
+                        <WifiOff size={28} className="text-primary-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-foreground">Modo Sin Conexión</h3>
+                        <p className="text-muted-foreground text-sm">Funciona 100% offline</p>
+                      </div>
+                    </div>
+                    <ul className="space-y-3">
+                      {[
+                        "Software instalado en tu PC",
+                        "No requiere internet para funcionar",
+                        "Datos guardados localmente",
+                        "Ideal para zonas rurales",
+                      ].map((item) => (
+                        <li key={item} className="flex items-center gap-3 text-foreground">
+                          <div className="w-2 h-2 rounded-full bg-primary" />
+                          <span className="text-sm">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-                <ul className="space-y-3">
-                  {[
-                    "Software instalado en tu PC",
-                    "No requiere internet para funcionar",
-                    "Datos guardados localmente",
-                    "Ideal para zonas rurales",
-                  ].map((item) => (
-                    <li key={item} className="flex items-center gap-3 text-foreground">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-sm">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm">Trabaja sin internet. Tus datos se guardan localmente.</p>
+              </TooltipContent>
+            </Tooltip>
 
             {/* Online Mode */}
-            <div className="relative">
-              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-primary/20 rounded-full blur-xl" />
-              <div className="relative bg-secondary rounded-2xl p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-xl bg-accent flex items-center justify-center">
-                    <Wifi size={28} className="text-accent-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-foreground">Modo Conectado</h3>
-                    <p className="text-muted-foreground text-sm">Sincronización en la nube</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="relative cursor-pointer">
+                  <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-primary/20 rounded-full blur-xl" />
+                  <div className="relative bg-secondary rounded-2xl p-8 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-14 h-14 rounded-xl bg-accent flex items-center justify-center">
+                        <Wifi size={28} className="text-accent-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-foreground">Modo Conectado</h3>
+                        <p className="text-muted-foreground text-sm">Sincronización en la nube</p>
+                      </div>
+                    </div>
+                    <ul className="space-y-3">
+                      {[
+                        "Sincroniza con la app móvil",
+                        "Respaldo automático en la nube",
+                        "Acceso desde múltiples dispositivos",
+                        "Consulta datos en tiempo real",
+                      ].map((item) => (
+                        <li key={item} className="flex items-center gap-3 text-foreground">
+                          <div className="w-2 h-2 rounded-full bg-accent" />
+                          <span className="text-sm">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-                <ul className="space-y-3">
-                  {[
-                    "Sincroniza con la app móvil",
-                    "Respaldo automático en la nube",
-                    "Acceso desde múltiples dispositivos",
-                    "Consulta datos en tiempo real",
-                  ].map((item) => (
-                    <li key={item} className="flex items-center gap-3 text-foreground">
-                      <div className="w-2 h-2 rounded-full bg-accent" />
-                      <span className="text-sm">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm">Sincroniza automáticamente con la nube y accede desde cualquier lugar.</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
         {/* Connection Types */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {connections.map((conn) => (
-            <div
-              key={conn.title}
-              className="group bg-card rounded-2xl p-6 shadow-md border border-border/50 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-            >
-              <div className="w-14 h-14 mx-auto rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                <conn.icon size={28} className="text-primary" />
-              </div>
-              <h4 className="font-bold text-foreground mb-2">{conn.title}</h4>
-              <p className="text-muted-foreground text-sm">{conn.description}</p>
-            </div>
+            <Tooltip key={conn.title}>
+              <TooltipTrigger asChild>
+                <div
+                  className="group bg-card rounded-2xl p-6 shadow-md border border-border/50 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+                >
+                  <div className="w-14 h-14 mx-auto rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                    <conn.icon size={28} className="text-primary" />
+                  </div>
+                  <h4 className="font-bold text-foreground mb-2">{conn.title}</h4>
+                  <p className="text-muted-foreground text-sm">{conn.description}</p>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm">{conn.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
 
@@ -151,24 +183,37 @@ const ConnectivitySection = () => {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {hardware.map((item) => (
-              <div
-                key={item.name}
-                className="bg-primary-foreground/10 backdrop-blur-sm rounded-xl p-5 text-center border border-primary-foreground/10 transition-all hover:bg-primary-foreground/20"
-              >
-                <item.icon size={32} className="text-accent mx-auto mb-3" />
-                <span className="text-primary-foreground font-medium text-sm">
-                  {item.name}
-                </span>
-              </div>
+              <Tooltip key={item.name}>
+                <TooltipTrigger asChild>
+                  <div
+                    className="bg-primary-foreground/10 backdrop-blur-sm rounded-xl p-5 text-center border border-primary-foreground/10 transition-all hover:bg-primary-foreground/20 cursor-pointer"
+                  >
+                    <item.icon size={32} className="text-accent mx-auto mb-3" />
+                    <span className="text-primary-foreground font-medium text-sm">
+                      {item.name}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs bg-background text-foreground">
+                  <p className="text-sm">{item.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
             ))}
           </div>
 
           {/* CTA inside hardware section */}
           <div className="text-center mt-10">
-            <Button variant="heroOutline" size="lg">
-              Ver Equipos Compatibles
-              <ChevronRight className="ml-1" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="heroOutline" size="lg" onClick={() => navigate('/auth')}>
+                  Ver Equipos Compatibles
+                  <ChevronRight className="ml-1" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-sm">Consulta la lista completa de hardware soportado</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

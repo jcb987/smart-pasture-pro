@@ -1,0 +1,213 @@
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Animal {
+  id: string;
+  tag_id: string;
+  name: string | null;
+}
+
+interface AddMilkRecordDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (record: {
+    animal_id: string;
+    production_date: string;
+    morning_liters?: number;
+    afternoon_liters?: number;
+    evening_liters?: number;
+    fat_percentage?: number;
+    protein_percentage?: number;
+    somatic_cell_count?: number;
+    notes?: string;
+  }) => Promise<any>;
+}
+
+export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRecordDialogProps) => {
+  const [animals, setAnimals] = useState<Animal[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    animal_id: '',
+    production_date: new Date().toISOString().split('T')[0],
+    morning_liters: '',
+    afternoon_liters: '',
+    evening_liters: '',
+    fat_percentage: '',
+    protein_percentage: '',
+    somatic_cell_count: '',
+    notes: '',
+  });
+
+  useEffect(() => {
+    const fetchAnimals = async () => {
+      const { data } = await supabase
+        .from('animals')
+        .select('id, tag_id, name')
+        .eq('sex', 'hembra')
+        .eq('status', 'activo')
+        .order('tag_id');
+      setAnimals(data || []);
+    };
+    if (open) fetchAnimals();
+  }, [open]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.animal_id) return;
+
+    setLoading(true);
+    const result = await onSubmit({
+      animal_id: form.animal_id,
+      production_date: form.production_date,
+      morning_liters: form.morning_liters ? parseFloat(form.morning_liters) : undefined,
+      afternoon_liters: form.afternoon_liters ? parseFloat(form.afternoon_liters) : undefined,
+      evening_liters: form.evening_liters ? parseFloat(form.evening_liters) : undefined,
+      fat_percentage: form.fat_percentage ? parseFloat(form.fat_percentage) : undefined,
+      protein_percentage: form.protein_percentage ? parseFloat(form.protein_percentage) : undefined,
+      somatic_cell_count: form.somatic_cell_count ? parseInt(form.somatic_cell_count) : undefined,
+      notes: form.notes || undefined,
+    });
+
+    setLoading(false);
+    if (result) {
+      setForm({
+        animal_id: '',
+        production_date: new Date().toISOString().split('T')[0],
+        morning_liters: '',
+        afternoon_liters: '',
+        evening_liters: '',
+        fat_percentage: '',
+        protein_percentage: '',
+        somatic_cell_count: '',
+        notes: '',
+      });
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Registrar Producción de Leche</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Animal *</Label>
+            <Select value={form.animal_id} onValueChange={(v) => setForm({ ...form, animal_id: v })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar animal" />
+              </SelectTrigger>
+              <SelectContent>
+                {animals.map((animal) => (
+                  <SelectItem key={animal.id} value={animal.id}>
+                    {animal.tag_id} {animal.name && `- ${animal.name}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Fecha *</Label>
+            <Input
+              type="date"
+              value={form.production_date}
+              onChange={(e) => setForm({ ...form, production_date: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-2">
+              <Label>Mañana (L)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="0.0"
+                value={form.morning_liters}
+                onChange={(e) => setForm({ ...form, morning_liters: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tarde (L)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="0.0"
+                value={form.afternoon_liters}
+                onChange={(e) => setForm({ ...form, afternoon_liters: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Noche (L)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="0.0"
+                value={form.evening_liters}
+                onChange={(e) => setForm({ ...form, evening_liters: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-2">
+              <Label>Grasa (%)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="3.5"
+                value={form.fat_percentage}
+                onChange={(e) => setForm({ ...form, fat_percentage: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Proteína (%)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="3.2"
+                value={form.protein_percentage}
+                onChange={(e) => setForm({ ...form, protein_percentage: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>CCS</Label>
+              <Input
+                type="number"
+                placeholder="150000"
+                value={form.somatic_cell_count}
+                onChange={(e) => setForm({ ...form, somatic_cell_count: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Notas</Label>
+            <Textarea
+              placeholder="Observaciones..."
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading || !form.animal_id}>
+              {loading ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};

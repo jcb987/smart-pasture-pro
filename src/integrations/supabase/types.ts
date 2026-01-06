@@ -268,6 +268,65 @@ export type Database = {
           },
         ]
       }
+      milk_production: {
+        Row: {
+          afternoon_liters: number | null
+          animal_id: string
+          created_at: string
+          created_by: string | null
+          evening_liters: number | null
+          fat_percentage: number | null
+          id: string
+          morning_liters: number | null
+          notes: string | null
+          organization_id: string
+          production_date: string
+          protein_percentage: number | null
+          somatic_cell_count: number | null
+          total_liters: number | null
+        }
+        Insert: {
+          afternoon_liters?: number | null
+          animal_id: string
+          created_at?: string
+          created_by?: string | null
+          evening_liters?: number | null
+          fat_percentage?: number | null
+          id?: string
+          morning_liters?: number | null
+          notes?: string | null
+          organization_id: string
+          production_date?: string
+          protein_percentage?: number | null
+          somatic_cell_count?: number | null
+          total_liters?: number | null
+        }
+        Update: {
+          afternoon_liters?: number | null
+          animal_id?: string
+          created_at?: string
+          created_by?: string | null
+          evening_liters?: number | null
+          fat_percentage?: number | null
+          id?: string
+          morning_liters?: number | null
+          notes?: string | null
+          organization_id?: string
+          production_date?: string
+          protein_percentage?: number | null
+          somatic_cell_count?: number | null
+          total_liters?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_production_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -500,6 +559,56 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weight_records: {
+        Row: {
+          animal_id: string
+          condition_score: number | null
+          created_at: string
+          created_by: string | null
+          daily_gain: number | null
+          id: string
+          notes: string | null
+          organization_id: string
+          weight_date: string
+          weight_kg: number
+          weight_type: string
+        }
+        Insert: {
+          animal_id: string
+          condition_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          daily_gain?: number | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          weight_date?: string
+          weight_kg: number
+          weight_type?: string
+        }
+        Update: {
+          animal_id?: string
+          condition_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          daily_gain?: number | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          weight_date?: string
+          weight_kg?: number
+          weight_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weight_records_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
             referencedColumns: ["id"]
           },
         ]

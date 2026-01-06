@@ -1,16 +1,23 @@
 import { Button } from "@/components/ui/button";
 import { Play, ChevronRight, Milk, Beef, Target, Cpu, Smartphone, BarChart3, Wifi } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import heroBackground from "@/assets/hero-background.png";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const categories = [
-    { icon: Milk, label: "Lechería" },
-    { icon: Target, label: "Doble Propósito" },
-    { icon: Beef, label: "Cría y Recría" },
-    { icon: Target, label: "Engorde" },
+    { icon: Milk, label: "Lechería", tooltip: "Gestión completa de producción lechera" },
+    { icon: Target, label: "Doble Propósito", tooltip: "Control de leche y carne en un solo sistema" },
+    { icon: Beef, label: "Cría y Recría", tooltip: "Seguimiento del crecimiento y desarrollo" },
+    { icon: Target, label: "Engorde", tooltip: "Optimiza la ganancia de peso diaria" },
   ];
 
   const rotatingMessages = [
@@ -39,6 +46,17 @@ const HeroSection = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleStartFree = () => {
+    navigate('/auth');
+  };
+
+  const handleWatchDemo = () => {
+    const featuresSection = document.querySelector('#features');
+    if (featuresSection) {
+      featuresSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background Image */}
@@ -60,12 +78,19 @@ const HeroSection = () => {
       <div className="container mx-auto px-4 pt-24 pb-16 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 mb-8 animate-fade-in">
-            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-            <span className="text-primary-foreground/90 text-sm font-medium">
-              Líder en Latinoamérica en Gestión Ganadera
-            </span>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 mb-8 animate-fade-in cursor-pointer">
+                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                <span className="text-primary-foreground/90 text-sm font-medium">
+                  Líder en Latinoamérica en Gestión Ganadera
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="bg-background text-foreground">
+              <p className="text-sm">Más de 10,000 fincas confían en nosotros</p>
+            </TooltipContent>
+          </Tooltip>
 
           {/* Main Heading */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-primary-foreground mb-6 animate-slide-up leading-tight">
@@ -123,41 +148,68 @@ const HeroSection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-            <Button variant="hero" size="xl">
-              Comenzar Gratis
-              <ChevronRight className="ml-1" />
-            </Button>
-            <Button variant="heroOutline" size="xl">
-              <Play className="mr-2" size={18} />
-              Ver Demo
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="hero" size="xl" onClick={handleStartFree}>
+                  Comenzar Gratis
+                  <ChevronRight className="ml-1" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-background text-foreground">
+                <p className="text-sm">Prueba gratis por 30 días, sin tarjeta de crédito</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="heroOutline" size="xl" onClick={handleWatchDemo}>
+                  <Play className="mr-2" size={18} />
+                  Ver Demo
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-background text-foreground">
+                <p className="text-sm">Mira cómo funciona el sistema en 2 minutos</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Categories */}
           <div className="flex flex-wrap justify-center gap-3 animate-slide-up" style={{ animationDelay: "0.3s" }}>
             {categories.map((cat, index) => (
-              <div
-                key={cat.label}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/10 text-primary-foreground/90 text-sm transition-all hover:bg-primary-foreground/20 hover:scale-105 cursor-default"
-                style={{ animationDelay: `${0.4 + index * 0.1}s` }}
-              >
-                <cat.icon size={16} />
-                <span>{cat.label}</span>
-              </div>
+              <Tooltip key={cat.label}>
+                <TooltipTrigger asChild>
+                  <div
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/10 text-primary-foreground/90 text-sm transition-all hover:bg-primary-foreground/20 hover:scale-105 cursor-pointer"
+                    style={{ animationDelay: `${0.4 + index * 0.1}s` }}
+                  >
+                    <cat.icon size={16} />
+                    <span>{cat.label}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-background text-foreground">
+                  <p className="text-sm">{cat.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
             ))}
           </div>
 
           {/* Stats */}
           <div className="flex justify-center gap-12 md:gap-20 mt-16 pt-12 border-t border-primary-foreground/10 animate-slide-up" style={{ animationDelay: "0.5s" }}>
             {[
-              { value: "10,000+", label: "Fincas Activas" },
-              { value: "2M+", label: "Animales Registrados" },
-              { value: "15+", label: "Países" },
+              { value: "10,000+", label: "Fincas Activas", tooltip: "Fincas usando Agro Data activamente" },
+              { value: "2M+", label: "Animales Registrados", tooltip: "Animales gestionados en la plataforma" },
+              { value: "15+", label: "Países", tooltip: "Presencia en toda Latinoamérica" },
             ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-accent mb-1">{stat.value}</div>
-                <div className="text-primary-foreground/60 text-sm">{stat.label}</div>
-              </div>
+              <Tooltip key={stat.label}>
+                <TooltipTrigger asChild>
+                  <div className="text-center cursor-pointer">
+                    <div className="text-3xl md:text-4xl font-bold text-accent mb-1">{stat.value}</div>
+                    <div className="text-primary-foreground/60 text-sm">{stat.label}</div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-background text-foreground">
+                  <p className="text-sm">{stat.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
             ))}
           </div>
         </div>

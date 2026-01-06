@@ -13,6 +13,7 @@ import UseCasesSection from "@/components/sections/UseCasesSection";
 import TestimonialsSection from "@/components/sections/TestimonialsSection";
 import CTASection from "@/components/sections/CTASection";
 import Footer from "@/components/layout/Footer";
+import CookieBanner from "@/components/layout/CookieBanner";
 
 const Index = () => {
   return (
@@ -34,6 +35,7 @@ const Index = () => {
         <CTASection />
       </main>
       <Footer />
+      <CookieBanner />
     </div>
   );
 };

@@ -1,0 +1,106 @@
+import { Button } from "@/components/ui/button";
+import { Play, ChevronRight, Milk, Beef, Target } from "lucide-react";
+
+const HeroSection = () => {
+  const categories = [
+    { icon: Milk, label: "Lechería" },
+    { icon: Target, label: "Doble Propósito" },
+    { icon: Beef, label: "Cría y Recría" },
+    { icon: Target, label: "Engorde" },
+  ];
+
+  return (
+    <section className="relative min-h-screen flex items-center overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-hero" />
+      
+      {/* Decorative elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 right-10 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-foreground/5 rounded-full blur-3xl animate-float" />
+        <div className="absolute top-1/2 right-1/4 w-64 h-64 bg-accent/5 rounded-full blur-2xl" />
+      </div>
+
+      {/* Grid pattern overlay */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
+      </div>
+
+      <div className="container mx-auto px-4 pt-24 pb-16 relative z-10">
+        <div className="max-w-4xl mx-auto text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 mb-8 animate-fade-in">
+            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+            <span className="text-primary-foreground/90 text-sm font-medium">
+              Líder en Latinoamérica en Gestión Ganadera
+            </span>
+          </div>
+
+          {/* Main Heading */}
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-primary-foreground mb-6 animate-slide-up leading-tight">
+            El Sistema de Gestión Ganadera
+            <span className="block text-accent mt-2">Más Completo</span>
+          </h1>
+
+          {/* Subheading */}
+          <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            Sistematiza y administra tu ganadería con inteligencia artificial. 
+            Sin límite de fincas ni animales. Funciona offline y se sincroniza en la nube.
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+            <Button variant="hero" size="xl">
+              Comenzar Gratis
+              <ChevronRight className="ml-1" />
+            </Button>
+            <Button variant="heroOutline" size="xl">
+              <Play className="mr-2" size={18} />
+              Ver Demo
+            </Button>
+          </div>
+
+          {/* Categories */}
+          <div className="flex flex-wrap justify-center gap-3 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+            {categories.map((cat, index) => (
+              <div
+                key={cat.label}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/10 text-primary-foreground/90 text-sm transition-all hover:bg-primary-foreground/20 hover:scale-105 cursor-default"
+                style={{ animationDelay: `${0.4 + index * 0.1}s` }}
+              >
+                <cat.icon size={16} />
+                <span>{cat.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-12 border-t border-primary-foreground/10 animate-slide-up" style={{ animationDelay: "0.5s" }}>
+            {[
+              { value: "10,000+", label: "Fincas Activas" },
+              { value: "2M+", label: "Animales Registrados" },
+              { value: "15+", label: "Países" },
+              { value: "99.9%", label: "Uptime" },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl md:text-4xl font-bold text-accent mb-1">{stat.value}</div>
+                <div className="text-primary-foreground/60 text-sm">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom wave */}
+      <div className="absolute bottom-0 left-0 right-0">
+        <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
+          <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="hsl(var(--background))"/>
+        </svg>
+      </div>
+    </section>
+  );
+};
+
+export default HeroSection;

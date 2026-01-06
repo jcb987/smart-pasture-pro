@@ -268,6 +268,78 @@ export type Database = {
           },
         ]
       }
+      breeding_suggestions: {
+        Row: {
+          bull_name: string | null
+          compatibility_score: number | null
+          created_at: string
+          created_by: string | null
+          executed_date: string | null
+          expected_improvement: Json | null
+          female_id: string
+          id: string
+          inbreeding_coefficient: number | null
+          male_id: string | null
+          notes: string | null
+          organization_id: string
+          priority: number | null
+          semen_code: string | null
+          status: string | null
+          suggested_date: string | null
+        }
+        Insert: {
+          bull_name?: string | null
+          compatibility_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          executed_date?: string | null
+          expected_improvement?: Json | null
+          female_id: string
+          id?: string
+          inbreeding_coefficient?: number | null
+          male_id?: string | null
+          notes?: string | null
+          organization_id: string
+          priority?: number | null
+          semen_code?: string | null
+          status?: string | null
+          suggested_date?: string | null
+        }
+        Update: {
+          bull_name?: string | null
+          compatibility_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          executed_date?: string | null
+          expected_improvement?: Json | null
+          female_id?: string
+          id?: string
+          inbreeding_coefficient?: number | null
+          male_id?: string | null
+          notes?: string | null
+          organization_id?: string
+          priority?: number | null
+          semen_code?: string | null
+          status?: string | null
+          suggested_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "breeding_suggestions_female_id_fkey"
+            columns: ["female_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "breeding_suggestions_male_id_fkey"
+            columns: ["male_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_consumption: {
         Row: {
           animal_id: string | null
@@ -628,6 +700,86 @@ export type Database = {
             columns: ["paddock_id"]
             isOneToOne: false
             referencedRelation: "paddocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      genetic_evaluations: {
+        Row: {
+          animal_id: string
+          body_conformation_score: number | null
+          calving_ease_index: number | null
+          created_at: string
+          created_by: string | null
+          disease_resistance_index: number | null
+          evaluation_date: string
+          evaluator: string | null
+          fertility_index: number | null
+          growth_rate_index: number | null
+          id: string
+          legs_feet_score: number | null
+          longevity_index: number | null
+          maternal_ability_index: number | null
+          meat_production_index: number | null
+          milk_production_index: number | null
+          notes: string | null
+          organization_id: string
+          overall_genetic_value: number | null
+          reliability_percentage: number | null
+          udder_score: number | null
+        }
+        Insert: {
+          animal_id: string
+          body_conformation_score?: number | null
+          calving_ease_index?: number | null
+          created_at?: string
+          created_by?: string | null
+          disease_resistance_index?: number | null
+          evaluation_date?: string
+          evaluator?: string | null
+          fertility_index?: number | null
+          growth_rate_index?: number | null
+          id?: string
+          legs_feet_score?: number | null
+          longevity_index?: number | null
+          maternal_ability_index?: number | null
+          meat_production_index?: number | null
+          milk_production_index?: number | null
+          notes?: string | null
+          organization_id: string
+          overall_genetic_value?: number | null
+          reliability_percentage?: number | null
+          udder_score?: number | null
+        }
+        Update: {
+          animal_id?: string
+          body_conformation_score?: number | null
+          calving_ease_index?: number | null
+          created_at?: string
+          created_by?: string | null
+          disease_resistance_index?: number | null
+          evaluation_date?: string
+          evaluator?: string | null
+          fertility_index?: number | null
+          growth_rate_index?: number | null
+          id?: string
+          legs_feet_score?: number | null
+          longevity_index?: number | null
+          maternal_ability_index?: number | null
+          meat_production_index?: number | null
+          milk_production_index?: number | null
+          notes?: string | null
+          organization_id?: string
+          overall_genetic_value?: number | null
+          reliability_percentage?: number | null
+          udder_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "genetic_evaluations_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
             referencedColumns: ["id"]
           },
         ]
@@ -1238,6 +1390,59 @@ export type Database = {
             columns: ["supply_id"]
             isOneToOne: false
             referencedRelation: "supplies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      traceability_records: {
+        Row: {
+          animal_id: string
+          created_by: string | null
+          destination_organization: string | null
+          document_hash: string | null
+          export_data: Json | null
+          id: string
+          notes: string | null
+          organization_id: string
+          record_date: string
+          record_type: string
+          source_organization: string | null
+          verification_code: string | null
+        }
+        Insert: {
+          animal_id: string
+          created_by?: string | null
+          destination_organization?: string | null
+          document_hash?: string | null
+          export_data?: Json | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          record_date?: string
+          record_type: string
+          source_organization?: string | null
+          verification_code?: string | null
+        }
+        Update: {
+          animal_id?: string
+          created_by?: string | null
+          destination_organization?: string | null
+          document_hash?: string | null
+          export_data?: Json | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          record_date?: string
+          record_type?: string
+          source_organization?: string | null
+          verification_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traceability_records_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
             referencedColumns: ["id"]
           },
         ]

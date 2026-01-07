@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFounderAuth } from '@/hooks/useFounderAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,9 +24,25 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard');
-    }
+    const checkUserRole = async () => {
+      if (!loading && user) {
+        // Check if user is founder
+        const { data } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'founder')
+          .maybeSingle();
+        
+        if (data) {
+          navigate('/founder');
+        } else {
+          navigate('/dashboard');
+        }
+      }
+    };
+    
+    checkUserRole();
   }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {

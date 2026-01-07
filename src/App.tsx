@@ -4,7 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { FounderProvider } from "@/contexts/FounderContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { FounderModeBanner } from "@/components/founder/FounderModeBanner";
 
 // Public pages
 import Index from "./pages/Index";
@@ -36,50 +38,59 @@ import AppMovil from "./pages/AppMovil";
 import Configuracion from "./pages/Configuracion";
 import Ayuda from "./pages/Ayuda";
 
+// Founder pages
+import FounderDashboard from "./pages/FounderDashboard";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
+      <FounderProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <FounderModeBanner />
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
 
-            {/* Legal routes */}
-            <Route path="/terminos" element={<Terminos />} />
-            <Route path="/privacidad" element={<Privacidad />} />
-            <Route path="/cookies" element={<Cookies />} />
+              {/* Legal routes */}
+              <Route path="/terminos" element={<Terminos />} />
+              <Route path="/privacidad" element={<Privacidad />} />
+              <Route path="/cookies" element={<Cookies />} />
 
-            {/* Protected routes */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
-            <Route path="/animales" element={<ProtectedRoute><Animales /></ProtectedRoute>} />
-            <Route path="/reproduccion" element={<ProtectedRoute><Reproduccion /></ProtectedRoute>} />
-            <Route path="/produccion-leche" element={<ProtectedRoute><ProduccionLeche /></ProtectedRoute>} />
-            <Route path="/produccion-carne" element={<ProtectedRoute><ProduccionCarne /></ProtectedRoute>} />
-            <Route path="/salud" element={<ProtectedRoute><Salud /></ProtectedRoute>} />
-            <Route path="/alimentacion" element={<ProtectedRoute><Alimentacion /></ProtectedRoute>} />
-            <Route path="/praderas" element={<ProtectedRoute><Praderas /></ProtectedRoute>} />
-            <Route path="/simulaciones" element={<ProtectedRoute><Simulaciones /></ProtectedRoute>} />
-            <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
-            <Route path="/costos" element={<ProtectedRoute><Costos /></ProtectedRoute>} />
-            <Route path="/insumos" element={<ProtectedRoute><Insumos /></ProtectedRoute>} />
-            <Route path="/genetica" element={<ProtectedRoute><Genetica /></ProtectedRoute>} />
-            <Route path="/intercambio" element={<ProtectedRoute><Intercambio /></ProtectedRoute>} />
-            <Route path="/app-movil" element={<ProtectedRoute><AppMovil /></ProtectedRoute>} />
-            <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
-            <Route path="/ayuda" element={<ProtectedRoute><Ayuda /></ProtectedRoute>} />
+              {/* Founder route */}
+              <Route path="/founder" element={<ProtectedRoute><FounderDashboard /></ProtectedRoute>} />
 
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+              {/* Protected routes */}
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
+              <Route path="/animales" element={<ProtectedRoute><Animales /></ProtectedRoute>} />
+              <Route path="/reproduccion" element={<ProtectedRoute><Reproduccion /></ProtectedRoute>} />
+              <Route path="/produccion-leche" element={<ProtectedRoute><ProduccionLeche /></ProtectedRoute>} />
+              <Route path="/produccion-carne" element={<ProtectedRoute><ProduccionCarne /></ProtectedRoute>} />
+              <Route path="/salud" element={<ProtectedRoute><Salud /></ProtectedRoute>} />
+              <Route path="/alimentacion" element={<ProtectedRoute><Alimentacion /></ProtectedRoute>} />
+              <Route path="/praderas" element={<ProtectedRoute><Praderas /></ProtectedRoute>} />
+              <Route path="/simulaciones" element={<ProtectedRoute><Simulaciones /></ProtectedRoute>} />
+              <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
+              <Route path="/costos" element={<ProtectedRoute><Costos /></ProtectedRoute>} />
+              <Route path="/insumos" element={<ProtectedRoute><Insumos /></ProtectedRoute>} />
+              <Route path="/genetica" element={<ProtectedRoute><Genetica /></ProtectedRoute>} />
+              <Route path="/intercambio" element={<ProtectedRoute><Intercambio /></ProtectedRoute>} />
+              <Route path="/app-movil" element={<ProtectedRoute><AppMovil /></ProtectedRoute>} />
+              <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
+              <Route path="/ayuda" element={<ProtectedRoute><Ayuda /></ProtectedRoute>} />
+
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </FounderProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

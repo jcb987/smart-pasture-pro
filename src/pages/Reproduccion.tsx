@@ -3,12 +3,16 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, Plus, TrendingUp, Calendar, AlertTriangle, Baby } from 'lucide-react';
+import { Heart, Plus, TrendingUp, Calendar, AlertTriangle, Baby, Upload, Download } from 'lucide-react';
 import { useReproduction } from '@/hooks/useReproduction';
 import { RegisterEventDialog } from '@/components/reproduccion/RegisterEventDialog';
 import { ReproductiveTable } from '@/components/reproduccion/ReproductiveTable';
 import { ReproductiveHistoryDialog } from '@/components/reproduccion/ReproductiveHistoryDialog';
 import { ReproductiveAlerts } from '@/components/reproduccion/ReproductiveAlerts';
+import { SmartImportDialog } from '@/components/shared/SmartImportDialog';
+import { reproductionImportConfig } from '@/config/importConfigs';
+import { useExportReproduction } from '@/hooks/useExportReproduction';
+import { useImportReproduction } from '@/hooks/useImportReproduction';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -16,7 +20,10 @@ const Reproduccion = () => {
   const { females, bulls, events, stats, isLoading, addEvent, deleteEvent } = useReproduction();
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [selectedAnimalId, setSelectedAnimalId] = useState<string | null>(null);
+  const { exportToExcel, exporting } = useExportReproduction();
+  const { importData } = useImportReproduction();
   const [pedigreeData, setPedigreeData] = useState<{ motherName?: string; fatherName?: string }>({});
 
   const selectedAnimal = selectedAnimalId 
@@ -84,13 +91,23 @@ const Reproduccion = () => {
             <h1 className="text-3xl font-bold text-foreground">Reproducción</h1>
             <p className="text-muted-foreground">Gestión reproductiva y predicciones del hato</p>
           </div>
-          <Button onClick={() => {
-            setSelectedAnimalId(null);
-            setShowEventDialog(true);
-          }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Registrar Evento
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar
+            </Button>
+            <Button variant="outline" onClick={exportToExcel} disabled={exporting}>
+              <Download className="mr-2 h-4 w-4" />
+              Exportar
+            </Button>
+            <Button onClick={() => {
+              setSelectedAnimalId(null);
+              setShowEventDialog(true);
+            }}>
+              <Plus className="mr-2 h-4 w-4" />
+              Registrar Evento
+            </Button>
+          </div>
         </div>
 
         {/* KPIs */}
@@ -354,6 +371,14 @@ const Reproduccion = () => {
         onDeleteEvent={deleteEvent}
         motherName={pedigreeData.motherName}
         fatherName={pedigreeData.fatherName}
+      />
+
+      <SmartImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        config={reproductionImportConfig}
+        existingData={events}
+        onImport={importData}
       />
     </DashboardLayout>
   );

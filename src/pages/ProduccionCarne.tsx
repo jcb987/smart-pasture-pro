@@ -2,15 +2,22 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Drumstick, Plus, Scale, TrendingUp, Target, Award } from 'lucide-react';
+import { Drumstick, Plus, Scale, TrendingUp, Target, Award, Upload, Download } from 'lucide-react';
 import { useWeightRecords, MeatStats } from '@/hooks/useWeightRecords';
 import { AddWeightRecordDialog } from '@/components/produccion/AddWeightRecordDialog';
 import { ProductionChart } from '@/components/produccion/ProductionChart';
 import { RankingTable } from '@/components/produccion/RankingTable';
 import { ProductionRecordsTable } from '@/components/produccion/ProductionRecordsTable';
+import { SmartImportDialog } from '@/components/shared/SmartImportDialog';
+import { meatImportConfig } from '@/config/importConfigs';
+import { useExportMeat } from '@/hooks/useExportMeat';
+import { useImportMeat } from '@/hooks/useImportMeat';
 
 const ProduccionCarne = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const { exportToExcel, exporting } = useExportMeat();
+  const { importData } = useImportMeat();
   const [stats, setStats] = useState<MeatStats>({
     animalsInFattening: 0,
     avgWeight: 0,
@@ -71,10 +78,20 @@ const ProduccionCarne = () => {
             <h1 className="text-3xl font-bold text-foreground">Producción de Carne</h1>
             <p className="text-muted-foreground">Seguimiento de crecimiento y engorde</p>
           </div>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Registrar Peso
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar
+            </Button>
+            <Button variant="outline" onClick={exportToExcel} disabled={exporting}>
+              <Download className="mr-2 h-4 w-4" />
+              Exportar
+            </Button>
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Registrar Peso
+            </Button>
+          </div>
         </div>
 
         {/* KPIs */}
@@ -210,7 +227,19 @@ const ProduccionCarne = () => {
         onOpenChange={setShowAddDialog} 
         onSubmit={addRecord} 
       />
+
+      <SmartImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        config={meatImportConfig}
+        existingData={records}
+        onImport={importData}
+      />
     </DashboardLayout>
+  );
+};
+
+export default ProduccionCarne;
   );
 };
 

@@ -25,6 +25,8 @@ const categoryLabels: Record<AnimalCategory, string> = {
   ternero: 'Ternero',
   becerra: 'Becerra',
   becerro: 'Becerro',
+  bufala: 'Búfala',
+  bufalo: 'Búfalo',
 };
 
 export function AnimalsFilters({ filters, onFiltersChange, lotes }: AnimalsFiltersProps) {

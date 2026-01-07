@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-export type AnimalCategory = 'vaca' | 'toro' | 'novilla' | 'novillo' | 'ternera' | 'ternero' | 'becerra' | 'becerro';
+export type AnimalCategory = 'vaca' | 'toro' | 'novilla' | 'novillo' | 'ternera' | 'ternero' | 'becerra' | 'becerro' | 'bufala' | 'bufalo';
 export type AnimalStatus = 'activo' | 'vendido' | 'muerto' | 'descartado' | 'trasladado';
 export type AnimalSex = 'macho' | 'hembra';
 
@@ -252,7 +252,7 @@ export function useAnimals() {
     const activeAnimals = animals.filter(a => a.status === 'activo');
     
     const porCategoria = {} as Record<AnimalCategory, number>;
-    const categories: AnimalCategory[] = ['vaca', 'toro', 'novilla', 'novillo', 'ternera', 'ternero', 'becerra', 'becerro'];
+    const categories: AnimalCategory[] = ['vaca', 'toro', 'novilla', 'novillo', 'ternera', 'ternero', 'becerra', 'becerro', 'bufala', 'bufalo'];
     categories.forEach(cat => {
       porCategoria[cat] = activeAnimals.filter(a => a.category === cat).length;
     });

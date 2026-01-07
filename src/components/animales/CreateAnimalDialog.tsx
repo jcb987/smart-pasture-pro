@@ -35,6 +35,8 @@ const categoryLabels: Record<AnimalCategory, string> = {
   ternero: 'Ternero',
   becerra: 'Becerra',
   becerro: 'Becerro',
+  bufala: 'Búfala',
+  bufalo: 'Búfalo',
 };
 
 export function CreateAnimalDialog({ open, onOpenChange, onSubmit }: CreateAnimalDialogProps) {
@@ -112,7 +114,7 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit }: CreateAnima
     setFormData(prev => ({
       ...prev,
       category: value,
-      sex: ['vaca', 'novilla', 'ternera', 'becerra'].includes(value) ? 'hembra' : 'macho',
+      sex: ['vaca', 'novilla', 'ternera', 'becerra', 'bufala'].includes(value) ? 'hembra' : 'macho',
     }));
   };
 

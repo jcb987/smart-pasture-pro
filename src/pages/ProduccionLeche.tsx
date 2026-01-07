@@ -3,15 +3,23 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical } from 'lucide-react';
+import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Upload, Download } from 'lucide-react';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { AddMilkRecordDialog } from '@/components/produccion/AddMilkRecordDialog';
 import { ProductionChart } from '@/components/produccion/ProductionChart';
 import { RankingTable } from '@/components/produccion/RankingTable';
 import { ProductionRecordsTable } from '@/components/produccion/ProductionRecordsTable';
+import { SmartImportDialog } from '@/components/shared/SmartImportDialog';
+import { milkImportConfig } from '@/config/importConfigs';
+import { useExportMilk } from '@/hooks/useExportMilk';
+import { useImportMilk } from '@/hooks/useImportMilk';
 
 const ProduccionLeche = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const { exportToExcel, exporting } = useExportMilk();
+  const { importData } = useImportMilk();
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
   
   const { 
@@ -47,10 +55,20 @@ const ProduccionLeche = () => {
             <h1 className="text-3xl font-bold text-foreground">Producción de Leche</h1>
             <p className="text-muted-foreground">Control completo de producción lechera</p>
           </div>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Registrar Producción
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar
+            </Button>
+            <Button variant="outline" onClick={exportToExcel} disabled={exporting}>
+              <Download className="mr-2 h-4 w-4" />
+              Exportar
+            </Button>
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Registrar Producción
+            </Button>
+          </div>
         </div>
 
         {/* KPIs */}
@@ -198,7 +216,19 @@ const ProduccionLeche = () => {
         onOpenChange={setShowAddDialog} 
         onSubmit={addRecord} 
       />
+
+      <SmartImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        config={milkImportConfig}
+        existingData={records}
+        onImport={importData}
+      />
     </DashboardLayout>
+  );
+};
+
+export default ProduccionLeche;
   );
 };
 

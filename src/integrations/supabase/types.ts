@@ -1752,7 +1752,7 @@ export type Database = {
         | "muerto"
         | "descartado"
         | "trasladado"
-      app_role: "admin" | "ganadero" | "tecnico" | "veterinario"
+      app_role: "admin" | "ganadero" | "tecnico" | "veterinario" | "founder"
       permission_type: "read" | "write" | "delete"
     }
     CompositeTypes: {
@@ -1901,7 +1901,7 @@ export const Constants = {
         "descartado",
         "trasladado",
       ],
-      app_role: ["admin", "ganadero", "tecnico", "veterinario"],
+      app_role: ["admin", "ganadero", "tecnico", "veterinario", "founder"],
       permission_type: ["read", "write", "delete"],
     },
   },

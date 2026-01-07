@@ -35,8 +35,8 @@ serve(async (req) => {
       `- ${col.db}: ${col.labels.join(', ')} ${col.required ? '(requerido)' : '(opcional)'}`
     ).join('\n');
 
-    const systemPrompt = `Eres un experto en extracción de datos tabulares de documentos PDF.
-Tu tarea es analizar el contenido del PDF y extraer los datos en formato tabular.
+    const systemPrompt = `Eres un experto en extracción de datos de inventarios ganaderos de documentos PDF.
+Tu tarea es analizar el contenido del PDF y extraer los datos de animales en formato tabular.
 
 El documento debe contener datos para la tabla "${tableName}".
 
@@ -44,20 +44,21 @@ Columnas esperadas:
 ${columnsDescription}
 
 INSTRUCCIONES CRÍTICAS:
-1. Busca cualquier tabla o lista de datos en el documento
-2. Identifica las columnas que corresponden a los campos esperados
-3. Extrae MÁXIMO 100 filas de datos (las más importantes/primeras)
-4. Para fechas, usa formato YYYY-MM-DD
-5. Para números, usa punto como separador decimal
-6. Si una celda está vacía, usa null
-7. IMPORTANTE: Asegúrate de que el JSON esté COMPLETO y bien formado
+1. Busca cualquier tabla, lista o datos de animales en el documento
+2. El campo principal es el ARETE/ID del animal (puede ser: número, código alfanumérico como "020-113", "706/8", "E9132")
+3. Detecta FASES/ETAPAS productivas como: "Vaca seca", "Vaca parida", "Nov. vientre", "Hemb. levante", "Mac. levante", "Reproductor", "Cría macho", "Cría hembra", etc.
+4. Extrae MÁXIMO 100 filas de datos (las primeras/más importantes)
+5. Para fechas, usa formato YYYY-MM-DD
+6. Para números (peso), usa punto como separador decimal
+7. Si una celda está vacía o no existe, usa null
+8. IMPORTANTE: Asegúrate de que el JSON esté COMPLETO y bien formado
 
 RESPONDE ÚNICAMENTE con un objeto JSON válido con esta estructura:
 {
-  "headers": ["columna1", "columna2", ...],
+  "headers": ["tag_id", "name", "stage", "sex", "breed", "weight", "lot_name", "status"],
   "rows": [
-    [valor1, valor2, ...],
-    [valor1, valor2, ...]
+    ["020-113", null, "Vaca parida", null, null, 450, "Potrero 1", null],
+    ["706/8", "Lucero", "Nov. vientre", null, "Holstein", null, null, null]
   ],
   "extractionNotes": "Notas sobre la extracción",
   "totalRowsInDocument": 150

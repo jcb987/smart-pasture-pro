@@ -3,7 +3,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Beef, Plus, FileSpreadsheet, AlertTriangle, Upload } from 'lucide-react';
+import { Beef, Plus, FileSpreadsheet, AlertTriangle, Upload, Brain } from 'lucide-react';
 import { useAnimals, type Animal, type AnimalFilters } from '@/hooks/useAnimals';
 import { CreateAnimalDialog } from '@/components/animales/CreateAnimalDialog';
 import { AnimalEditDetailDialog } from '@/components/animales/AnimalEditDetailDialog';
@@ -11,7 +11,7 @@ import { AnimalsTable } from '@/components/animales/AnimalsTable';
 import { AnimalsFilters } from '@/components/animales/AnimalsFilters';
 import { AddWeightDialog } from '@/components/animales/AddWeightDialog';
 import { ExportDialog } from '@/components/animales/ExportDialog';
-import { ImportAnimalsDialog } from '@/components/animales/ImportAnimalsDialog';
+import { SmartAnimalImporter } from '@/components/animales/SmartAnimalImporter';
 import { AnimalScanner } from '@/components/animales/AnimalScanner';
 import {
   AlertDialog,
@@ -37,6 +37,7 @@ const Animales = () => {
     getStats,
     filterAnimals,
     getAlertas,
+    fetchAnimals,
   } = useAnimals();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -119,8 +120,8 @@ const Animales = () => {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Importar
+              <Brain className="mr-2 h-4 w-4" />
+              Importar Inteligente
             </Button>
             <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
               <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -298,15 +299,11 @@ const Animales = () => {
         availableLots={stats.lotes}
       />
 
-      <ImportAnimalsDialog
+      <SmartAnimalImporter
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         existingAnimals={animals}
-        onImport={async (animalsToImport) => {
-          for (const animal of animalsToImport) {
-            await createAnimal(animal);
-          }
-        }}
+        onImportComplete={fetchAnimals}
       />
     </DashboardLayout>
   );

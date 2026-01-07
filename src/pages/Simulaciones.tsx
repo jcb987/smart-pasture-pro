@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LineChart, Play, RotateCcw, Save, Sparkles, Calculator } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { LineChart, RotateCcw, Save, Sparkles, AlertCircle, Settings, CheckCircle2 } from 'lucide-react';
 import { useSimulations } from '@/hooks/useSimulations';
 import { SimulationControls } from '@/components/simulaciones/SimulationControls';
 import { SimulationChart } from '@/components/simulaciones/SimulationChart';
 import { SimulationResultsCard } from '@/components/simulaciones/SimulationResults';
 import { ScenarioComparison } from '@/components/simulaciones/ScenarioComparison';
 import { PresetScenarios } from '@/components/simulaciones/PresetScenarios';
+import { BaseDataSurvey, BaseDataConfig } from '@/components/simulaciones/BaseDataSurvey';
 import {
   Dialog,
   DialogContent,
@@ -28,12 +30,18 @@ const Simulaciones = () => {
     currentVariables,
     setCurrentVariables,
     baselineMetrics,
+    baseDataConfig,
+    existingDataStatus,
     loading,
+    isConfigured,
     runSimulation,
     createScenario,
     deleteScenario,
     compareScenarios,
     getPresetScenarios,
+    configureBaseData,
+    resetConfiguration,
+    validateSimulation,
     DEFAULT_VARIABLES,
   } = useSimulations();
 
@@ -46,7 +54,7 @@ const Simulaciones = () => {
   // Run simulation with current variables
   const results = useMemo(() => {
     return runSimulation(currentVariables);
-  }, [currentVariables, baselineMetrics]);
+  }, [currentVariables, runSimulation]);
 
   // Get comparison scenario data
   const comparisonScenario = useMemo(() => {
@@ -57,15 +65,27 @@ const Simulaciones = () => {
     return null;
   }, [comparisonIds, scenarios]);
 
+  const validation = validateSimulation();
+
   const handleReset = () => {
     setCurrentVariables(DEFAULT_VARIABLES);
     setComparisonIds([]);
     toast({ title: 'Variables reiniciadas', description: 'Se han restaurado los valores por defecto' });
   };
 
+  const handleResetConfig = () => {
+    resetConfiguration();
+    toast({ title: 'Configuración reiniciada', description: 'Debes completar la encuesta nuevamente' });
+  };
+
   const handleSaveScenario = () => {
     if (!scenarioName.trim()) {
       toast({ title: 'Error', description: 'Ingresa un nombre para el escenario', variant: 'destructive' });
+      return;
+    }
+
+    if (!validation.isValid) {
+      toast({ title: 'Error', description: 'No se puede guardar: faltan datos base', variant: 'destructive' });
       return;
     }
 
@@ -85,6 +105,14 @@ const Simulaciones = () => {
     toast({ title: 'Comparando escenarios', description: 'El escenario seleccionado se ha cargado' });
   };
 
+  const handleConfigComplete = (config: BaseDataConfig) => {
+    configureBaseData(config);
+    toast({ 
+      title: 'Configuración completada', 
+      description: 'Ya puedes comenzar a simular escenarios con datos reales' 
+    });
+  };
+
   const presets = getPresetScenarios();
 
   if (loading) {
@@ -101,6 +129,73 @@ const Simulaciones = () => {
     );
   }
 
+  // Show configuration survey if not configured
+  if (!isConfigured) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          {/* Header */}
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Simulaciones</h1>
+            <p className="text-muted-foreground">Herramienta de decisión - ¿Qué pasaría si...?</p>
+          </div>
+
+          {/* No animals warning */}
+          {(!baselineMetrics || baselineMetrics.totalAnimals === 0) && (
+            <Card className="border-destructive/50 bg-destructive/5">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                  <div>
+                    <p className="font-medium text-destructive">No hay animales registrados</p>
+                    <p className="text-sm text-muted-foreground">
+                      Registra al menos un animal en el módulo de Animales antes de usar simulaciones.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Configuration Survey */}
+          {existingDataStatus && (
+            <BaseDataSurvey 
+              existingData={existingDataStatus}
+              onComplete={handleConfigComplete}
+            />
+          )}
+
+          {/* Info about data sources */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="h-5 w-5 text-primary" />
+                ¿Por qué necesitamos estos datos?
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <p className="text-muted-foreground">
+                  Para generar simulaciones <strong>confiables y auditables</strong>, necesitamos información real de tu operación:
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1 mt-2">
+                  <li>✔ <strong>Precios de venta:</strong> Para calcular ingresos proyectados</li>
+                  <li>✔ <strong>Costos operativos:</strong> Para determinar rentabilidad real</li>
+                  <li>✔ <strong>Producción actual:</strong> Como base para proyecciones</li>
+                  <li>✔ <strong>Horizonte:</strong> Para definir el período de análisis</li>
+                </ul>
+                <p className="text-sm text-muted-foreground mt-4">
+                  <strong>Garantía:</strong> Ningún resultado se genera con datos aleatorios o estimados. 
+                  Todo proviene de la información que ingresas o de tus registros existentes.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -110,17 +205,55 @@ const Simulaciones = () => {
             <h1 className="text-2xl font-bold text-foreground">Simulaciones</h1>
             <p className="text-muted-foreground">Herramienta de decisión - ¿Qué pasaría si...?</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handleResetConfig}>
+              <Settings className="mr-2 h-4 w-4" />
+              Reconfigurar
+            </Button>
             <Button variant="outline" onClick={handleReset}>
               <RotateCcw className="mr-2 h-4 w-4" />
               Reiniciar
             </Button>
-            <Button onClick={() => setSaveDialogOpen(true)}>
+            <Button onClick={() => setSaveDialogOpen(true)} disabled={!validation.isValid}>
               <Save className="mr-2 h-4 w-4" />
               Guardar Escenario
             </Button>
           </div>
         </div>
+
+        {/* Configuration Summary */}
+        {baseDataConfig && (
+          <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20">
+            <CardContent className="pt-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-700 dark:text-green-300">Configuración activa</p>
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      {baseDataConfig.productionType === 'lecheria' ? 'Lechería' : 
+                       baseDataConfig.productionType === 'carne' ? 'Carne' : 'Doble Propósito'} • 
+                      {baseDataConfig.projectionMonths} meses • 
+                      {baseDataConfig.currency}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-wrap justify-end">
+                  {baseDataConfig.milkPricePerLiter > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      Leche: ${baseDataConfig.milkPricePerLiter.toLocaleString()}/L
+                    </Badge>
+                  )}
+                  {baseDataConfig.meatPricePerKg > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      Carne: ${baseDataConfig.meatPricePerKg.toLocaleString()}/kg
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* KPI Stats */}
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
@@ -164,18 +297,19 @@ const Simulaciones = () => {
           </Card>
         </div>
 
-        {/* No data warning */}
-        {(!baselineMetrics || baselineMetrics.totalAnimals === 0) && (
-          <Card className="border-amber-200 bg-amber-50/50">
+        {/* Validation warnings */}
+        {validation.warnings.length > 0 && (
+          <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
             <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <Calculator className="h-5 w-5 text-amber-600" />
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
                 <div>
-                  <p className="font-medium text-amber-700">Datos insuficientes</p>
-                  <p className="text-sm text-amber-600">
-                    Registra animales, producción y costos para obtener simulaciones más precisas. 
-                    Por ahora se usarán valores estimados.
-                  </p>
+                  <p className="font-medium text-amber-700 dark:text-amber-300">Avisos</p>
+                  <ul className="text-sm text-amber-600 dark:text-amber-400 mt-1 space-y-0.5">
+                    {validation.warnings.map((w, i) => (
+                      <li key={i}>• {w}</li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             </CardContent>
@@ -195,11 +329,13 @@ const Simulaciones = () => {
         </div>
 
         {/* Charts */}
-        <SimulationChart
-          data={results.monthlyData}
-          comparisonData={comparisonScenario?.results.monthlyData}
-          comparisonLabel={comparisonScenario?.name}
-        />
+        {results.monthlyData.length > 0 && (
+          <SimulationChart
+            data={results.monthlyData}
+            comparisonData={comparisonScenario?.results.monthlyData}
+            comparisonLabel={comparisonScenario?.name}
+          />
+        )}
 
         {/* Saved Scenarios Comparison */}
         <ScenarioComparison
@@ -229,10 +365,12 @@ const Simulaciones = () => {
                 <li>✔ Visualiza resultados en gráficas comparativas</li>
                 <li>✔ Guarda escenarios para análisis posterior</li>
               </ul>
-              <p className="text-sm text-muted-foreground mt-4">
-                <strong>Nota:</strong> Los resultados son proyecciones basadas en tus datos actuales y las variables que configures. 
-                Úsalos como guía para la toma de decisiones, no como predicciones exactas.
-              </p>
+              <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>Garantía de precisión:</strong> Todos los cálculos se basan exclusivamente en los datos que ingresaste 
+                  en la configuración base y en tus registros del sistema. No se utilizan valores aleatorios ni estimaciones.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

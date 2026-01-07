@@ -3,14 +3,15 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Beef, Plus, FileSpreadsheet, AlertTriangle } from 'lucide-react';
+import { Beef, Plus, FileSpreadsheet, AlertTriangle, Upload } from 'lucide-react';
 import { useAnimals, type Animal, type AnimalFilters } from '@/hooks/useAnimals';
 import { CreateAnimalDialog } from '@/components/animales/CreateAnimalDialog';
-import { AnimalDetailDialog } from '@/components/animales/AnimalDetailDialog';
+import { AnimalEditDetailDialog } from '@/components/animales/AnimalEditDetailDialog';
 import { AnimalsTable } from '@/components/animales/AnimalsTable';
 import { AnimalsFilters } from '@/components/animales/AnimalsFilters';
 import { AddWeightDialog } from '@/components/animales/AddWeightDialog';
 import { ExportDialog } from '@/components/animales/ExportDialog';
+import { ImportAnimalsDialog } from '@/components/animales/ImportAnimalsDialog';
 import { AnimalScanner } from '@/components/animales/AnimalScanner';
 import {
   AlertDialog,
@@ -43,6 +44,7 @@ const Animales = () => {
   const [weightDialogOpen, setWeightDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
   
   const [filters, setFilters] = useState<AnimalFilters>({
@@ -116,9 +118,13 @@ const Animales = () => {
             <p className="text-muted-foreground">Registro y control total del hato</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar
+            </Button>
             <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
               <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Exportar a Excel
+              Exportar
             </Button>
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -252,11 +258,13 @@ const Animales = () => {
         onSubmit={createAnimal}
       />
 
-      <AnimalDetailDialog
+      <AnimalEditDetailDialog
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
         animal={selectedAnimal}
+        animals={animals}
         getEvents={getAnimalEvents}
+        onSave={updateAnimal}
       />
 
       <AddWeightDialog
@@ -288,6 +296,17 @@ const Animales = () => {
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
         availableLots={stats.lotes}
+      />
+
+      <ImportAnimalsDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        existingAnimals={animals}
+        onImport={async (animalsToImport) => {
+          for (const animal of animalsToImport) {
+            await createAnimal(animal);
+          }
+        }}
       />
     </DashboardLayout>
   );

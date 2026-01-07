@@ -128,12 +128,27 @@ Si no encuentras datos tabulares, responde:
     let parsed;
     try {
       let jsonStr = content.trim();
-      if (jsonStr.startsWith('```')) {
-        jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      
+      // Remove markdown code blocks more robustly
+      // Handle ```json ... ``` or ``` ... ```
+      const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1].trim();
+      } else if (jsonStr.startsWith('```')) {
+        // Fallback: remove starting ``` and ending ```
+        jsonStr = jsonStr.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
       }
+      
+      // Find the JSON object boundaries as additional fallback
+      const firstBrace = jsonStr.indexOf('{');
+      const lastBrace = jsonStr.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+      }
+      
       parsed = JSON.parse(jsonStr);
     } catch (parseError) {
-      console.error('Failed to parse AI response:', content);
+      console.error('Failed to parse AI response:', content.substring(0, 500));
       throw new Error('Failed to parse AI response as JSON');
     }
 

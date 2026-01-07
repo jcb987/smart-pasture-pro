@@ -74,23 +74,35 @@ const faqs: FAQItem[] = [
   },
 ];
 
+// Cada guía tiene una categoría única - NO se repiten
 const moduleGuides = [
-  { id: 'inicio', title: 'Primeros Pasos', icon: Book, description: 'Configuración inicial del sistema' },
-  { id: 'animales', title: 'Animales', icon: Beef, description: 'Gestión completa del inventario ganadero' },
-  { id: 'produccion-leche', title: 'Producción de Leche', icon: Scale, description: 'Registro y análisis de producción lechera' },
-  { id: 'produccion-carne', title: 'Producción de Carne', icon: Scale, description: 'Control de peso y ganancia diaria' },
-  { id: 'reproduccion', title: 'Reproducción', icon: Baby, description: 'Ciclo reproductivo y genética' },
-  { id: 'salud', title: 'Salud', icon: Heart, description: 'Control sanitario y tratamientos' },
-  { id: 'alimentacion', title: 'Alimentación', icon: Leaf, description: 'Dietas, inventario y consumo' },
-  { id: 'praderas', title: 'Praderas', icon: Leaf, description: 'Gestión de potreros y rotación' },
-  { id: 'genetica', title: 'Genética', icon: Dna, description: 'Mejoramiento y evaluaciones' },
-  { id: 'costos', title: 'Costos', icon: DollarSign, description: 'Finanzas y rentabilidad' },
-  { id: 'insumos', title: 'Insumos', icon: Package, description: 'Inventario de medicamentos y materiales' },
-  { id: 'reportes', title: 'Reportes', icon: BarChart3, description: 'Informes y exportación' },
-  { id: 'usuarios', title: 'Usuarios', icon: Users, description: 'Gestión de usuarios y permisos' },
-  { id: 'trazabilidad', title: 'Trazabilidad', icon: ArrowLeftRight, description: 'Hoja de vida e intercambio' },
-  { id: 'app-movil', title: 'App Móvil', icon: Smartphone, description: 'Uso sin conexión' },
-  { id: 'configuracion', title: 'Configuración', icon: Settings, description: 'Personalización del sistema' },
+  // Inicio - guías generales del sistema
+  { id: 'inicio', title: 'Primeros Pasos', icon: Book, description: 'Configuración inicial del sistema', category: 'inicio' },
+  { id: 'app-movil', title: 'App Móvil', icon: Smartphone, description: 'Uso sin conexión', category: 'inicio' },
+  { id: 'configuracion', title: 'Configuración', icon: Settings, description: 'Personalización del sistema', category: 'inicio' },
+  { id: 'usuarios', title: 'Usuarios', icon: Users, description: 'Gestión de usuarios y permisos', category: 'inicio' },
+  
+  // Animales - guías de registro e identificación
+  { id: 'animales', title: 'Animales', icon: Beef, description: 'Registro e identificación del ganado', category: 'animales' },
+  { id: 'trazabilidad', title: 'Trazabilidad', icon: ArrowLeftRight, description: 'Hoja de vida del animal', category: 'animales' },
+  
+  // Producción - guías de leche, carne y productividad
+  { id: 'produccion-leche', title: 'Producción de Leche', icon: Scale, description: 'Registro de ordeños diarios', category: 'produccion' },
+  { id: 'produccion-carne', title: 'Producción de Carne', icon: Scale, description: 'Control de peso y engorde', category: 'produccion' },
+  { id: 'costos', title: 'Costos', icon: DollarSign, description: 'Finanzas y rentabilidad', category: 'produccion' },
+  { id: 'reportes', title: 'Reportes', icon: BarChart3, description: 'Informes y exportación', category: 'produccion' },
+  
+  // Reproducción - guías de celos, inseminación y partos
+  { id: 'reproduccion', title: 'Reproducción', icon: Baby, description: 'Ciclo reproductivo y partos', category: 'reproduccion' },
+  { id: 'genetica', title: 'Genética', icon: Dna, description: 'Mejoramiento y selección', category: 'reproduccion' },
+  
+  // Salud - guías sanitarias y tratamientos
+  { id: 'salud', title: 'Salud', icon: Heart, description: 'Control sanitario y vacunas', category: 'salud' },
+  { id: 'insumos', title: 'Insumos', icon: Package, description: 'Medicamentos y materiales', category: 'salud' },
+  
+  // Alimentación - guías de praderas y nutrición
+  { id: 'alimentacion', title: 'Alimentación', icon: Leaf, description: 'Dietas y nutrición', category: 'alimentacion' },
+  { id: 'praderas', title: 'Praderas', icon: Leaf, description: 'Gestión de potreros', category: 'alimentacion' },
 ];
 
 const Ayuda = () => {
@@ -103,10 +115,13 @@ const Ayuda = () => {
     f.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredModules = moduleGuides.filter(m =>
-    m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filtrar módulos por categoría seleccionada y búsqueda
+  const filteredModules = moduleGuides.filter(m => {
+    const matchesSearch = m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          m.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || m.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const categories = [
     { id: 'all', label: 'Todos' },

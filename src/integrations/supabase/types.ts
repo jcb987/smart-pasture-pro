@@ -902,6 +902,142 @@ export type Database = {
           },
         ]
       }
+      help_guide_versions: {
+        Row: {
+          change_note: string | null
+          content: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          guide_id: string
+          id: string
+          title: string
+          version_number: number
+        }
+        Insert: {
+          change_note?: string | null
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          guide_id: string
+          id?: string
+          title: string
+          version_number?: number
+        }
+        Update: {
+          change_note?: string | null
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          guide_id?: string
+          id?: string
+          title?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_guide_versions_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "help_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      help_guides: {
+        Row: {
+          content: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          is_published: boolean | null
+          module: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_published?: boolean | null
+          module: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_published?: boolean | null
+          module?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      help_resources: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          file_path: string | null
+          file_size: number | null
+          guide_id: string
+          id: string
+          mime_type: string | null
+          resource_type: string
+          thumbnail_url: string | null
+          title: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          file_path?: string | null
+          file_size?: number | null
+          guide_id: string
+          id?: string
+          mime_type?: string | null
+          resource_type: string
+          thumbnail_url?: string | null
+          title: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          file_path?: string | null
+          file_size?: number | null
+          guide_id?: string
+          id?: string
+          mime_type?: string | null
+          resource_type?: string
+          thumbnail_url?: string | null
+          title?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_resources_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "help_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milk_production: {
         Row: {
           afternoon_liters: number | null

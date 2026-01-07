@@ -70,6 +70,25 @@ export const useSettings = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // Apply theme to document
+  const applyTheme = (theme: 'light' | 'dark' | 'system') => {
+    const root = document.documentElement;
+    
+    if (theme === 'system') {
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.classList.toggle('dark', systemPrefersDark);
+    } else {
+      root.classList.toggle('dark', theme === 'dark');
+    }
+  };
+
+  // Apply language (for future i18n integration)
+  const applyLanguage = (language: 'es' | 'en') => {
+    document.documentElement.lang = language;
+    // Store for potential i18n library integration
+    localStorage.setItem('app_language', language);
+  };
+
   // Cargar configuración del localStorage
   const loadSettings = () => {
     try {
@@ -80,7 +99,11 @@ export const useSettings = () => {
         setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
       }
       if (savedPreferences) {
-        setPreferences({ ...DEFAULT_PREFERENCES, ...JSON.parse(savedPreferences) });
+        const prefs = { ...DEFAULT_PREFERENCES, ...JSON.parse(savedPreferences) };
+        setPreferences(prefs);
+        // Apply theme and language on load
+        applyTheme(prefs.theme);
+        applyLanguage(prefs.language);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -104,6 +127,15 @@ export const useSettings = () => {
     const updated = { ...preferences, ...newPreferences };
     setPreferences(updated);
     localStorage.setItem('user_preferences', JSON.stringify(updated));
+    
+    // Apply theme and language immediately
+    if (newPreferences.theme) {
+      applyTheme(newPreferences.theme);
+    }
+    if (newPreferences.language) {
+      applyLanguage(newPreferences.language);
+    }
+    
     toast({
       title: 'Preferencias actualizadas',
       description: 'Tus preferencias se han guardado',

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFounderAuth } from '@/hooks/useFounderAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Leaf, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Leaf, Eye, EyeOff, Loader2, Shield } from 'lucide-react';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -15,7 +16,9 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFounderLogin, setIsFounderLogin] = useState(false);
   const { signIn, signUp, user, loading } = useAuth();
+  const { signInAsFounder, isLoading: founderLoading } = useFounderAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -48,6 +51,14 @@ const Auth = () => {
     }
     
     setIsLoading(false);
+  };
+
+  const handleFounderSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = await signInAsFounder(email, password);
+    if (result.success) {
+      navigate('/founder');
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -89,6 +100,100 @@ const Auth = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Founder Login View
+  if (isFounderLogin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-500/10 via-background to-amber-600/5 p-4">
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <div className="p-2 bg-amber-500 rounded-xl">
+              <Shield className="h-8 w-8 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-foreground">Acceso Founder</span>
+          </div>
+
+          <Card className="border-amber-500/30 shadow-lg">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Panel de Administración</CardTitle>
+              <CardDescription>
+                Acceso exclusivo para el equipo de Agro Data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleFounderSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="founder-email">Correo electrónico</Label>
+                  <Input
+                    id="founder-email"
+                    type="email"
+                    placeholder="founder@agrodata.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="border-amber-500/30 focus:border-amber-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="founder-password">Contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="founder-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="border-amber-500/30 focus:border-amber-500"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white" 
+                  disabled={founderLoading}
+                >
+                  {founderLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Verificando...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="mr-2 h-4 w-4" />
+                      Acceder como Founder
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            <button 
+              onClick={() => setIsFounderLogin(false)}
+              className="text-primary hover:underline"
+            >
+              ← Volver al inicio de sesión normal
+            </button>
+          </p>
+        </div>
       </div>
     );
   }
@@ -237,12 +342,24 @@ const Auth = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          ¿Necesitas ayuda?{' '}
-          <a href="/" className="text-primary hover:underline">
-            Volver al inicio
-          </a>
-        </p>
+        <div className="mt-6 space-y-3">
+          <p className="text-center text-sm text-muted-foreground">
+            ¿Necesitas ayuda?{' '}
+            <a href="/" className="text-primary hover:underline">
+              Volver al inicio
+            </a>
+          </p>
+          
+          <div className="flex justify-center">
+            <button
+              onClick={() => setIsFounderLogin(true)}
+              className="text-xs text-muted-foreground/60 hover:text-amber-500 transition-colors flex items-center gap-1"
+            >
+              <Shield className="h-3 w-3" />
+              Acceso Founder
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

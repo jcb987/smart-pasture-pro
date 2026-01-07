@@ -704,6 +704,47 @@ export type Database = {
           },
         ]
       }
+      founder_access_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          founder_user_id: string
+          id: string
+          ip_address: string | null
+          target_organization_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          founder_user_id: string
+          id?: string
+          ip_address?: string | null
+          target_organization_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          founder_user_id?: string
+          id?: string
+          ip_address?: string | null
+          target_organization_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "founder_access_logs_target_organization_id_fkey"
+            columns: ["target_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       genetic_evaluations: {
         Row: {
           animal_id: string
@@ -1728,8 +1769,18 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_founder: { Args: { _user_id: string }; Returns: boolean }
       log_activity: {
         Args: { p_action: string; p_details?: Json; p_module_name?: string }
+        Returns: string
+      }
+      log_founder_access: {
+        Args: {
+          p_action?: string
+          p_details?: Json
+          p_target_org_id?: string
+          p_target_user_id?: string
+        }
         Returns: string
       }
     }

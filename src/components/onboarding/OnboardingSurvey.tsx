@@ -310,6 +310,14 @@ export function OnboardingSurvey({ open, onComplete, userId, organizationId }: O
           {renderStep()}
         </div>
 
+        {/* Data usage notice */}
+        <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground text-center border border-border/50">
+          <p>
+            📊 Usamos estas respuestas para mejorar Agro Data. 
+            <strong> No vendemos tus datos.</strong>
+          </p>
+        </div>
+
         <div className="flex justify-between pt-4">
           <Button
             variant="outline"

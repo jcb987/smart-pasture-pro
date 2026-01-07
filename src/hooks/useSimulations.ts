@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAnimals } from '@/hooks/useAnimals';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { useWeightRecords } from '@/hooks/useWeightRecords';
@@ -52,6 +52,10 @@ export interface SimulationResults {
   revenueChange: number;
   costChange: number;
   profitChange: number;
+  
+  // Data source tracking
+  dataSource: 'user_input' | 'system_data' | 'mixed';
+  assumptions: string[];
 }
 
 export interface MonthlyProjection {
@@ -72,12 +76,45 @@ export interface CurrentMetrics {
   activeAnimals: number;
   femalesCount: number;
   malesCount: number;
-  avgDailyMilk: number;
-  avgDailyGain: number;
+  avgDailyMilk: number | null;
+  avgDailyGain: number | null;
+  monthlyFeedCost: number | null;
+  monthlyHealthCost: number | null;
+  avgMilkPrice: number | null;
+  avgMeatPrice: number | null;
+}
+
+export interface BaseDataConfig {
+  milkPricePerLiter: number;
+  meatPricePerKg: number;
+  currency: string;
   monthlyFeedCost: number;
   monthlyHealthCost: number;
-  avgMilkPrice: number;
-  avgMeatPrice: number;
+  monthlyLaborCost: number;
+  otherOperationalCosts: number;
+  avgDailyMilkPerFemale: number;
+  avgMonthlyMeatKg: number;
+  avgDailyWeightGain: number;
+  projectionMonths: number;
+  productionType: 'lecheria' | 'carne' | 'doble_proposito';
+}
+
+export interface ExistingDataStatus {
+  hasAnimals: boolean;
+  hasMilkRecords: boolean;
+  hasWeightRecords: boolean;
+  hasFeedingData: boolean;
+  hasHealthData: boolean;
+  calculatedMilkAvg: number | null;
+  calculatedWeightGain: number | null;
+  calculatedFeedCost: number | null;
+  calculatedHealthCost: number | null;
+}
+
+export interface SimulationValidation {
+  isValid: boolean;
+  missingData: string[];
+  warnings: string[];
 }
 
 const DEFAULT_VARIABLES: SimulationVariables = {
@@ -95,15 +132,14 @@ const DEFAULT_VARIABLES: SimulationVariables = {
   projectionMonths: 12,
 };
 
-// Default prices (can be customized)
-const DEFAULT_MILK_PRICE = 1500; // COP per liter
-const DEFAULT_MEAT_PRICE = 8500; // COP per kg
-
 export const useSimulations = () => {
   const [scenarios, setScenarios] = useState<SimulationScenario[]>([]);
   const [currentVariables, setCurrentVariables] = useState<SimulationVariables>(DEFAULT_VARIABLES);
   const [baselineMetrics, setBaselineMetrics] = useState<CurrentMetrics | null>(null);
+  const [baseDataConfig, setBaseDataConfig] = useState<BaseDataConfig | null>(null);
+  const [existingDataStatus, setExistingDataStatus] = useState<ExistingDataStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isConfigured, setIsConfigured] = useState(false);
 
   const { animals, getStats: getAnimalStats } = useAnimals();
   const { records: milkRecords, getStats: getMilkStats } = useMilkProduction();
@@ -111,45 +147,124 @@ export const useSimulations = () => {
   const { healthEvents, getStats: getHealthStats } = useHealth();
   const { consumption, getStats: getFeedStats } = useFeeding();
 
-  // Calculate current baseline metrics from real data
+  // Calculate existing data status from real data
   useEffect(() => {
-    if (animals.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    const calculateMetrics = async () => {
+    const calculateDataStatus = async () => {
       const animalStats = getAnimalStats();
       const milkStats = getMilkStats();
       const meatStats = await getMeatStats();
-      const healthStats = getHealthStats();
       const feedStats = getFeedStats();
-
-      // Calculate health costs from events
+      
       const totalHealthCost = healthEvents?.reduce((sum, e) => sum + (e.cost || 0), 0) || 0;
       
+      const status: ExistingDataStatus = {
+        hasAnimals: animals.length > 0,
+        hasMilkRecords: (milkRecords?.length || 0) > 0,
+        hasWeightRecords: (weightRecords?.length || 0) > 0,
+        hasFeedingData: (consumption?.length || 0) > 0,
+        hasHealthData: (healthEvents?.length || 0) > 0,
+        calculatedMilkAvg: milkStats.avgPerCow > 0 ? milkStats.avgPerCow : null,
+        calculatedWeightGain: meatStats.avgDailyGain > 0 ? meatStats.avgDailyGain : null,
+        calculatedFeedCost: feedStats.monthlyFeedCost > 0 ? feedStats.monthlyFeedCost : null,
+        calculatedHealthCost: totalHealthCost > 0 ? totalHealthCost : null,
+      };
+      
+      setExistingDataStatus(status);
+      
+      // Set baseline metrics
       const metrics: CurrentMetrics = {
         totalAnimals: animalStats.total,
         activeAnimals: animalStats.total,
         femalesCount: animalStats.hembras,
         malesCount: animalStats.machos,
-        avgDailyMilk: milkStats.avgPerCow || 15, // Default 15L if no data
-        avgDailyGain: meatStats.avgDailyGain || 0.8, // Default 0.8kg/day
-        monthlyFeedCost: feedStats.monthlyFeedCost || 0,
-        monthlyHealthCost: totalHealthCost,
-        avgMilkPrice: DEFAULT_MILK_PRICE,
-        avgMeatPrice: DEFAULT_MEAT_PRICE,
+        avgDailyMilk: status.calculatedMilkAvg,
+        avgDailyGain: status.calculatedWeightGain,
+        monthlyFeedCost: status.calculatedFeedCost,
+        monthlyHealthCost: status.calculatedHealthCost,
+        avgMilkPrice: null, // Must be provided by user
+        avgMeatPrice: null, // Must be provided by user
       };
-
+      
       setBaselineMetrics(metrics);
       setLoading(false);
     };
 
-    calculateMetrics();
+    calculateDataStatus();
   }, [animals, milkRecords, weightRecords, healthEvents, consumption]);
 
-  const runSimulation = (variables: SimulationVariables): SimulationResults => {
-    if (!baselineMetrics) {
+  // Validate if simulation can run
+  const validateSimulation = useCallback((): SimulationValidation => {
+    const missingData: string[] = [];
+    const warnings: string[] = [];
+
+    if (!baselineMetrics || baselineMetrics.totalAnimals === 0) {
+      missingData.push('No hay animales registrados en el sistema');
+    }
+
+    if (!baseDataConfig) {
+      missingData.push('Configuración base no completada');
+      return { isValid: false, missingData, warnings };
+    }
+
+    const { productionType, milkPricePerLiter, meatPricePerKg, monthlyFeedCost, avgDailyMilkPerFemale, avgDailyWeightGain } = baseDataConfig;
+
+    if (productionType !== 'carne' && milkPricePerLiter <= 0) {
+      missingData.push('Precio de venta de leche');
+    }
+
+    if (productionType !== 'lecheria' && meatPricePerKg <= 0) {
+      missingData.push('Precio de venta de carne');
+    }
+
+    if (monthlyFeedCost <= 0) {
+      missingData.push('Costo mensual de alimentación');
+    }
+
+    if (productionType !== 'carne') {
+      const milkValue = existingDataStatus?.calculatedMilkAvg || avgDailyMilkPerFemale;
+      if (!milkValue || milkValue <= 0) {
+        missingData.push('Producción promedio de leche por hembra');
+      }
+    }
+
+    if (productionType !== 'lecheria') {
+      const gainValue = existingDataStatus?.calculatedWeightGain || avgDailyWeightGain;
+      if (!gainValue || gainValue <= 0) {
+        missingData.push('Ganancia diaria de peso');
+      }
+    }
+
+    // Add warnings for data sources
+    if (!existingDataStatus?.hasMilkRecords && productionType !== 'carne') {
+      warnings.push('Producción de leche basada en valor manual ingresado');
+    }
+
+    if (!existingDataStatus?.hasWeightRecords && productionType !== 'lecheria') {
+      warnings.push('Ganancia de peso basada en valor manual ingresado');
+    }
+
+    return {
+      isValid: missingData.length === 0,
+      missingData,
+      warnings,
+    };
+  }, [baselineMetrics, baseDataConfig, existingDataStatus]);
+
+  // Configure base data
+  const configureBaseData = (config: BaseDataConfig) => {
+    setBaseDataConfig(config);
+    setCurrentVariables(prev => ({
+      ...prev,
+      projectionMonths: config.projectionMonths,
+    }));
+    setIsConfigured(true);
+  };
+
+  // Run simulation with ONLY real/configured data - NO RANDOM VALUES
+  const runSimulation = useCallback((variables: SimulationVariables): SimulationResults => {
+    const validation = validateSimulation();
+    
+    if (!validation.isValid || !baselineMetrics || !baseDataConfig) {
       return {
         monthlyData: [],
         totalRevenue: 0,
@@ -159,18 +274,62 @@ export const useSimulations = () => {
         revenueChange: 0,
         costChange: 0,
         profitChange: 0,
+        dataSource: 'user_input',
+        assumptions: validation.missingData.map(d => `Falta: ${d}`),
       };
+    }
+
+    const { 
+      milkPricePerLiter, 
+      meatPricePerKg, 
+      monthlyFeedCost, 
+      monthlyHealthCost, 
+      monthlyLaborCost,
+      otherOperationalCosts,
+      avgDailyMilkPerFemale,
+      avgDailyWeightGain,
+      productionType,
+    } = baseDataConfig;
+
+    // Use system data if available, otherwise use configured values
+    const actualMilkProduction = existingDataStatus?.calculatedMilkAvg || avgDailyMilkPerFemale;
+    const actualWeightGain = existingDataStatus?.calculatedWeightGain || avgDailyWeightGain;
+    const actualFeedCost = existingDataStatus?.calculatedFeedCost || monthlyFeedCost;
+    const actualHealthCost = existingDataStatus?.calculatedHealthCost || monthlyHealthCost;
+
+    const assumptions: string[] = [];
+    let dataSource: 'user_input' | 'system_data' | 'mixed' = 'user_input';
+
+    if (existingDataStatus?.calculatedMilkAvg || existingDataStatus?.calculatedWeightGain) {
+      dataSource = existingDataStatus?.calculatedMilkAvg && existingDataStatus?.calculatedWeightGain 
+        ? 'system_data' 
+        : 'mixed';
+    }
+
+    assumptions.push(`Precio leche: $${milkPricePerLiter.toLocaleString()}/L (ingresado por usuario)`);
+    assumptions.push(`Precio carne: $${meatPricePerKg.toLocaleString()}/kg (ingresado por usuario)`);
+    
+    if (existingDataStatus?.calculatedMilkAvg) {
+      assumptions.push(`Producción leche: ${actualMilkProduction.toFixed(1)} L/día (del sistema)`);
+    } else {
+      assumptions.push(`Producción leche: ${actualMilkProduction.toFixed(1)} L/día (ingresado por usuario)`);
     }
 
     const monthlyData: MonthlyProjection[] = [];
     let cumulativeRevenue = 0;
     let cumulativeCosts = 0;
     
-    // Calculate baseline monthly values
-    const baseMonthlyMilk = baselineMetrics.avgDailyMilk * baselineMetrics.femalesCount * 30;
-    const baseMonthlyMeat = baselineMetrics.avgDailyGain * baselineMetrics.malesCount * 30;
-    const baseFeedCost = baselineMetrics.monthlyFeedCost || (baselineMetrics.totalAnimals * 150000); // Default cost estimate
-    const baseHealthCost = baselineMetrics.monthlyHealthCost || (baselineMetrics.totalAnimals * 20000);
+    // Calculate baseline monthly values using ONLY real/configured data
+    const baseMonthlyMilk = productionType !== 'carne' 
+      ? actualMilkProduction * baselineMetrics.femalesCount * 30 
+      : 0;
+    const baseMonthlyMeat = productionType !== 'lecheria'
+      ? actualWeightGain * baselineMetrics.malesCount * 30 
+      : 0;
+    const baseFeedCost = actualFeedCost;
+    const baseHealthCost = actualHealthCost;
+    const baseLaborCost = monthlyLaborCost;
+    const baseOtherCost = otherOperationalCosts;
     
     let currentHerdSize = baselineMetrics.totalAnimals;
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -193,12 +352,13 @@ export const useSimulations = () => {
       // Calculate costs with adjustments
       const feedCosts = baseFeedCost * herdRatio * (1 + variables.feedCostChange / 100);
       const healthCosts = baseHealthCost * herdRatio * (1 + variables.healthCostChange / 100);
-      const laborCosts = (baseFeedCost * 0.3) * (1 + variables.laborCostChange / 100); // Labor ~30% of feed
-      const totalCosts = feedCosts + healthCosts + laborCosts;
+      const laborCosts = baseLaborCost * (1 + variables.laborCostChange / 100);
+      const otherCosts = baseOtherCost;
+      const totalCosts = feedCosts + healthCosts + laborCosts + otherCosts;
 
-      // Calculate revenue
-      const milkRevenue = milkProduction * baselineMetrics.avgMilkPrice;
-      const meatRevenue = meatProduction * baselineMetrics.avgMeatPrice;
+      // Calculate revenue using user-provided prices
+      const milkRevenue = milkProduction * milkPricePerLiter;
+      const meatRevenue = meatProduction * meatPricePerKg;
       const revenue = milkRevenue + meatRevenue;
 
       const profit = revenue - totalCosts;
@@ -222,9 +382,9 @@ export const useSimulations = () => {
       });
     }
 
-    // Calculate baseline totals for comparison
-    const baselineTotalRevenue = (baseMonthlyMilk * DEFAULT_MILK_PRICE + baseMonthlyMeat * DEFAULT_MEAT_PRICE) * variables.projectionMonths;
-    const baselineTotalCosts = (baseFeedCost + baseHealthCost + baseFeedCost * 0.3) * variables.projectionMonths;
+    // Calculate baseline totals for comparison (without any variable changes)
+    const baselineTotalRevenue = (baseMonthlyMilk * milkPricePerLiter + baseMonthlyMeat * meatPricePerKg) * variables.projectionMonths;
+    const baselineTotalCosts = (baseFeedCost + baseHealthCost + baseLaborCost + baseOtherCost) * variables.projectionMonths;
     const baselineProfit = baselineTotalRevenue - baselineTotalCosts;
 
     const netProfit = cumulativeRevenue - cumulativeCosts;
@@ -238,8 +398,10 @@ export const useSimulations = () => {
       revenueChange: baselineTotalRevenue > 0 ? Math.round(((cumulativeRevenue - baselineTotalRevenue) / baselineTotalRevenue) * 100) : 0,
       costChange: baselineTotalCosts > 0 ? Math.round(((cumulativeCosts - baselineTotalCosts) / baselineTotalCosts) * 100) : 0,
       profitChange: baselineProfit !== 0 ? Math.round(((netProfit - baselineProfit) / Math.abs(baselineProfit)) * 100) : 0,
+      dataSource,
+      assumptions,
     };
-  };
+  }, [baselineMetrics, baseDataConfig, existingDataStatus, validateSimulation]);
 
   const createScenario = (name: string, description: string, variables: SimulationVariables): SimulationScenario => {
     const results = runSimulation(variables);
@@ -275,6 +437,7 @@ export const useSimulations = () => {
         feedCostChange: -5,
         mortalityRate: 1,
         pregnancyRate: 75,
+        projectionMonths: baseDataConfig?.projectionMonths || 12,
       },
     },
     {
@@ -288,6 +451,7 @@ export const useSimulations = () => {
         healthCostChange: 30,
         mortalityRate: 5,
         pregnancyRate: 45,
+        projectionMonths: baseDataConfig?.projectionMonths || 12,
       },
     },
     {
@@ -300,6 +464,7 @@ export const useSimulations = () => {
         healthCostChange: 100,
         mortalityRate: 8,
         cullingRate: 25,
+        projectionMonths: baseDataConfig?.projectionMonths || 12,
       },
     },
     {
@@ -323,21 +488,34 @@ export const useSimulations = () => {
         feedCostChange: -15,
         healthCostChange: -10,
         laborCostChange: -20,
+        projectionMonths: baseDataConfig?.projectionMonths || 12,
       },
     },
   ];
+
+  const resetConfiguration = () => {
+    setBaseDataConfig(null);
+    setIsConfigured(false);
+    setCurrentVariables(DEFAULT_VARIABLES);
+  };
 
   return {
     scenarios,
     currentVariables,
     setCurrentVariables,
     baselineMetrics,
+    baseDataConfig,
+    existingDataStatus,
     loading,
+    isConfigured,
     runSimulation,
     createScenario,
     deleteScenario,
     compareScenarios,
     getPresetScenarios,
+    configureBaseData,
+    resetConfiguration,
+    validateSimulation,
     DEFAULT_VARIABLES,
   };
 };

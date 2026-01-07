@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SimulationResults as Results, CurrentMetrics } from '@/hooks/useSimulations';
-import { TrendingUp, TrendingDown, DollarSign, Percent, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Percent, ArrowUpRight, ArrowDownRight, Minus, Info, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SimulationResultsProps {
   results: Results;
@@ -24,7 +25,7 @@ const ChangeIndicator = ({ value, inverted = false }: { value: number; inverted?
 
   if (isNeutral) {
     return (
-      <Badge variant="outline" className="gap-1">
+      <Badge variant="outline" className="gap-1 text-xs">
         <Minus className="h-3 w-3" />
         Sin cambio
       </Badge>
@@ -34,7 +35,7 @@ const ChangeIndicator = ({ value, inverted = false }: { value: number; inverted?
   return (
     <Badge
       variant={isPositive ? 'default' : 'destructive'}
-      className={`gap-1 ${isPositive ? 'bg-green-600' : ''}`}
+      className={`gap-1 text-xs ${isPositive ? 'bg-green-600' : ''}`}
     >
       {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
       {value > 0 ? '+' : ''}{value}%
@@ -42,19 +43,102 @@ const ChangeIndicator = ({ value, inverted = false }: { value: number; inverted?
   );
 };
 
+const DataSourceIndicator = ({ source, assumptions }: { source: string; assumptions: string[] }) => {
+  const getSourceLabel = () => {
+    switch (source) {
+      case 'system_data': return 'Datos del sistema';
+      case 'user_input': return 'Datos ingresados';
+      case 'mixed': return 'Datos mixtos';
+      default: return 'Datos configurados';
+    }
+  };
+
+  const getSourceIcon = () => {
+    switch (source) {
+      case 'system_data': return <CheckCircle2 className="h-3 w-3 text-green-600" />;
+      case 'user_input': return <Info className="h-3 w-3 text-blue-600" />;
+      case 'mixed': return <AlertCircle className="h-3 w-3 text-amber-600" />;
+      default: return <Info className="h-3 w-3" />;
+    }
+  };
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="outline" className="gap-1 text-xs cursor-help">
+            {getSourceIcon()}
+            {getSourceLabel()}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-xs">
+          <p className="font-medium mb-1">Fuentes de datos:</p>
+          <ul className="text-xs space-y-0.5">
+            {assumptions.slice(0, 5).map((a, i) => (
+              <li key={i}>• {a}</li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 export const SimulationResultsCard = ({ results, baseline }: SimulationResultsProps) => {
   const isProfit = results.netProfit > 0;
+  const hasData = results.monthlyData.length > 0;
+
+  // Check if results are valid (not empty due to missing config)
+  if (!hasData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Resultados de la Simulación
+          </CardTitle>
+          <CardDescription>
+            Completa la configuración base para ver resultados
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground font-medium">Datos insuficientes para simular</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Completa la encuesta de configuración base para comenzar
+            </p>
+            {results.assumptions && results.assumptions.length > 0 && (
+              <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-left w-full">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">Datos faltantes:</p>
+                <ul className="text-xs text-amber-600 dark:text-amber-400 space-y-0.5">
+                  {results.assumptions.map((a, i) => (
+                    <li key={i}>• {a}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5" />
-          Resultados de la Simulación
-        </CardTitle>
-        <CardDescription>
-          Proyección financiera basada en los parámetros configurados
-        </CardDescription>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Resultados de la Simulación
+            </CardTitle>
+            <CardDescription>
+              Proyección financiera basada en tus datos reales
+            </CardDescription>
+          </div>
+          <DataSourceIndicator source={results.dataSource} assumptions={results.assumptions} />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
@@ -139,13 +223,21 @@ export const SimulationResultsCard = ({ results, baseline }: SimulationResultsPr
           </div>
         )}
 
+        {/* Data source notice */}
+        <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+          <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" />
+            <strong>Basado en datos ingresados</strong> — Cero valores aleatorios o estimados
+          </p>
+        </div>
+
         {/* Baseline Comparison */}
-        {baseline && (
-          <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              <strong>Datos base:</strong> {baseline.totalAnimals} animales, 
-              {baseline.femalesCount} hembras produciendo ~{baseline.avgDailyMilk.toFixed(1)}L/día, 
-              {baseline.malesCount} machos con GDP de ~{baseline.avgDailyGain.toFixed(2)}kg/día
+        {baseline && baseline.totalAnimals > 0 && (
+          <div className="mt-3 p-3 rounded-lg bg-muted/50 border border-border/50">
+            <p className="text-sm text-muted-foreground">
+              <strong>Base actual:</strong> {baseline.totalAnimals} animales
+              {baseline.femalesCount > 0 && `, ${baseline.femalesCount} hembras`}
+              {baseline.malesCount > 0 && `, ${baseline.malesCount} machos`}
             </p>
           </div>
         )}

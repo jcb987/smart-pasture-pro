@@ -28,7 +28,8 @@ import {
   Download,
   Loader2,
   Brain,
-  Sparkles
+  Sparkles,
+  FileText
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
@@ -195,6 +196,38 @@ export function SmartImportDialog({
     return null;
   };
 
+  // Parse PDF content to extract tabular data using AI
+  const parsePDFWithAI = async (file: File): Promise<{ headers: string[]; rows: unknown[][] } | null> => {
+    try {
+      // Convert file to base64
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+
+      const allExpected = [...config.requiredColumns, ...(config.optionalColumns || [])];
+      
+      const response = await supabase.functions.invoke('pdf-import-parser', {
+        body: {
+          pdfBase64: base64,
+          expectedColumns: allExpected.map(c => ({ 
+            db: c.db, 
+            labels: c.labels,
+            required: config.requiredColumns.some(r => r.db === c.db)
+          })),
+          tableName: config.tableName,
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      return response.data as { headers: string[]; rows: unknown[][] };
+    } catch (error) {
+      console.error('PDF parsing error:', error);
+      return null;
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -202,25 +235,51 @@ export function SmartImportDialog({
     setFile(selectedFile);
     setStep('analyzing');
 
-    try {
-      const data = await selectedFile.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
+    const isPDF = selectedFile.name.toLowerCase().endsWith('.pdf') || selectedFile.type === 'application/pdf';
 
-      if (jsonData.length < 2) {
-        toast({
-          title: 'Archivo vacío',
-          description: 'El archivo no contiene datos para importar',
-          variant: 'destructive',
-        });
-        setStep('upload');
-        return;
+    try {
+      let headers: string[];
+      let dataRows: unknown[][];
+
+      if (isPDF) {
+        // Parse PDF with AI
+        const pdfResult = await parsePDFWithAI(selectedFile);
+        
+        if (!pdfResult || pdfResult.rows.length === 0) {
+          toast({
+            title: 'No se encontraron datos',
+            description: 'No se pudieron extraer datos tabulares del PDF. Verifica que el archivo contenga tablas con datos.',
+            variant: 'destructive',
+          });
+          setStep('upload');
+          return;
+        }
+
+        headers = pdfResult.headers;
+        dataRows = pdfResult.rows;
+      } else {
+        // Parse Excel/CSV
+        const data = await selectedFile.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
+
+        if (jsonData.length < 2) {
+          toast({
+            title: 'Archivo vacío',
+            description: 'El archivo no contiene datos para importar',
+            variant: 'destructive',
+          });
+          setStep('upload');
+          return;
+        }
+
+        headers = (jsonData[0] as string[]).map(h => h?.toString().trim() || '');
+        dataRows = jsonData.slice(1);
       }
 
-      const headers = (jsonData[0] as string[]).map(h => h?.toString().trim() || '');
       setRawHeaders(headers);
-      setRawData(jsonData.slice(1));
+      setRawData(dataRows);
 
       // Try AI analysis first
       const aiResult = await analyzeWithAI(headers);
@@ -239,7 +298,7 @@ export function SmartImportDialog({
       console.error('Parse error:', error);
       toast({
         title: 'Error al leer archivo',
-        description: 'No se pudo procesar el archivo Excel',
+        description: isPDF ? 'No se pudo procesar el archivo PDF' : 'No se pudo procesar el archivo Excel',
         variant: 'destructive',
       });
       setStep('upload');
@@ -362,10 +421,10 @@ export function SmartImportDialog({
               <div className="border-2 border-dashed rounded-lg p-8 text-center w-full">
                 <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                 <p className="text-base font-medium mb-1">Arrastra tu archivo aquí</p>
-                <p className="text-sm text-muted-foreground mb-3">o haz clic para seleccionar</p>
+                <p className="text-sm text-muted-foreground mb-3">Excel (.xlsx, .xls) o PDF</p>
                 <input
                   type="file"
-                  accept=".xlsx,.xls,.csv"
+                  accept=".xlsx,.xls,.csv,.pdf"
                   onChange={handleFileChange}
                   className="hidden"
                   id="smart-import-upload"
@@ -382,14 +441,25 @@ export function SmartImportDialog({
                 <div className="text-sm">
                   <p className="font-medium">Análisis inteligente con IA</p>
                   <p className="text-muted-foreground">
-                    Detectamos automáticamente las columnas aunque tengan nombres diferentes
+                    Detectamos automáticamente las columnas de Excel o extraemos tablas de PDFs
                   </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  Excel/CSV
+                </div>
+                <div className="flex items-center gap-1">
+                  <FileText className="h-3.5 w-3.5" />
+                  PDF con tablas
                 </div>
               </div>
 
               <Button variant="outline" size="sm" onClick={downloadTemplate}>
                 <Download className="mr-2 h-4 w-4" />
-                Descargar plantilla
+                Descargar plantilla Excel
               </Button>
             </div>
           )}

@@ -2,3 +2,9 @@ project_id = "xkuwfijtvufyteyrlvtk"
 
 [functions.chat-assistant]
 verify_jwt = false
+
+[functions.smart-import-analyzer]
+verify_jwt = false
+
+[functions.pdf-import-parser]
+verify_jwt = false

@@ -57,53 +57,53 @@ export const SimulationResultsCard = ({ results, baseline }: SimulationResultsPr
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           {/* Total Revenue */}
-          <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/50">
+          <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
             <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-muted-foreground">Ingresos Totales</span>
+              <span className="text-xs font-medium text-muted-foreground">Ingresos Totales</span>
               <ChangeIndicator value={results.revenueChange} />
             </div>
-            <p className="text-2xl font-bold text-primary">{formatCurrency(results.totalRevenue)}</p>
+            <p className="text-lg font-bold text-primary">{formatCurrency(results.totalRevenue)}</p>
           </div>
 
           {/* Total Costs */}
-          <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/50">
+          <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
             <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-muted-foreground">Costos Totales</span>
+              <span className="text-xs font-medium text-muted-foreground">Costos Totales</span>
               <ChangeIndicator value={results.costChange} inverted />
             </div>
-            <p className="text-2xl font-bold text-orange-600">{formatCurrency(results.totalCosts)}</p>
+            <p className="text-lg font-bold text-orange-600">{formatCurrency(results.totalCosts)}</p>
           </div>
 
           {/* Net Profit */}
-          <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/50">
+          <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
             <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-muted-foreground">Utilidad Neta</span>
+              <span className="text-xs font-medium text-muted-foreground">Utilidad Neta</span>
               <ChangeIndicator value={results.profitChange} />
             </div>
-            <p className={`text-2xl font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+            <p className={`text-lg font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
               {formatCurrency(results.netProfit)}
             </p>
           </div>
 
           {/* ROI */}
-          <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/50">
+          <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
             <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-muted-foreground">ROI</span>
-              <Badge variant="outline" className="w-fit gap-1">
+              <span className="text-xs font-medium text-muted-foreground">ROI</span>
+              <Badge variant="outline" className="w-fit gap-1 text-xs">
                 <Percent className="h-3 w-3" />
                 Retorno
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <p className={`text-2xl font-bold ${results.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <p className={`text-lg font-bold ${results.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {results.roi}%
               </p>
               {results.roi > 0 ? (
-                <TrendingUp className="h-5 w-5 text-green-600" />
+                <TrendingUp className="h-4 w-4 text-green-600" />
               ) : (
-                <TrendingDown className="h-5 w-5 text-red-600" />
+                <TrendingDown className="h-4 w-4 text-red-600" />
               )}
             </div>
           </div>

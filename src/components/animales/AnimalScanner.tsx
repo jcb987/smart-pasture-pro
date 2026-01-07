@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { 
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter 
 } from '@/components/ui/dialog';
-import { QrCode, Scan, Camera, Search, Check, AlertCircle } from 'lucide-react';
+import { QrCode, Scan, Search, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ScanResult {
@@ -67,42 +67,53 @@ export const AnimalScanner = ({ onAnimalFound, className }: AnimalScannerProps) 
   return (
     <>
       <Card className={className}>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Scan className="h-4 w-4 text-primary" />
             Identificación Rápida
           </CardTitle>
-          <CardDescription className="text-xs">
-            Escanea RFID o ingresa el código manualmente
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Unified search input with icon button */}
           <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={manualInput}
+                onChange={(e) => setManualInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleManualSearch()}
+                placeholder="Buscar por arete..."
+                className="pl-9"
+              />
+            </div>
             <Button 
-              onClick={() => setScanDialogOpen(true)} 
-              className="flex-1"
-              variant="outline"
+              onClick={handleManualSearch} 
+              disabled={!manualInput.trim()}
+              size="icon"
+              variant="default"
+              title="Buscar"
             >
-              <QrCode className="mr-2 h-4 w-4" />
-              Escanear
+              <Search className="h-4 w-4" />
             </Button>
             <Button 
-              onClick={startScan}
-              className="flex-1"
+              onClick={() => setScanDialogOpen(true)}
+              size="icon"
+              variant="outline"
+              title="Escanear RFID/Código"
             >
-              <Camera className="mr-2 h-4 w-4" />
-              RFID
+              <QrCode className="h-4 w-4" />
             </Button>
           </div>
 
+          {/* Last scan result - compact */}
           {lastScan && (
-            <div className="p-2 bg-muted rounded-lg flex items-center justify-between">
+            <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800">
               <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium">{lastScan.code}</span>
+                <Check className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-green-700 dark:text-green-400">{lastScan.code}</span>
               </div>
-              <span className="text-xs text-muted-foreground">
-                {lastScan.timestamp.toLocaleTimeString()}
+              <span className="text-xs text-green-600 dark:text-green-500">
+                {lastScan.timestamp.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
           )}

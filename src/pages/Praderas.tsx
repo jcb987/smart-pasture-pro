@@ -4,20 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { 
   Sprout, Plus, MapPin, Sun, Ruler, Trees, 
-  RotateCcw, CheckCircle, Clock 
+  RotateCcw, CheckCircle, Clock, Sparkles
 } from 'lucide-react';
 import { usePaddocks } from '@/hooks/usePaddocks';
 import { AddPaddockDialog } from '@/components/praderas/AddPaddockDialog';
 import { StartRotationDialog } from '@/components/praderas/StartRotationDialog';
 import { AddMeasurementDialog } from '@/components/praderas/AddMeasurementDialog';
 import { PaddocksGrid, RotationHistoryTable, MeasurementsTable } from '@/components/praderas/PaddockComponents';
+import { PraderasAIAssistant } from '@/components/praderas/PraderasAIAssistant';
 
 const Praderas = () => {
   const [showPaddockDialog, setShowPaddockDialog] = useState(false);
   const [showRotationDialog, setShowRotationDialog] = useState(false);
   const [showMeasurementDialog, setShowMeasurementDialog] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [selectedPaddockForRotation, setSelectedPaddockForRotation] = useState<string | null>(null);
 
   const {
@@ -59,12 +62,30 @@ const Praderas = () => {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Praderas y Forraje</h1>
             <p className="text-muted-foreground">Administración de potreros y rotación de pasturas</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Sheet open={showAIAssistant} onOpenChange={setShowAIAssistant}>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="gap-2 border-primary/30 text-primary hover:bg-primary/5">
+                  <Sparkles className="h-4 w-4" />
+                  Ayuda IA
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-md p-0">
+                <PraderasAIAssistant
+                  paddocksCount={stats.totalPaddocks}
+                  totalHectares={stats.totalHectares}
+                  totalAnimalsInPasture={stats.totalAnimalsInPasture}
+                  occupiedPaddocks={stats.occupiedPaddocks}
+                  availablePaddocks={stats.availablePaddocks}
+                  onClose={() => setShowAIAssistant(false)}
+                />
+              </SheetContent>
+            </Sheet>
             <Button variant="outline" onClick={() => setShowMeasurementDialog(true)}>
               <Ruler className="mr-2 h-4 w-4" />
               Nuevo Aforo

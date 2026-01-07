@@ -1447,6 +1447,53 @@ export type Database = {
           },
         ]
       }
+      user_onboarding: {
+        Row: {
+          completed_at: string
+          created_at: string
+          herd_size: string
+          id: string
+          main_challenge: string
+          organization_id: string | null
+          primary_role: string
+          production_type: string
+          species: string[]
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          herd_size: string
+          id?: string
+          main_challenge: string
+          organization_id?: string | null
+          primary_role: string
+          production_type: string
+          species?: string[]
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          herd_size?: string
+          id?: string
+          main_challenge?: string
+          organization_id?: string | null
+          primary_role?: string
+          production_type?: string
+          species?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_onboarding_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           created_at: string
@@ -1649,6 +1696,8 @@ export type Database = {
         | "ternero"
         | "becerra"
         | "becerro"
+        | "bufala"
+        | "bufalo"
       animal_sex: "macho" | "hembra"
       animal_status:
         | "activo"
@@ -1794,6 +1843,8 @@ export const Constants = {
         "ternero",
         "becerra",
         "becerro",
+        "bufala",
+        "bufalo",
       ],
       animal_sex: ["macho", "hembra"],
       animal_status: [

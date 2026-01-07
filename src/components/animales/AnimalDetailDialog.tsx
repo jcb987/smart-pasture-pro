@@ -42,6 +42,8 @@ const categoryLabels: Record<AnimalCategory, string> = {
   ternero: 'Ternero',
   becerra: 'Becerra',
   becerro: 'Becerro',
+  bufala: 'Búfala',
+  bufalo: 'Búfalo',
 };
 
 const eventIcons: Record<string, React.ReactNode> = {

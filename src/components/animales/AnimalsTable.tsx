@@ -35,6 +35,8 @@ const categoryLabels: Record<AnimalCategory, string> = {
   ternero: 'Ternero',
   becerra: 'Becerra',
   becerro: 'Becerro',
+  bufala: 'Búfala',
+  bufalo: 'Búfalo',
 };
 
 const categoryColors: Record<AnimalCategory, string> = {
@@ -46,6 +48,8 @@ const categoryColors: Record<AnimalCategory, string> = {
   ternero: 'bg-cyan-100 text-cyan-800',
   becerra: 'bg-fuchsia-100 text-fuchsia-800',
   becerro: 'bg-teal-100 text-teal-800',
+  bufala: 'bg-amber-100 text-amber-800',
+  bufalo: 'bg-orange-100 text-orange-800',
 };
 
 const formatDate = (dateStr: string | null) => {

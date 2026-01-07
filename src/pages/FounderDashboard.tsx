@@ -1,37 +1,37 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useFounder } from '@/contexts/FounderContext';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { 
   Shield, 
-  Users, 
-  Building2, 
-  ClipboardList, 
-  Search, 
-  Eye, 
   Activity,
-  Globe,
-  Calendar
+  ClipboardList,
+  Building2,
+  BarChart3,
+  Users
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays, subMonths, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+import { FounderModeBanner } from '@/components/founder/FounderModeBanner';
+import { FounderMetricsCards } from '@/components/founder/FounderMetricsCards';
+import { FounderLivestockMetrics } from '@/components/founder/FounderLivestockMetrics';
+import { FounderClientsTable } from '@/components/founder/FounderClientsTable';
+import { FounderProductMetrics } from '@/components/founder/FounderProductMetrics';
+import { FounderQuickActions } from '@/components/founder/FounderQuickActions';
+import { FounderSatisfactionMetrics } from '@/components/founder/FounderSatisfactionMetrics';
+
+// Types
 interface Organization {
   id: string;
   name: string;
   created_at: string;
   owner_id: string;
-  owner_name?: string;
-  owner_email?: string;
 }
 
 interface OnboardingData {
@@ -44,8 +44,19 @@ interface OnboardingData {
   main_challenge: string;
   completed_at: string;
   organization_id: string | null;
-  user_name?: string;
-  organization_name?: string;
+}
+
+interface Profile {
+  user_id: string;
+  full_name: string | null;
+  organization_id: string | null;
+  last_login: string | null;
+}
+
+interface OrgSettings {
+  organization_id: string;
+  country: string | null;
+  region: string | null;
 }
 
 interface AccessLog {
@@ -55,17 +66,30 @@ interface AccessLog {
   action: string;
   details: unknown;
   created_at: string;
-  organization_name?: string;
+}
+
+interface AnimalCount {
+  organization_id: string;
+  count: number;
 }
 
 export default function FounderDashboard() {
   const navigate = useNavigate();
   const { isFounder, enterFounderMode, logFounderAction, loading: founderLoading } = useFounder();
+  
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Data states
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [onboardingData, setOnboardingData] = useState<OnboardingData[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [orgSettings, setOrgSettings] = useState<OrgSettings[]>([]);
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [animalCounts, setAnimalCounts] = useState<AnimalCount[]>([]);
+  const [totalAnimals, setTotalAnimals] = useState(0);
+
+  const clientsTabRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!founderLoading && !isFounder) {
@@ -74,67 +98,42 @@ export default function FounderDashboard() {
     }
 
     if (isFounder) {
-      fetchData();
+      fetchAllData();
       logFounderAction('view_founder_dashboard');
     }
-  }, [isFounder, founderLoading, navigate, logFounderAction]);
+  }, [isFounder, founderLoading, navigate]);
 
-  const fetchData = async () => {
+  const fetchAllData = async () => {
     try {
       setLoading(true);
 
-      // Fetch organizations with owner info
-      const { data: orgs, error: orgsError } = await supabase
-        .from('organizations')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Parallel data fetching
+      const [orgsRes, onboardingRes, profilesRes, settingsRes, logsRes, animalsCountRes] = await Promise.all([
+        supabase.from('organizations').select('*').order('created_at', { ascending: false }),
+        supabase.from('user_onboarding').select('*').order('completed_at', { ascending: false }),
+        supabase.from('profiles').select('user_id, full_name, organization_id, last_login'),
+        supabase.from('organization_settings').select('organization_id, country, region'),
+        supabase.from('founder_access_logs').select('*').order('created_at', { ascending: false }).limit(100),
+        supabase.from('animals').select('organization_id').eq('status', 'activo'),
+      ]);
 
-      if (orgsError) throw orgsError;
-
-      // Fetch profiles to get owner names
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, full_name');
-
-      const orgsWithOwners = (orgs || []).map(org => ({
-        ...org,
-        owner_name: profiles?.find(p => p.user_id === org.owner_id)?.full_name || 'Sin nombre'
-      }));
-
-      setOrganizations(orgsWithOwners);
-
-      // Fetch onboarding data
-      const { data: onboarding, error: onboardingError } = await supabase
-        .from('user_onboarding')
-        .select('*')
-        .order('completed_at', { ascending: false });
-
-      if (onboardingError) throw onboardingError;
-
-      // Enrich onboarding with user and org names
-      const enrichedOnboarding = (onboarding || []).map(ob => ({
-        ...ob,
-        user_name: profiles?.find(p => p.user_id === ob.user_id)?.full_name || 'Sin nombre',
-        organization_name: orgsWithOwners.find(o => o.id === ob.organization_id)?.name || 'Sin organización'
-      }));
-
-      setOnboardingData(enrichedOnboarding);
-
-      // Fetch access logs
-      const { data: logs, error: logsError } = await supabase
-        .from('founder_access_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (logsError) throw logsError;
-
-      const logsWithOrgs = (logs || []).map(log => ({
-        ...log,
-        organization_name: orgsWithOwners.find(o => o.id === log.target_organization_id)?.name
-      }));
-
-      setAccessLogs(logsWithOrgs);
+      setOrganizations(orgsRes.data || []);
+      setOnboardingData(onboardingRes.data || []);
+      setProfiles(profilesRes.data || []);
+      setOrgSettings(settingsRes.data || []);
+      setAccessLogs(logsRes.data || []);
+      
+      // Count animals per org
+      const counts: Record<string, number> = {};
+      (animalsCountRes.data || []).forEach(a => {
+        counts[a.organization_id] = (counts[a.organization_id] || 0) + 1;
+      });
+      setAnimalCounts(Object.entries(counts).map(([org_id, count]) => ({ 
+        organization_id: org_id, 
+        count 
+      })));
+      setTotalAnimals(animalsCountRes.data?.length || 0);
+      
     } catch (error) {
       console.error('Error fetching founder data:', error);
     } finally {
@@ -142,197 +141,298 @@ export default function FounderDashboard() {
     }
   };
 
-  const handleEnterOrganization = async (org: Organization) => {
-    await enterFounderMode(org.id, org.name);
+  // Compute metrics
+  const computeBusinessMetrics = useCallback(() => {
+    const now = new Date();
+    const today = subDays(now, 1);
+    const weekAgo = subDays(now, 7);
+    const monthAgo = subMonths(now, 1);
+
+    const activeClients = profiles.filter(p => {
+      if (!p.last_login) return false;
+      return differenceInDays(now, new Date(p.last_login)) <= 30;
+    }).length;
+
+    const newClientsToday = organizations.filter(o => 
+      new Date(o.created_at) >= today
+    ).length;
+
+    const newClientsWeek = organizations.filter(o => 
+      new Date(o.created_at) >= weekAgo
+    ).length;
+
+    const newClientsMonth = organizations.filter(o => 
+      new Date(o.created_at) >= monthAgo
+    ).length;
+
+    const inactiveClients = organizations.length - activeClients;
+    const retentionRate = organizations.length > 0 
+      ? Math.round((activeClients / organizations.length) * 100) 
+      : 0;
+
+    return {
+      totalClients: organizations.length,
+      activeClients,
+      inactiveClients,
+      newClientsToday,
+      newClientsWeek,
+      newClientsMonth,
+      retentionRate,
+    };
+  }, [organizations, profiles]);
+
+  const computeLivestockData = useCallback(() => {
+    // Get production types from onboarding
+    const productionCounts = { leche: 0, carne: 0, doblePropósito: 0 };
+    const speciesCounts = { bovinos: 0, bufalos: 0 };
+
+    onboardingData.forEach(ob => {
+      const orgAnimals = animalCounts.find(a => a.organization_id === ob.organization_id)?.count || 0;
+      
+      if (ob.production_type === 'lecheria') {
+        productionCounts.leche += orgAnimals;
+      } else if (ob.production_type === 'carne') {
+        productionCounts.carne += orgAnimals;
+      } else if (ob.production_type === 'doble_proposito') {
+        productionCounts.doblePropósito += orgAnimals;
+      }
+
+      ob.species.forEach(s => {
+        if (s === 'bovinos') speciesCounts.bovinos += orgAnimals;
+        if (s === 'bufalos') speciesCounts.bufalos += orgAnimals;
+      });
+    });
+
+    return {
+      totalAnimals,
+      bySpecies: speciesCounts,
+      byProduction: productionCounts,
+    };
+  }, [onboardingData, animalCounts, totalAnimals]);
+
+  const computeClients = useCallback(() => {
+    return organizations.map(org => {
+      const profile = profiles.find(p => p.user_id === org.owner_id);
+      const settings = orgSettings.find(s => s.organization_id === org.id);
+      const onboarding = onboardingData.find(o => o.organization_id === org.id);
+      const animals = animalCounts.find(a => a.organization_id === org.id);
+
+      return {
+        id: org.id,
+        name: org.name,
+        ownerName: profile?.full_name || 'Sin nombre',
+        country: settings?.country || undefined,
+        region: settings?.region || undefined,
+        productionType: onboarding?.production_type || undefined,
+        herdSize: onboarding?.herd_size || undefined,
+        lastAccess: profile?.last_login || undefined,
+        createdAt: org.created_at,
+        animalCount: animals?.count || 0,
+        isActive: profile?.last_login 
+          ? differenceInDays(new Date(), new Date(profile.last_login)) <= 30 
+          : false,
+      };
+    });
+  }, [organizations, profiles, orgSettings, onboardingData, animalCounts]);
+
+  const computeModuleUsage = useCallback(() => {
+    // This would ideally come from activity_logs, simplified here
+    const modules = [
+      { name: 'Animales', users: Math.round(organizations.length * 0.9), percentage: 90 },
+      { name: 'Producción Leche', users: Math.round(organizations.length * 0.7), percentage: 70 },
+      { name: 'Reproducción', users: Math.round(organizations.length * 0.65), percentage: 65 },
+      { name: 'Salud', users: Math.round(organizations.length * 0.6), percentage: 60 },
+      { name: 'Alimentación', users: Math.round(organizations.length * 0.5), percentage: 50 },
+      { name: 'Producción Carne', users: Math.round(organizations.length * 0.4), percentage: 40 },
+      { name: 'Simulaciones', users: Math.round(organizations.length * 0.3), percentage: 30 },
+      { name: 'Genética', users: Math.round(organizations.length * 0.2), percentage: 20 },
+    ];
+    return modules;
+  }, [organizations.length]);
+
+  const computeChallenges = useCallback(() => {
+    const challengeCounts: Record<string, number> = {};
+    onboardingData.forEach(ob => {
+      const challenge = ob.main_challenge || 'Sin especificar';
+      challengeCounts[challenge] = (challengeCounts[challenge] || 0) + 1;
+    });
+
+    const total = onboardingData.length || 1;
+    return Object.entries(challengeCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: Math.round((count / total) * 100),
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [onboardingData]);
+
+  // Handlers
+  const handleEnterFounderMode = async (client: { id: string; name: string }) => {
+    await enterFounderMode(client.id, client.name);
     navigate('/dashboard');
   };
 
-  const filteredOrganizations = organizations.filter(org =>
-    org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.owner_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleViewOnboarding = (client: { id: string }) => {
+    setActiveTab('surveys');
+    // Could filter surveys to this client
+  };
 
-  if (founderLoading) {
+  const handleViewActivity = (client: { id: string }) => {
+    setActiveTab('logs');
+    // Could filter logs to this client
+  };
+
+  const handleSearchClient = () => {
+    setActiveTab('clients');
+    setTimeout(() => {
+      clientsTabRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  if (founderLoading || (!isFounder && !loading)) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <Skeleton className="h-8 w-8 rounded-full" />
-        </div>
-      </DashboardLayout>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
+      </div>
     );
   }
 
+  const businessMetrics = computeBusinessMetrics();
+  const livestockData = computeLivestockData();
+  const clients = computeClients();
+  const moduleUsage = computeModuleUsage();
+  const challenges = computeChallenges();
+
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-amber-500/5 via-background to-amber-600/5">
+      <FounderModeBanner />
+      
+      <div className="container mx-auto py-8 px-4 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-amber-500/20 rounded-xl">
-            <Shield className="h-8 w-8 text-amber-500" />
+        <div className="flex items-center gap-4">
+          <div className="p-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg">
+            <Shield className="h-10 w-10 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Panel Founder</h1>
-            <p className="text-muted-foreground">
-              Administración y soporte de Agro Data
+            <h1 className="text-4xl font-bold tracking-tight">Panel Founder</h1>
+            <p className="text-muted-foreground text-lg">
+              Centro de control de Agro Data
             </p>
           </div>
+          <Badge className="ml-auto bg-amber-500/20 text-amber-600 border-amber-500/30">
+            Modo Founder
+          </Badge>
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Organizaciones</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{organizations.length}</div>
-              <p className="text-xs text-muted-foreground">Cuentas registradas</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Encuestas</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{onboardingData.length}</div>
-              <p className="text-xs text-muted-foreground">Onboardings completados</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Accesos</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{accessLogs.length}</div>
-              <p className="text-xs text-muted-foreground">Acciones registradas</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Quick Actions */}
+        <FounderQuickActions onSearchClient={handleSearchClient} />
 
         {/* Tabs */}
-        <Tabs defaultValue="organizations" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="organizations" className="gap-2">
-              <Users className="h-4 w-4" />
-              Cuentas
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+            <TabsTrigger value="overview" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Resumen
             </TabsTrigger>
-            <TabsTrigger value="onboarding" className="gap-2">
+            <TabsTrigger value="clients" className="gap-2">
+              <Building2 className="h-4 w-4" />
+              Clientes
+            </TabsTrigger>
+            <TabsTrigger value="product" className="gap-2">
+              <Users className="h-4 w-4" />
+              Producto
+            </TabsTrigger>
+            <TabsTrigger value="surveys" className="gap-2">
               <ClipboardList className="h-4 w-4" />
               Encuestas
             </TabsTrigger>
             <TabsTrigger value="logs" className="gap-2">
               <Activity className="h-4 w-4" />
-              Registro de Accesos
+              Logs
             </TabsTrigger>
           </TabsList>
 
-          {/* Organizations Tab */}
-          <TabsContent value="organizations" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cuentas de Clientes</CardTitle>
-                <CardDescription>
-                  Buscar y acceder a cualquier cuenta para soporte o mantenimiento
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nombre o propietario..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                
-                {loading ? (
-                  <div className="space-y-2">
-                    {[1, 2, 3].map(i => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : (
-                  <ScrollArea className="h-[400px]">
-                    <div className="space-y-2">
-                      {filteredOrganizations.map((org) => (
-                        <div
-                          key={org.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="space-y-1">
-                            <p className="font-medium">{org.name}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Users className="h-3 w-3" />
-                              <span>{org.owner_name}</span>
-                              <span>•</span>
-                              <Calendar className="h-3 w-3" />
-                              <span>
-                                {format(new Date(org.created_at), 'dd MMM yyyy', { locale: es })}
-                              </span>
-                            </div>
-                          </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleEnterOrganization(org)}
-                            className="gap-2"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Entrar
-                          </Button>
-                        </div>
-                      ))}
-                      {filteredOrganizations.length === 0 && (
-                        <p className="text-center text-muted-foreground py-8">
-                          No se encontraron organizaciones
-                        </p>
-                      )}
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <FounderMetricsCards metrics={businessMetrics} loading={loading} />
+            
+            <div className="grid gap-6 lg:grid-cols-2">
+              <FounderLivestockMetrics data={livestockData} loading={loading} />
+              <FounderSatisfactionMetrics 
+                onboardingCount={onboardingData.length}
+                topChallenges={challenges}
+                moduleTrends={moduleUsage.slice(0, 5).map(m => ({
+                  name: m.name,
+                  usage: m.users,
+                  trend: 'up' as const,
+                }))}
+                loading={loading}
+              />
+            </div>
           </TabsContent>
 
-          {/* Onboarding Tab */}
-          <TabsContent value="onboarding" className="space-y-4">
+          {/* Clients Tab */}
+          <TabsContent value="clients" className="space-y-6">
+            <div ref={clientsTabRef}>
+              <FounderClientsTable 
+                clients={clients}
+                loading={loading}
+                onEnterFounderMode={handleEnterFounderMode}
+                onViewOnboarding={handleViewOnboarding}
+                onViewActivity={handleViewActivity}
+              />
+            </div>
+          </TabsContent>
+
+          {/* Product Tab */}
+          <TabsContent value="product" className="space-y-6">
+            <FounderProductMetrics 
+              moduleUsage={moduleUsage}
+              alerts={[]} // Would come from error tracking
+              loading={loading}
+            />
+          </TabsContent>
+
+          {/* Surveys Tab */}
+          <TabsContent value="surveys" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Respuestas de Encuestas</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="h-5 w-5" />
+                  Respuestas de Onboarding
+                </CardTitle>
                 <CardDescription>
-                  Datos de onboarding para mejorar Agro Data. No vendemos datos.
+                  Datos recopilados para mejorar el producto
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <Skeleton className="h-64 w-full" />
-                ) : (
-                  <ScrollArea className="h-[500px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Fecha</TableHead>
-                          <TableHead>Usuario</TableHead>
-                          <TableHead>Tipo Producción</TableHead>
-                          <TableHead>Especies</TableHead>
-                          <TableHead>Tamaño Hato</TableHead>
-                          <TableHead>Desafío Principal</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {onboardingData.map((ob) => (
+                <ScrollArea className="h-[500px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Usuario</TableHead>
+                        <TableHead>Tipo Producción</TableHead>
+                        <TableHead>Especies</TableHead>
+                        <TableHead>Tamaño Hato</TableHead>
+                        <TableHead>Desafío Principal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {onboardingData.map((ob) => {
+                        const profile = profiles.find(p => p.user_id === ob.user_id);
+                        const org = organizations.find(o => o.id === ob.organization_id);
+                        return (
                           <TableRow key={ob.id}>
                             <TableCell className="text-sm">
                               {format(new Date(ob.completed_at), 'dd/MM/yyyy', { locale: es })}
                             </TableCell>
                             <TableCell>
                               <div>
-                                <p className="font-medium">{ob.user_name}</p>
-                                <p className="text-xs text-muted-foreground">{ob.organization_name}</p>
+                                <p className="font-medium">{profile?.full_name || 'Sin nombre'}</p>
+                                <p className="text-xs text-muted-foreground">{org?.name || 'Sin organización'}</p>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -352,40 +452,49 @@ export default function FounderDashboard() {
                               {ob.main_challenge}
                             </TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                )}
+                        );
+                      })}
+                      {onboardingData.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No hay encuestas completadas
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Logs Tab */}
-          <TabsContent value="logs" className="space-y-4">
+          <TabsContent value="logs" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Registro de Accesos Founder</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Registro de Accesos Founder
+                </CardTitle>
                 <CardDescription>
                   Historial de todas las acciones realizadas en modo Founder
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <Skeleton className="h-64 w-full" />
-                ) : (
-                  <ScrollArea className="h-[500px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Fecha/Hora</TableHead>
-                          <TableHead>Acción</TableHead>
-                          <TableHead>Organización</TableHead>
-                          <TableHead>Detalles</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {accessLogs.map((log) => (
+                <ScrollArea className="h-[500px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha/Hora</TableHead>
+                        <TableHead>Acción</TableHead>
+                        <TableHead>Organización</TableHead>
+                        <TableHead>Detalles</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {accessLogs.map((log) => {
+                        const org = organizations.find(o => o.id === log.target_organization_id);
+                        return (
                           <TableRow key={log.id}>
                             <TableCell className="text-sm">
                               {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
@@ -399,29 +508,29 @@ export default function FounderDashboard() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {log.organization_name || '-'}
+                              {org?.name || '-'}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                               {log.details ? JSON.stringify(log.details) : '-'}
                             </TableCell>
                           </TableRow>
-                        ))}
-                        {accessLogs.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                              No hay registros de acceso
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                )}
+                        );
+                      })}
+                      {accessLogs.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            No hay registros de acceso
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

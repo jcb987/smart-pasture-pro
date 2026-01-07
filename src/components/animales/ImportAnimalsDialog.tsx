@@ -26,9 +26,13 @@ import {
   CheckCircle2, 
   XCircle,
   Download,
-  Loader2
+  Loader2,
+  FileText,
+  Brain,
+  Sparkles
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { supabase } from '@/integrations/supabase/client';
 import { type Animal, type AnimalCategory, type AnimalSex } from '@/hooks/useAnimals';
 
 interface ImportAnimalsDialogProps {
@@ -65,11 +69,12 @@ export function ImportAnimalsDialog({
   existingAnimals,
   onImport 
 }: ImportAnimalsDialogProps) {
-  const [step, setStep] = useState<'upload' | 'preview' | 'importing' | 'complete'>('upload');
+  const [step, setStep] = useState<'upload' | 'analyzing' | 'preview' | 'importing' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ImportRow[]>([]);
   const [importProgress, setImportProgress] = useState(0);
   const [importResults, setImportResults] = useState({ success: 0, errors: 0 });
+  const [isAnalyzingPDF, setIsAnalyzingPDF] = useState(false);
 
   const resetDialog = () => {
     setStep('upload');
@@ -77,6 +82,7 @@ export function ImportAnimalsDialog({
     setParsedData([]);
     setImportProgress(0);
     setImportResults({ success: 0, errors: 0 });
+    setIsAnalyzingPDF(false);
   };
 
   const handleClose = () => {
@@ -252,14 +258,160 @@ export function ImportAnimalsDialog({
     return parsedRows;
   }, [existingAnimals]);
 
+  // Parse PDF with AI
+  const parsePDFWithAI = async (file: File): Promise<ImportRow[]> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+
+      const expectedColumns = [
+        { db: 'tag_id', labels: ['arete', 'id', 'tag_id', 'identificador'], required: true },
+        { db: 'name', labels: ['nombre', 'name'], required: false },
+        { db: 'category', labels: ['categoria', 'category', 'tipo'], required: true },
+        { db: 'sex', labels: ['sexo', 'sex', 'genero'], required: true },
+        { db: 'breed', labels: ['raza', 'breed'], required: false },
+        { db: 'birth_date', labels: ['nacimiento', 'birth_date', 'fecha_nacimiento'], required: false },
+        { db: 'mother', labels: ['madre', 'mother', 'madre_id'], required: false },
+        { db: 'father', labels: ['padre', 'father', 'padre_id'], required: false },
+        { db: 'lot_name', labels: ['lote', 'lot', 'potrero'], required: false },
+        { db: 'origin', labels: ['origen', 'origin', 'procedencia'], required: false },
+        { db: 'weight', labels: ['peso', 'weight'], required: false },
+        { db: 'notes', labels: ['notas', 'notes', 'observaciones'], required: false },
+      ];
+
+      const response = await supabase.functions.invoke('pdf-import-parser', {
+        body: {
+          pdfBase64: base64,
+          expectedColumns,
+          tableName: 'animals',
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      const { headers, rows } = response.data as { headers: string[]; rows: unknown[][] };
+
+      if (!rows || rows.length === 0) {
+        return [];
+      }
+
+      // Map headers to column indices
+      const colMap: Record<string, number> = {};
+      headers.forEach((h, i) => {
+        const normalized = h?.toString().toLowerCase().trim() || '';
+        if (normalized.includes('arete') || normalized === 'id' || normalized === 'tag_id') colMap.tag_id = i;
+        if (normalized.includes('nombre') || normalized === 'name') colMap.name = i;
+        if (normalized.includes('categoria') || normalized === 'category') colMap.category = i;
+        if (normalized.includes('sexo') || normalized === 'sex') colMap.sex = i;
+        if (normalized.includes('raza') || normalized === 'breed') colMap.breed = i;
+        if (normalized.includes('nacimiento') || normalized === 'birth_date') colMap.birth_date = i;
+        if (normalized.includes('madre') || normalized === 'mother') colMap.mother = i;
+        if (normalized.includes('padre') || normalized === 'father') colMap.father = i;
+        if (normalized.includes('lote') || normalized === 'lot' || normalized.includes('potrero')) colMap.lot_name = i;
+        if (normalized.includes('origen') || normalized === 'origin') colMap.origin = i;
+        if (normalized.includes('peso') || normalized === 'weight') colMap.weight = i;
+        if (normalized.includes('notas') || normalized === 'notes') colMap.notes = i;
+      });
+
+      const parsedRows: ImportRow[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i] as unknown[];
+        if (!row || row.length === 0) continue;
+
+        const errors: string[] = [];
+        const warnings: string[] = [];
+
+        const tagId = row[colMap.tag_id]?.toString().trim() || '';
+        const categoryRaw = row[colMap.category]?.toString() || '';
+        const sexRaw = row[colMap.sex]?.toString() || '';
+        const motherTag = row[colMap.mother]?.toString().trim() || null;
+        const fatherTag = row[colMap.father]?.toString().trim() || null;
+
+        if (!tagId) {
+          errors.push('Arete/ID es obligatorio');
+        } else if (existingAnimals.some(a => a.tag_id.toLowerCase() === tagId.toLowerCase())) {
+          errors.push(`Arete "${tagId}" ya existe`);
+        } else if (parsedRows.some(r => r.tag_id.toLowerCase() === tagId.toLowerCase())) {
+          errors.push(`Arete "${tagId}" duplicado`);
+        }
+
+        const category = normalizeCategory(categoryRaw);
+        if (!category) {
+          errors.push(`Categoría inválida: "${categoryRaw}"`);
+        }
+
+        let sex = normalizeSex(sexRaw);
+        if (!sex && category) {
+          sex = femaleCategories.includes(category) ? 'hembra' : 'macho';
+          warnings.push('Sexo asignado automáticamente');
+        } else if (!sex) {
+          errors.push(`Sexo inválido: "${sexRaw}"`);
+        }
+
+        if (motherTag && !findAnimalByTag(motherTag)) {
+          warnings.push(`Madre "${motherTag}" no encontrada`);
+        }
+        if (fatherTag && !findAnimalByTag(fatherTag)) {
+          warnings.push(`Padre "${fatherTag}" no encontrado`);
+        }
+
+        const birthDate = parseDate(row[colMap.birth_date]);
+        const weight = row[colMap.weight] ? parseFloat(row[colMap.weight]?.toString()) : null;
+
+        parsedRows.push({
+          row_number: i + 2,
+          tag_id: tagId,
+          name: row[colMap.name]?.toString().trim() || null,
+          category: category || categoryRaw,
+          sex: sex || sexRaw,
+          breed: row[colMap.breed]?.toString().trim() || null,
+          birth_date: birthDate,
+          mother_tag: motherTag,
+          father_tag: fatherTag,
+          lot_name: row[colMap.lot_name]?.toString().trim() || null,
+          origin: row[colMap.origin]?.toString().trim() || null,
+          current_weight: weight && !isNaN(weight) ? weight : null,
+          notes: row[colMap.notes]?.toString().trim() || null,
+          errors,
+          warnings,
+        });
+      }
+
+      return parsedRows;
+    } catch (error) {
+      console.error('PDF parsing error:', error);
+      return [];
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
     setFile(selectedFile);
-    const parsed = await parseExcelFile(selectedFile);
-    setParsedData(parsed);
-    setStep('preview');
+    const isPDF = selectedFile.name.toLowerCase().endsWith('.pdf') || selectedFile.type === 'application/pdf';
+
+    if (isPDF) {
+      setStep('analyzing');
+      setIsAnalyzingPDF(true);
+      const parsed = await parsePDFWithAI(selectedFile);
+      setIsAnalyzingPDF(false);
+      
+      if (parsed.length === 0) {
+        setStep('upload');
+        return;
+      }
+      
+      setParsedData(parsed);
+      setStep('preview');
+    } else {
+      const parsed = await parseExcelFile(selectedFile);
+      setParsedData(parsed);
+      setStep('preview');
+    }
   };
 
   const handleImport = async () => {
@@ -334,10 +486,11 @@ export function ImportAnimalsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            Importar Animales desde Excel
+            Importar Animales
           </DialogTitle>
           <DialogDescription>
-            {step === 'upload' && 'Sube un archivo Excel (.xlsx) o CSV con los datos de tus animales'}
+            {step === 'upload' && 'Sube un archivo Excel (.xlsx), CSV o PDF con los datos de tus animales'}
+            {step === 'analyzing' && 'Analizando el documento con IA...'}
             {step === 'preview' && 'Revisa los datos antes de importar'}
             {step === 'importing' && 'Importando animales...'}
             {step === 'complete' && 'Importación completada'}
@@ -346,14 +499,14 @@ export function ImportAnimalsDialog({
 
         <div className="flex-1 min-h-0">
           {step === 'upload' && (
-            <div className="flex flex-col items-center justify-center py-12 gap-6">
-              <div className="border-2 border-dashed rounded-lg p-12 text-center w-full">
-                <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-lg font-medium mb-2">Arrastra tu archivo aquí</p>
-                <p className="text-sm text-muted-foreground mb-4">o haz clic para seleccionar</p>
+            <div className="flex flex-col items-center justify-center py-8 gap-4">
+              <div className="border-2 border-dashed rounded-lg p-8 text-center w-full">
+                <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                <p className="text-base font-medium mb-1">Arrastra tu archivo aquí</p>
+                <p className="text-sm text-muted-foreground mb-3">Excel (.xlsx, .xls) o PDF</p>
                 <input
                   type="file"
-                  accept=".xlsx,.xls,.csv"
+                  accept=".xlsx,.xls,.csv,.pdf"
                   onChange={handleFileChange}
                   className="hidden"
                   id="file-upload"
@@ -365,16 +518,50 @@ export function ImportAnimalsDialog({
                 </label>
               </div>
 
-              <Button variant="outline" onClick={downloadTemplate}>
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg w-full">
+                <Brain className="h-5 w-5 text-primary flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium">Análisis inteligente con IA</p>
+                  <p className="text-muted-foreground">
+                    Detectamos automáticamente las columnas de Excel o extraemos tablas de PDFs
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  Excel/CSV
+                </div>
+                <div className="flex items-center gap-1">
+                  <FileText className="h-3.5 w-3.5" />
+                  PDF con tablas
+                </div>
+              </div>
+
+              <Button variant="outline" size="sm" onClick={downloadTemplate}>
                 <Download className="mr-2 h-4 w-4" />
-                Descargar plantilla
+                Descargar plantilla Excel
               </Button>
 
               <div className="text-sm text-muted-foreground max-w-md text-center">
-                <p className="font-medium mb-2">Columnas esperadas:</p>
-                <p>Arete*, Nombre, Categoría*, Sexo*, Raza, Fecha_Nacimiento, Madre, Padre, Lote, Origen, Peso, Notas</p>
-                <p className="text-xs mt-2">* Campos obligatorios</p>
+                <p className="font-medium mb-1">Columnas esperadas:</p>
+                <p className="text-xs">Arete*, Nombre, Categoría*, Sexo*, Raza, Fecha_Nacimiento, Madre, Padre, Lote, Origen, Peso, Notas</p>
+                <p className="text-xs mt-1">* Campos obligatorios</p>
               </div>
+            </div>
+          )}
+
+          {step === 'analyzing' && (
+            <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <div className="relative">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <Sparkles className="h-5 w-5 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
+              </div>
+              <p className="text-lg font-medium">Analizando PDF con IA...</p>
+              <p className="text-sm text-muted-foreground">
+                Extrayendo datos de las tablas del documento
+              </p>
             </div>
           )}
 

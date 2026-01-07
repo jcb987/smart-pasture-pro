@@ -59,27 +59,27 @@ export const SimulationResultsCard = ({ results, baseline }: SimulationResultsPr
       <CardContent>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Total Revenue */}
-          <div className="space-y-2 p-4 rounded-lg bg-muted/50">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Ingresos Totales</span>
+          <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/50">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-muted-foreground">Ingresos Totales</span>
               <ChangeIndicator value={results.revenueChange} />
             </div>
             <p className="text-2xl font-bold text-primary">{formatCurrency(results.totalRevenue)}</p>
           </div>
 
           {/* Total Costs */}
-          <div className="space-y-2 p-4 rounded-lg bg-muted/50">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Costos Totales</span>
+          <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/50">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-muted-foreground">Costos Totales</span>
               <ChangeIndicator value={results.costChange} inverted />
             </div>
             <p className="text-2xl font-bold text-orange-600">{formatCurrency(results.totalCosts)}</p>
           </div>
 
           {/* Net Profit */}
-          <div className="space-y-2 p-4 rounded-lg bg-muted/50">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Utilidad Neta</span>
+          <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/50">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-muted-foreground">Utilidad Neta</span>
               <ChangeIndicator value={results.profitChange} />
             </div>
             <p className={`text-2xl font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
@@ -88,10 +88,13 @@ export const SimulationResultsCard = ({ results, baseline }: SimulationResultsPr
           </div>
 
           {/* ROI */}
-          <div className="space-y-2 p-4 rounded-lg bg-muted/50">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">ROI</span>
-              <Percent className="h-4 w-4 text-muted-foreground" />
+          <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/50">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-muted-foreground">ROI</span>
+              <Badge variant="outline" className="w-fit gap-1">
+                <Percent className="h-3 w-3" />
+                Retorno
+              </Badge>
             </div>
             <div className="flex items-center gap-2">
               <p className={`text-2xl font-bold ${results.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>

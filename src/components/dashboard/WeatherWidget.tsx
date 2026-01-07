@@ -72,9 +72,13 @@ export const WeatherWidget = ({ className }: { className?: string }) => {
               <p className="text-sm text-muted-foreground mb-3">
                 Configura tu ubicación para ver el clima
               </p>
-              <Button size="sm" onClick={() => setShowLocationDialog(true)}>
-                <MapPin className="h-4 w-4 mr-2" />
-                Configurar Ubicación
+              <Button 
+                size="sm" 
+                onClick={() => setShowLocationDialog(true)}
+                className="w-full max-w-[200px]"
+              >
+                <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">Configurar Ubicación</span>
               </Button>
             </div>
           </CardContent>
@@ -103,12 +107,12 @@ export const WeatherWidget = ({ className }: { className?: string }) => {
     <>
       <Card className={cn("overflow-hidden", className)}>
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Thermometer className="h-4 w-4 text-orange-500" />
-              {location?.location_name || 'Clima'}
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 min-w-0">
+              <Thermometer className="h-4 w-4 text-orange-500 flex-shrink-0" />
+              <span className="truncate">{location?.location_name || 'Clima'}</span>
             </CardTitle>
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-shrink-0">
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLocationDialog(true)}>
                 <Settings className="h-3 w-3" />
               </Button>
@@ -118,60 +122,60 @@ export const WeatherWidget = ({ className }: { className?: string }) => {
             </div>
           </div>
         </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Current weather */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <WeatherIcon className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold">{weather.temperature}°C</div>
-              <div className="text-sm text-muted-foreground">{getConditionText(weather.condition)}</div>
-            </div>
-          </div>
-          <div className="text-right text-sm text-muted-foreground space-y-1">
-            <div className="flex items-center gap-1 justify-end">
-              <Droplets className="h-3 w-3" />
-              {weather.humidity}%
-            </div>
-            <div className="flex items-center gap-1 justify-end">
-              <Wind className="h-3 w-3" />
-              {weather.windSpeed} km/h
-            </div>
-          </div>
-        </div>
-
-        {/* Alert */}
-        {weather.alert && (
-          <div className={cn(
-            "p-2 rounded-lg flex items-start gap-2 text-xs",
-            weather.alert.severity === 'high' ? 'bg-destructive/10 text-destructive' :
-            weather.alert.severity === 'medium' ? 'bg-amber-500/10 text-amber-700' :
-            'bg-blue-500/10 text-blue-700'
-          )}>
-            <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <span>{weather.alert.message}</span>
-          </div>
-        )}
-
-        {/* Forecast */}
-        <div className="flex gap-2 overflow-x-auto pt-2 border-t">
-          {weather.forecast.map((day) => (
-            <div key={day.day} className="flex-shrink-0 text-center p-2 rounded-lg bg-muted/50 min-w-[50px]">
-              <div className="text-xs font-medium">{day.day}</div>
-              <div className="text-xs text-muted-foreground">
-                {day.tempMax}° / {day.tempMin}°
+        <CardContent className="space-y-3">
+          {/* Current weather */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <WeatherIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xl sm:text-2xl font-bold">{weather.temperature}°C</div>
+                <div className="text-xs sm:text-sm text-muted-foreground truncate">{getConditionText(weather.condition)}</div>
               </div>
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-    <LocationConfigDialog 
-      open={showLocationDialog} 
-      onOpenChange={setShowLocationDialog} 
-    />
-  </>
+            <div className="text-right text-xs sm:text-sm text-muted-foreground space-y-1 flex-shrink-0">
+              <div className="flex items-center gap-1 justify-end">
+                <Droplets className="h-3 w-3" />
+                {weather.humidity}%
+              </div>
+              <div className="flex items-center gap-1 justify-end">
+                <Wind className="h-3 w-3" />
+                {weather.windSpeed} km/h
+              </div>
+            </div>
+          </div>
+
+          {/* Alert */}
+          {weather.alert && (
+            <div className={cn(
+              "p-2 rounded-lg flex items-start gap-2 text-xs",
+              weather.alert.severity === 'high' ? 'bg-destructive/10 text-destructive' :
+              weather.alert.severity === 'medium' ? 'bg-amber-500/10 text-amber-700' :
+              'bg-blue-500/10 text-blue-700'
+            )}>
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span className="line-clamp-2">{weather.alert.message}</span>
+            </div>
+          )}
+
+          {/* Forecast - scrollable on mobile */}
+          <div className="flex gap-2 overflow-x-auto pt-2 border-t scrollbar-hide">
+            {weather.forecast.map((day) => (
+              <div key={day.day} className="flex-shrink-0 text-center p-1.5 sm:p-2 rounded-lg bg-muted/50 min-w-[45px] sm:min-w-[50px]">
+                <div className="text-xs font-medium">{day.day}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">
+                  {day.tempMax}° / {day.tempMin}°
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      <LocationConfigDialog 
+        open={showLocationDialog} 
+        onOpenChange={setShowLocationDialog} 
+      />
+    </>
   );
 };

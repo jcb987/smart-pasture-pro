@@ -18,25 +18,69 @@ export interface WeatherData {
   }[];
 }
 
-// Simulated weather API - in production would connect to real weather service
+interface OpenMeteoResponse {
+  current: {
+    temperature_2m: number;
+    relative_humidity_2m: number;
+    wind_speed_10m: number;
+    weather_code: number;
+  };
+  daily: {
+    time: string[];
+    temperature_2m_max: number[];
+    temperature_2m_min: number[];
+    weather_code: number[];
+  };
+}
+
+// Map WMO weather codes to our condition types
+const mapWeatherCode = (code: number): WeatherData['condition'] => {
+  if (code === 0 || code === 1) return 'sunny';
+  if (code >= 2 && code <= 3) return 'cloudy';
+  if (code >= 51 && code <= 67) return 'rainy';
+  if (code >= 80 && code <= 82) return 'rainy';
+  if (code >= 95 && code <= 99) return 'stormy';
+  if (code >= 71 && code <= 77) return 'cold';
+  if (code >= 85 && code <= 86) return 'cold';
+  return 'cloudy';
+};
+
+const getDayName = (dateStr: string): string => {
+  const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const date = new Date(dateStr);
+  return days[date.getDay()];
+};
+
 export const useWeather = (location?: { lat: number; lng: number }) => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchWeather = useCallback(async () => {
+    if (!location) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Use Open-Meteo API (free, no API key required)
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=5`
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener datos del clima');
+      }
+
+      const data: OpenMeteoResponse = await response.json();
       
-      // Generate realistic weather data
-      const temp = Math.round(18 + Math.random() * 15);
-      const humidity = Math.round(40 + Math.random() * 40);
+      const temp = Math.round(data.current.temperature_2m);
+      const humidity = Math.round(data.current.relative_humidity_2m);
+      const windSpeed = Math.round(data.current.wind_speed_10m);
+      const condition = mapWeatherCode(data.current.weather_code);
       
-      const conditions: WeatherData['condition'][] = ['sunny', 'cloudy', 'rainy', 'stormy', 'cold'];
-      const condition = conditions[Math.floor(Math.random() * conditions.length)];
-      
+      // Generate alerts based on real conditions
       let alert: WeatherData['alert'] | undefined;
       
       if (temp > 32) {
@@ -57,33 +101,37 @@ export const useWeather = (location?: { lat: number; lng: number }) => {
           message: 'Tormenta pronosticada. Resguarde el ganado.',
           severity: 'high',
         };
+      } else if (humidity < 30 && temp > 28) {
+        alert = {
+          type: 'drought',
+          message: 'Condiciones secas. Revise el suministro de agua.',
+          severity: 'medium',
+        };
       }
 
-      const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-      const today = new Date().getDay();
-      
-      const forecast = Array.from({ length: 5 }, (_, i) => ({
-        day: days[(today + i) % 7],
-        tempMax: temp + Math.round(Math.random() * 5 - 2),
-        tempMin: temp - 5 + Math.round(Math.random() * 3),
-        condition: conditions[Math.floor(Math.random() * 3)],
+      const forecast = data.daily.time.map((date, i) => ({
+        day: getDayName(date),
+        tempMax: Math.round(data.daily.temperature_2m_max[i]),
+        tempMin: Math.round(data.daily.temperature_2m_min[i]),
+        condition: mapWeatherCode(data.daily.weather_code[i]),
       }));
 
       setWeather({
         temperature: temp,
         humidity,
         condition,
-        windSpeed: Math.round(5 + Math.random() * 20),
+        windSpeed,
         alert,
         forecast,
       });
       setError(null);
     } catch (err) {
+      console.error('Weather fetch error:', err);
       setError('Error al cargar datos del clima');
     } finally {
       setLoading(false);
     }
-  }, [location]);
+  }, [location?.lat, location?.lng]);
 
   useEffect(() => {
     fetchWeather();

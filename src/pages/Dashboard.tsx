@@ -13,59 +13,53 @@ import {
   Droplets,
   Baby,
   Stethoscope,
-  ArrowRight
+  ArrowRight,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import { WeatherWidget } from '@/components/dashboard/WeatherWidget';
 import { AIChatWidget } from '@/components/ai/AIChatWidget';
-
-// Mock data - In production this would come from the database
-const kpiData = {
-  totalAnimales: 324,
-  hembrasLactancia: 156,
-  partosEsperados: 28,
-  produccionDiaria: 2847,
-  alertasActivas: 12,
-  tasaFertilidad: 68,
-  produccionPromedio: 18.3,
-  diasAbiertosPromedio: 142,
-};
-
-const alerts = [
-  { id: 1, type: 'warning', message: '5 vacas con producción baja', module: 'Producción' },
-  { id: 2, type: 'danger', message: '3 hembras que debían parir', module: 'Reproducción' },
-  { id: 3, type: 'info', message: '8 animales sin pesar esta semana', module: 'Animales' },
-  { id: 4, type: 'warning', message: '2 animales con tratamiento pendiente', module: 'Salud' },
-];
-
-const recentEvents = [
-  { id: 1, event: 'Parto registrado', animal: 'VAC-0234', time: 'Hace 2 horas' },
-  { id: 2, event: 'Servicio exitoso', animal: 'VAC-0189', time: 'Hace 5 horas' },
-  { id: 3, event: 'Vacunación aplicada', animal: 'Lote A12', time: 'Ayer' },
-  { id: 4, event: 'Peso registrado', animal: 'VAC-0156', time: 'Ayer' },
-];
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { kpis, alerts, recentEvents, loading, lastUpdated, refresh } = useDashboardData();
 
   const aiContext = {
-    totalAnimals: kpiData.totalAnimales,
-    animalsInLactation: kpiData.hembrasLactancia,
-    dailyProduction: kpiData.produccionDiaria,
-    alertsCount: kpiData.alertasActivas,
-    fertilityRate: kpiData.tasaFertilidad,
+    totalAnimals: kpis.totalAnimales,
+    animalsInLactation: kpis.hembrasLactancia,
+    dailyProduction: kpis.produccionDiaria,
+    alertsCount: kpis.alertasActivas,
+    fertilityRate: kpis.tasaFertilidad,
+  };
+
+  const formatLastUpdated = () => {
+    return format(lastUpdated, "'Actualizado' HH:mm", { locale: es });
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Vista general de tu ganadería • Actualizado hace 5 minutos
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Vista general de tu ganadería • {formatLastUpdated()}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            <span className="ml-2 hidden sm:inline">Actualizar</span>
+          </Button>
         </div>
 
         {/* Weather + Main KPIs */}
@@ -78,10 +72,10 @@ const Dashboard = () => {
               <Beef className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{kpiData.totalAnimales}</div>
+              <div className="text-2xl font-bold">{kpis.totalAnimales}</div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
-                +12 este mes
+                +{kpis.cambioMensual} este mes
               </p>
             </CardContent>
           </Card>
@@ -92,9 +86,9 @@ const Dashboard = () => {
               <Milk className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{kpiData.hembrasLactancia}</div>
+              <div className="text-2xl font-bold">{kpis.hembrasLactancia}</div>
               <p className="text-xs text-muted-foreground">
-                {Math.round((kpiData.hembrasLactancia / kpiData.totalAnimales) * 100)}% del hato
+                {kpis.totalAnimales > 0 ? Math.round((kpis.hembrasLactancia / kpis.totalAnimales) * 100) : 0}% del hato
               </p>
             </CardContent>
           </Card>
@@ -105,10 +99,9 @@ const Dashboard = () => {
               <Droplets className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{kpiData.produccionDiaria} L</div>
+              <div className="text-2xl font-bold">{kpis.produccionDiaria.toFixed(1)} L</div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <TrendingUp className="h-3 w-3 text-green-500" />
-                +5.2% vs semana pasada
+                Promedio: {kpis.produccionPromedio} L/vaca
               </p>
             </CardContent>
           </Card>
@@ -119,9 +112,9 @@ const Dashboard = () => {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-500">{kpiData.alertasActivas}</div>
+              <div className="text-2xl font-bold text-red-500">{kpis.alertasActivas}</div>
               <p className="text-xs text-muted-foreground">
-                Requieren atención inmediata
+                Requieren atención
               </p>
             </CardContent>
           </Card>
@@ -138,28 +131,28 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{kpiData.tasaFertilidad}%</span>
-                <Badge variant={kpiData.tasaFertilidad >= 65 ? 'default' : 'destructive'}>
-                  {kpiData.tasaFertilidad >= 65 ? 'Óptimo' : 'Bajo'}
+                <span className="text-2xl font-bold">{kpis.tasaFertilidad}%</span>
+                <Badge variant={kpis.tasaFertilidad >= 65 ? 'default' : 'destructive'}>
+                  {kpis.tasaFertilidad >= 65 ? 'Óptimo' : 'Bajo'}
                 </Badge>
               </div>
-              <Progress value={kpiData.tasaFertilidad} className="mt-2" />
+              <Progress value={kpis.tasaFertilidad} className="mt-2" />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Milk className="h-4 w-4 text-blue-500" />
-                Producción Promedio
+                <Baby className="h-4 w-4 text-purple-500" />
+                Partos Esperados
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{kpiData.produccionPromedio} L/día</span>
-                <Badge variant="secondary">Por vaca</Badge>
+                <span className="text-2xl font-bold">{kpis.partosEsperados}</span>
+                <Badge variant="secondary">Próximos 30 días</Badge>
               </div>
-              <Progress value={(kpiData.produccionPromedio / 25) * 100} className="mt-2" />
+              <Progress value={kpis.partosEsperados > 0 ? Math.min((kpis.partosEsperados / 10) * 100, 100) : 0} className="mt-2" />
             </CardContent>
           </Card>
 
@@ -172,12 +165,12 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{kpiData.diasAbiertosPromedio}</span>
-                <Badge variant={kpiData.diasAbiertosPromedio <= 120 ? 'default' : 'destructive'}>
-                  {kpiData.diasAbiertosPromedio <= 120 ? 'Normal' : 'Alto'}
+                <span className="text-2xl font-bold">{kpis.diasAbiertosPromedio || '-'}</span>
+                <Badge variant={kpis.diasAbiertosPromedio <= 120 ? 'default' : 'destructive'}>
+                  {kpis.diasAbiertosPromedio <= 120 ? 'Normal' : 'Alto'}
                 </Badge>
               </div>
-              <Progress value={100 - (kpiData.diasAbiertosPromedio / 200) * 100} className="mt-2" />
+              <Progress value={kpis.diasAbiertosPromedio > 0 ? 100 - (kpis.diasAbiertosPromedio / 200) * 100 : 0} className="mt-2" />
             </CardContent>
           </Card>
         </div>
@@ -193,26 +186,33 @@ const Dashboard = () => {
               <CardDescription>Eventos que requieren tu atención</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {alerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        alert.type === 'danger' ? 'bg-red-500' :
-                        alert.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
-                      }`} />
-                      <div>
-                        <p className="text-sm font-medium">{alert.message}</p>
-                        <p className="text-xs text-muted-foreground">{alert.module}</p>
+              {alerts.length > 0 ? (
+                <div className="space-y-3">
+                  {alerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          alert.type === 'danger' ? 'bg-red-500' :
+                          alert.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
+                        }`} />
+                        <div>
+                          <p className="text-sm font-medium">{alert.message}</p>
+                          <p className="text-xs text-muted-foreground">{alert.module}</p>
+                        </div>
                       </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Sin alertas activas</p>
+                </div>
+              )}
               <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/reportes')}>
                 Ver todas las alertas
               </Button>
@@ -228,25 +228,32 @@ const Dashboard = () => {
               <CardDescription>Últimos eventos registrados</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {recentEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Beef className="h-4 w-4 text-primary" />
+              {recentEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {recentEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Beef className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{event.event}</p>
+                          <p className="text-xs text-muted-foreground">{event.animal}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">{event.event}</p>
-                        <p className="text-xs text-muted-foreground">{event.animal}</p>
-                      </div>
+                      <span className="text-xs text-muted-foreground">{event.time}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{event.time}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Sin actividad reciente</p>
+                </div>
+              )}
               <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/animales')}>
                 Ver historial completo
               </Button>

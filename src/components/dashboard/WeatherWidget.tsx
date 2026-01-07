@@ -1,10 +1,13 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useWeather, type WeatherData } from '@/hooks/useWeather';
+import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
+import { LocationConfigDialog } from './LocationConfigDialog';
 import { 
   Sun, Cloud, CloudRain, CloudLightning, Snowflake, 
-  Thermometer, Droplets, Wind, AlertTriangle, RefreshCw 
+  Thermometer, Droplets, Wind, AlertTriangle, RefreshCw,
+  MapPin, Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +34,13 @@ const getConditionText = (condition: WeatherData['condition']) => {
 };
 
 export const WeatherWidget = ({ className }: { className?: string }) => {
-  const { weather, loading, error, refresh } = useWeather();
+  const { location, hasLocation } = useOrganizationSettings();
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const { weather, loading, error, refresh } = useWeather(
+    hasLocation && location?.latitude && location?.longitude
+      ? { lat: location.latitude, lng: location.longitude }
+      : undefined
+  );
 
   if (loading) {
     return (
@@ -43,6 +52,38 @@ export const WeatherWidget = ({ className }: { className?: string }) => {
           <div className="h-12 bg-muted rounded" />
         </CardContent>
       </Card>
+    );
+  }
+
+  // Show location setup if not configured
+  if (!hasLocation) {
+    return (
+      <>
+        <Card className={cn("overflow-hidden", className)}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Thermometer className="h-4 w-4 text-orange-500" />
+              Clima
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-center py-4">
+              <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground mb-3">
+                Configura tu ubicación para ver el clima
+              </p>
+              <Button size="sm" onClick={() => setShowLocationDialog(true)}>
+                <MapPin className="h-4 w-4 mr-2" />
+                Configurar Ubicación
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        <LocationConfigDialog 
+          open={showLocationDialog} 
+          onOpenChange={setShowLocationDialog} 
+        />
+      </>
     );
   }
 
@@ -59,18 +100,24 @@ export const WeatherWidget = ({ className }: { className?: string }) => {
   const WeatherIcon = getWeatherIcon(weather.condition);
 
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Thermometer className="h-4 w-4 text-orange-500" />
-            Clima Actual
-          </CardTitle>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={refresh}>
-            <RefreshCw className="h-3 w-3" />
-          </Button>
-        </div>
-      </CardHeader>
+    <>
+      <Card className={cn("overflow-hidden", className)}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Thermometer className="h-4 w-4 text-orange-500" />
+              {location?.location_name || 'Clima'}
+            </CardTitle>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLocationDialog(true)}>
+                <Settings className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={refresh}>
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
       <CardContent className="space-y-3">
         {/* Current weather */}
         <div className="flex items-center justify-between">
@@ -121,5 +168,10 @@ export const WeatherWidget = ({ className }: { className?: string }) => {
         </div>
       </CardContent>
     </Card>
+    <LocationConfigDialog 
+      open={showLocationDialog} 
+      onOpenChange={setShowLocationDialog} 
+    />
+  </>
   );
 };

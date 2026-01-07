@@ -20,7 +20,6 @@ const ProduccionLeche = () => {
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
   const { exportToExcel, exporting } = useExportMilk();
   const { importData } = useImportMilk();
-  const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
   
   const { 
     records, 
@@ -225,10 +224,6 @@ const ProduccionLeche = () => {
         onImport={importData}
       />
     </DashboardLayout>
-  );
-};
-
-export default ProduccionLeche;
   );
 };
 

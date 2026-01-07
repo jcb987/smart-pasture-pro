@@ -240,7 +240,3 @@ const ProduccionCarne = () => {
 };
 
 export default ProduccionCarne;
-  );
-};
-
-export default ProduccionCarne;

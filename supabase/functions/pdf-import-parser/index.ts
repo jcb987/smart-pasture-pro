@@ -43,13 +43,14 @@ El documento debe contener datos para la tabla "${tableName}".
 Columnas esperadas:
 ${columnsDescription}
 
-INSTRUCCIONES:
+INSTRUCCIONES CRÍTICAS:
 1. Busca cualquier tabla o lista de datos en el documento
 2. Identifica las columnas que corresponden a los campos esperados
-3. Extrae TODOS los datos de cada fila encontrada
+3. Extrae MÁXIMO 100 filas de datos (las más importantes/primeras)
 4. Para fechas, usa formato YYYY-MM-DD
 5. Para números, usa punto como separador decimal
 6. Si una celda está vacía, usa null
+7. IMPORTANTE: Asegúrate de que el JSON esté COMPLETO y bien formado
 
 RESPONDE ÚNICAMENTE con un objeto JSON válido con esta estructura:
 {
@@ -58,14 +59,16 @@ RESPONDE ÚNICAMENTE con un objeto JSON válido con esta estructura:
     [valor1, valor2, ...],
     [valor1, valor2, ...]
   ],
-  "extractionNotes": "Notas sobre la extracción"
+  "extractionNotes": "Notas sobre la extracción",
+  "totalRowsInDocument": 150
 }
 
 Si no encuentras datos tabulares, responde:
 {
   "headers": [],
   "rows": [],
-  "extractionNotes": "No se encontraron datos tabulares en el documento"
+  "extractionNotes": "No se encontraron datos tabulares en el documento",
+  "totalRowsInDocument": 0
 }`;
 
     console.log('Sending PDF to AI for extraction...');
@@ -96,7 +99,7 @@ Si no encuentras datos tabulares, responde:
             ]
           }
         ],
-        max_tokens: 8000,
+        max_tokens: 16000,
         temperature: 0.1,
       }),
     });
@@ -130,7 +133,6 @@ Si no encuentras datos tabulares, responde:
       let jsonStr = content.trim();
       
       // Remove markdown code blocks more robustly
-      // Handle ```json ... ``` or ``` ... ```
       const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (codeBlockMatch) {
         jsonStr = codeBlockMatch[1].trim();
@@ -139,16 +141,63 @@ Si no encuentras datos tabulares, responde:
         jsonStr = jsonStr.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
       }
       
-      // Find the JSON object boundaries as additional fallback
+      // Find the JSON object boundaries
       const firstBrace = jsonStr.indexOf('{');
-      const lastBrace = jsonStr.lastIndexOf('}');
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+      if (firstBrace !== -1) {
+        jsonStr = jsonStr.substring(firstBrace);
       }
       
-      parsed = JSON.parse(jsonStr);
+      // Try to parse as-is first
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        // If parsing fails, try to repair truncated JSON
+        console.log('JSON parse failed, attempting repair...');
+        
+        // Try to fix truncated JSON by closing open brackets
+        let repairedJson = jsonStr;
+        
+        // Count open brackets and arrays
+        const openBraces = (repairedJson.match(/{/g) || []).length;
+        const closeBraces = (repairedJson.match(/}/g) || []).length;
+        const openBrackets = (repairedJson.match(/\[/g) || []).length;
+        const closeBrackets = (repairedJson.match(/]/g) || []).length;
+        
+        // Remove trailing incomplete data (after last complete array item)
+        const lastCompleteItem = repairedJson.lastIndexOf('],');
+        const lastCompleteItem2 = repairedJson.lastIndexOf('null]');
+        const lastCompleteItem3 = repairedJson.lastIndexOf('"]');
+        const cutPoint = Math.max(lastCompleteItem, lastCompleteItem2, lastCompleteItem3);
+        
+        if (cutPoint > 0) {
+          repairedJson = repairedJson.substring(0, cutPoint + (lastCompleteItem === cutPoint ? 1 : (lastCompleteItem2 === cutPoint ? 5 : 2)));
+        }
+        
+        // Close remaining brackets and braces
+        const newOpenBrackets = (repairedJson.match(/\[/g) || []).length;
+        const newCloseBrackets = (repairedJson.match(/]/g) || []).length;
+        const newOpenBraces = (repairedJson.match(/{/g) || []).length;
+        const newCloseBraces = (repairedJson.match(/}/g) || []).length;
+        
+        for (let i = 0; i < newOpenBrackets - newCloseBrackets; i++) {
+          repairedJson += ']';
+        }
+        
+        // Add extractionNotes if missing
+        if (!repairedJson.includes('extractionNotes')) {
+          repairedJson += ', "extractionNotes": "Datos parcialmente extraídos"';
+        }
+        
+        for (let i = 0; i < newOpenBraces - newCloseBraces; i++) {
+          repairedJson += '}';
+        }
+        
+        console.log('Attempting to parse repaired JSON...');
+        parsed = JSON.parse(repairedJson);
+        console.log('Successfully repaired and parsed JSON');
+      }
     } catch (parseError) {
-      console.error('Failed to parse AI response:', content.substring(0, 500));
+      console.error('Failed to parse AI response:', content.substring(0, 1000));
       throw new Error('Failed to parse AI response as JSON');
     }
 

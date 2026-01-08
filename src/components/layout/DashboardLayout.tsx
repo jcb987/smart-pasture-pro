@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from 'react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { NotificationsDropdown } from '@/components/layout/NotificationsDropdown';
+import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
 
             <div className="flex items-center gap-2">
+              <OfflineIndicator />
               <NotificationsDropdown />
               
               <DropdownMenu>

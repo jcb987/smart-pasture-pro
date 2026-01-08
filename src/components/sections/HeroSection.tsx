@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Play, ChevronRight, Milk, Beef, Target, Cpu, Smartphone, BarChart3, Wifi } from "lucide-react";
+import { Play, ChevronRight, Milk, Beef, Target, Cpu, Smartphone, BarChart3, Wifi, Download, Apple, Monitor } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -8,6 +8,25 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import heroBackground from "@/assets/hero-background.png";
+
+// SVG Icons for stores
+const PlayStoreIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/>
+  </svg>
+);
+
+const AppStoreIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path d="M11.624 7.222c-.876 0-2.232-.996-3.66-.96-1.884.024-3.612 1.092-4.584 2.784-1.956 3.396-.504 8.412 1.404 11.172.936 1.344 2.04 2.856 3.504 2.808 1.404-.06 1.932-.912 3.636-.912 1.692 0 2.172.912 3.66.876 1.512-.024 2.472-1.368 3.396-2.724 1.068-1.56 1.512-3.072 1.536-3.156-.036-.012-2.94-1.128-2.976-4.488-.024-2.808 2.292-4.152 2.4-4.212-1.32-1.932-3.348-2.148-4.056-2.196-1.848-.144-3.396 1.008-4.26 1.008zm3.12-2.832c.78-.936 1.296-2.244 1.152-3.54-1.116.048-2.46.744-3.264 1.68-.72.828-1.344 2.16-1.176 3.432 1.236.096 2.508-.636 3.288-1.572z"/>
+  </svg>
+);
+
+const WindowsIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+  </svg>
+);
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -143,6 +162,66 @@ const HeroSection = () => {
                   }`}
                 />
               ))}
+            </div>
+          </div>
+
+          {/* Download Buttons */}
+          <div className="flex flex-col items-center gap-3 mb-12 animate-slide-up" style={{ animationDelay: "0.25s" }}>
+            <p className="text-primary-foreground/60 text-sm">Descarga la app para tu dispositivo:</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <a 
+                    href="#" 
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 transition-all hover:scale-105"
+                  >
+                    <WindowsIcon />
+                    <div className="flex flex-col items-start">
+                      <span className="text-[10px] text-primary-foreground/60 leading-none">Descargar para</span>
+                      <span className="text-sm font-semibold leading-tight">Windows</span>
+                    </div>
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-background text-foreground">
+                  <p className="text-sm">Descarga la aplicación de escritorio para Windows</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <a 
+                    href="#" 
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 transition-all hover:scale-105"
+                  >
+                    <AppStoreIcon />
+                    <div className="flex flex-col items-start">
+                      <span className="text-[10px] text-primary-foreground/60 leading-none">Disponible en</span>
+                      <span className="text-sm font-semibold leading-tight">App Store</span>
+                    </div>
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-background text-foreground">
+                  <p className="text-sm">Descarga para iPhone y iPad</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <a 
+                    href="#" 
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 transition-all hover:scale-105"
+                  >
+                    <PlayStoreIcon />
+                    <div className="flex flex-col items-start">
+                      <span className="text-[10px] text-primary-foreground/60 leading-none">Disponible en</span>
+                      <span className="text-sm font-semibold leading-tight">Google Play</span>
+                    </div>
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-background text-foreground">
+                  <p className="text-sm">Descarga para Android</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
 

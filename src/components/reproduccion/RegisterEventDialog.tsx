@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FemaleAnimal } from '@/hooks/useReproduction';
+import { Badge } from '@/components/ui/badge';
 
 interface Props {
   open: boolean;
@@ -25,6 +27,11 @@ interface Props {
     calf_sex?: 'macho' | 'hembra';
     calf_weight?: number;
     notes?: string;
+    // New fields for calf creation
+    create_calf?: boolean;
+    calf_tag_id?: string;
+    calf_name?: string;
+    father_id?: string;
   }) => void;
   defaultAnimalId?: string;
   defaultEventType?: string;
@@ -53,6 +60,7 @@ export const RegisterEventDialog = ({
   const [eventType, setEventType] = useState(defaultEventType || '');
   const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
   const [bullId, setBullId] = useState('');
+  const [fatherId, setFatherId] = useState('');
   const [semenBatch, setSemenBatch] = useState('');
   const [technician, setTechnician] = useState('');
   const [pregnancyResult, setPregnancyResult] = useState('');
@@ -61,9 +69,28 @@ export const RegisterEventDialog = ({
   const [calfSex, setCalfSex] = useState('');
   const [calfWeight, setCalfWeight] = useState('');
   const [notes, setNotes] = useState('');
+  
+  // New fields for calf creation
+  const [createCalf, setCreateCalf] = useState(true);
+  const [calfTagId, setCalfTagId] = useState('');
+  const [calfName, setCalfName] = useState('');
+
+  // Reset fields when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      setAnimalId(defaultAnimalId || '');
+      setEventType(defaultEventType || '');
+    }
+  }, [open, defaultAnimalId, defaultEventType]);
 
   const handleSubmit = () => {
     if (!animalId || !eventType || !eventDate) return;
+
+    // Validate birth fields
+    if (eventType === 'parto') {
+      if (!birthType || !calfSex) return;
+      if (createCalf && !calfTagId) return;
+    }
 
     onSubmit({
       animal_id: animalId,
@@ -78,12 +105,23 @@ export const RegisterEventDialog = ({
       calf_sex: calfSex as 'macho' | 'hembra' | undefined,
       calf_weight: calfWeight ? parseFloat(calfWeight) : undefined,
       notes: notes || undefined,
+      // New fields
+      create_calf: createCalf,
+      calf_tag_id: calfTagId || undefined,
+      calf_name: calfName || undefined,
+      father_id: fatherId || bullId || undefined,
     });
 
     // Reset form
+    resetForm();
+    onOpenChange(false);
+  };
+
+  const resetForm = () => {
     setAnimalId('');
     setEventType('');
     setBullId('');
+    setFatherId('');
     setSemenBatch('');
     setTechnician('');
     setPregnancyResult('');
@@ -92,7 +130,9 @@ export const RegisterEventDialog = ({
     setCalfSex('');
     setCalfWeight('');
     setNotes('');
-    onOpenChange(false);
+    setCreateCalf(true);
+    setCalfTagId('');
+    setCalfName('');
   };
 
   const showServiceFields = eventType === 'servicio';
@@ -100,8 +140,11 @@ export const RegisterEventDialog = ({
   const showPalpationFields = eventType === 'palpacion';
   const showBirthFields = eventType === 'parto';
 
+  // Get selected mother info
+  const selectedMother = females.find(f => f.id === animalId);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => { onOpenChange(open); if (!open) resetForm(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Evento Reproductivo</DialogTitle>
@@ -110,7 +153,7 @@ export const RegisterEventDialog = ({
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Animal *</Label>
+              <Label>{showBirthFields ? 'Madre *' : 'Animal *'}</Label>
               <Select value={animalId} onValueChange={setAnimalId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar" />
@@ -228,16 +271,50 @@ export const RegisterEventDialog = ({
                   </div>
                 )}
               </div>
+              <div className="space-y-2">
+                <Label>Veterinario</Label>
+                <Input
+                  value={technician}
+                  onChange={(e) => setTechnician(e.target.value)}
+                  placeholder="Nombre del veterinario"
+                />
+              </div>
             </div>
           )}
 
-          {/* Campos para Parto */}
+          {/* Campos para Parto - MEJORADO */}
           {showBirthFields && (
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
-              <h4 className="font-medium">Datos del Parto</h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Datos del Parto</h4>
+                {selectedMother && (
+                  <Badge variant="outline">
+                    Madre: {selectedMother.tag_id}
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Padre */}
+              <div className="space-y-2">
+                <Label>Padre *</Label>
+                <Select value={fatherId} onValueChange={setFatherId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar padre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unknown">Desconocido</SelectItem>
+                    {bulls.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.tag_id} {b.name && `- ${b.name}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Tipo de Parto</Label>
+                  <Label>Tipo de Parto *</Label>
                   <Select value={birthType} onValueChange={setBirthType}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar" />
@@ -251,7 +328,7 @@ export const RegisterEventDialog = ({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Sexo de la Cría</Label>
+                  <Label>Sexo de la Cría *</Label>
                   <Select value={calfSex} onValueChange={setCalfSex}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar" />
@@ -262,16 +339,55 @@ export const RegisterEventDialog = ({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Peso al Nacer (kg)</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={calfWeight}
-                    onChange={(e) => setCalfWeight(e.target.value)}
-                    placeholder="Ej: 35"
+              </div>
+
+              <div className="space-y-2">
+                <Label>Peso al Nacer (kg)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={calfWeight}
+                  onChange={(e) => setCalfWeight(e.target.value)}
+                  placeholder="Ej: 35"
+                />
+              </div>
+
+              {/* Crear cría automáticamente */}
+              <div className="pt-2 border-t space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="create-calf" 
+                    checked={createCalf} 
+                    onCheckedChange={(checked) => setCreateCalf(checked as boolean)} 
                   />
+                  <label 
+                    htmlFor="create-calf" 
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Crear registro de la cría automáticamente
+                  </label>
                 </div>
+
+                {createCalf && (
+                  <div className="grid grid-cols-2 gap-4 pl-6">
+                    <div className="space-y-2">
+                      <Label>Arete de la Cría *</Label>
+                      <Input
+                        value={calfTagId}
+                        onChange={(e) => setCalfTagId(e.target.value)}
+                        placeholder="Ej: 2024-001"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nombre (opcional)</Label>
+                      <Input
+                        value={calfName}
+                        onChange={(e) => setCalfName(e.target.value)}
+                        placeholder="Nombre de la cría"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -291,7 +407,15 @@ export const RegisterEventDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={!animalId || !eventType}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={
+              !animalId || 
+              !eventType || 
+              (showBirthFields && (!birthType || !calfSex)) ||
+              (showBirthFields && createCalf && !calfTagId)
+            }
+          >
             Registrar Evento
           </Button>
         </DialogFooter>

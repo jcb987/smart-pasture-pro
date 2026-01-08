@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Stethoscope, Plus, Syringe, AlertTriangle, Pill, ShieldCheck, Calendar, Brain } from 'lucide-react';
 import { useHealth } from '@/hooks/useHealth';
+import { useReproduction } from '@/hooks/useReproduction';
 import { AddHealthEventDialog } from '@/components/salud/AddHealthEventDialog';
 import { AddVaccinationDialog } from '@/components/salud/AddVaccinationDialog';
 import { HealthEventsTable, VaccinationTable } from '@/components/salud/HealthTables';
 import { HealthAlerts, DiagnosisStatsCard } from '@/components/salud/HealthAlerts';
 import { AIHealthPredictor } from '@/components/ai/AIHealthPredictor';
+import { toast } from 'sonner';
 
 const Salud = () => {
   const [showEventDialog, setShowEventDialog] = useState(false);
@@ -32,6 +34,8 @@ const Salud = () => {
     COMMON_VACCINES,
   } = useHealth();
 
+  const { addEvent: addReproductiveEvent } = useReproduction();
+
   const stats = getStats();
   const diagnosisStats = getDiagnosisStats();
   const alerts = getAlerts();
@@ -43,6 +47,33 @@ const Salud = () => {
   const handleApplyVaccination = (id: string) => {
     const today = new Date().toISOString().split('T')[0];
     applyVaccination(id, today);
+  };
+
+  // Handle palpation from health module - this registers a reproductive event
+  const handlePalpation = async (data: {
+    animal_id: string;
+    event_date: string;
+    result: 'positivo' | 'negativo';
+    gestation_days?: number;
+    veterinarian?: string;
+    notes?: string;
+  }) => {
+    try {
+      addReproductiveEvent({
+        animal_id: data.animal_id,
+        event_type: 'palpacion',
+        event_date: data.event_date,
+        pregnancy_result: data.result,
+        estimated_gestation_days: data.gestation_days,
+        technician: data.veterinarian,
+        notes: data.notes,
+      });
+      toast.success('Palpación registrada correctamente');
+      return true;
+    } catch (error) {
+      toast.error('Error al registrar palpación');
+      return false;
+    }
   };
 
   return (
@@ -251,6 +282,7 @@ const Salud = () => {
         open={showEventDialog}
         onOpenChange={setShowEventDialog}
         onSubmitEvent={addHealthEvent}
+        onPalpationSubmit={handlePalpation}
         commonDiagnoses={COMMON_DIAGNOSES}
       />
 

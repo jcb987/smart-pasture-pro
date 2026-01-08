@@ -210,7 +210,12 @@ export const useReproduction = () => {
 
   // Registrar evento reproductivo
   const addEventMutation = useMutation({
-    mutationFn: async (event: Omit<ReproductiveEvent, 'id' | 'created_at' | 'organization_id'>) => {
+    mutationFn: async (event: Omit<ReproductiveEvent, 'id' | 'created_at' | 'organization_id'> & {
+      create_calf?: boolean;
+      calf_tag_id?: string;
+      calf_name?: string;
+      father_id?: string;
+    }) => {
       if (!organizationId) throw new Error('No organization');
       
       // Calcular fecha esperada de parto si es servicio o inseminación
@@ -219,12 +224,53 @@ export const useReproduction = () => {
         expectedBirthDate = addDays(parseISO(event.event_date), GESTATION_DAYS).toISOString().split('T')[0];
       }
 
+      // Create calf record if it's a birth event and create_calf is true
+      let calfId: string | undefined = undefined;
+      if (event.event_type === 'parto' && event.create_calf && event.calf_tag_id && event.calf_sex) {
+        const calfCategory = event.calf_sex === 'macho' ? 'ternero' : 'ternera';
+        
+        const { data: calfData, error: calfError } = await supabase
+          .from('animals')
+          .insert({
+            tag_id: event.calf_tag_id,
+            name: event.calf_name || null,
+            category: calfCategory,
+            sex: event.calf_sex,
+            birth_date: event.event_date,
+            entry_date: event.event_date,
+            current_weight: event.calf_weight || null,
+            last_weight_date: event.calf_weight ? event.event_date : null,
+            mother_id: event.animal_id,
+            father_id: event.father_id && event.father_id !== 'unknown' ? event.father_id : null,
+            organization_id: organizationId,
+            status: 'activo',
+            reproductive_status: 'vacia',
+          })
+          .select('id')
+          .single();
+        
+        if (calfError) throw calfError;
+        calfId = calfData.id;
+      }
+
       const { data, error } = await supabase
         .from('reproductive_events')
         .insert({
-          ...event,
+          animal_id: event.animal_id,
+          event_type: event.event_type,
+          event_date: event.event_date,
+          bull_id: event.bull_id || event.father_id || undefined,
+          semen_batch: event.semen_batch,
+          technician: event.technician,
+          pregnancy_result: event.pregnancy_result,
+          estimated_gestation_days: event.estimated_gestation_days,
+          birth_type: event.birth_type,
+          calf_sex: event.calf_sex,
+          calf_weight: event.calf_weight,
+          calf_id: calfId,
           organization_id: organizationId,
           expected_birth_date: expectedBirthDate,
+          notes: event.notes,
         })
         .select()
         .single();
@@ -296,6 +342,7 @@ export const useReproduction = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reproductive-events'] });
       queryClient.invalidateQueries({ queryKey: ['reproductive-females'] });
+      queryClient.invalidateQueries({ queryKey: ['animals'] });
       toast.success('Evento reproductivo registrado');
     },
     onError: (error) => {

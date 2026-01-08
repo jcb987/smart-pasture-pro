@@ -54,7 +54,6 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <FounderModeBanner />
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />

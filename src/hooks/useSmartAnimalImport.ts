@@ -230,6 +230,27 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
     return num;
   }, []);
 
+  // Helper function to find a value from multiple possible keys
+  const findValue = useCallback((rowData: Record<string, unknown>, keys: string[]): unknown => {
+    for (const key of keys) {
+      // Direct key match
+      if (rowData[key] !== undefined && rowData[key] !== null && rowData[key] !== '') {
+        return rowData[key];
+      }
+      // Try case-insensitive partial match
+      for (const dataKey of Object.keys(rowData)) {
+        const normalizedDataKey = dataKey.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normalizedSearchKey = key.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (normalizedDataKey.includes(normalizedSearchKey) || normalizedSearchKey.includes(normalizedDataKey)) {
+          if (rowData[dataKey] !== undefined && rowData[dataKey] !== null && rowData[dataKey] !== '') {
+            return rowData[dataKey];
+          }
+        }
+      }
+    }
+    return null;
+  }, []);
+
   // Process a single row of data
   const processRow = useCallback((
     rowData: Record<string, unknown>,
@@ -239,13 +260,30 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
     const errors: string[] = [];
     const warnings: string[] = [];
     
+    // Extended list of possible tag field names
+    const tagFields = [
+      'tag_id', 'arete', 'id', 'numero', 'identificador', 'codigo', 
+      'no', 'n°', 'n.', 'num', 'animal', 'arete/id', 'id animal',
+      'identificacion', 'chapeta', 'ear tag', 'tag', 'nro', 'numero animal',
+      'no.', '#', 'consecutivo', 'registro'
+    ];
+    
     // Extract tag_id (primary identifier)
     let tagId = '';
-    const tagFields = ['tag_id', 'arete', 'id', 'numero', 'identificador', 'codigo'];
-    for (const field of tagFields) {
-      if (rowData[field]) {
-        tagId = rowData[field]?.toString().trim() || '';
-        break;
+    const tagValue = findValue(rowData, tagFields);
+    if (tagValue) {
+      tagId = tagValue.toString().trim();
+    }
+    
+    // If still no tag, try the first column value
+    if (!tagId) {
+      const firstKey = Object.keys(rowData)[0];
+      if (firstKey && rowData[firstKey]) {
+        const firstVal = rowData[firstKey]?.toString().trim();
+        // Only use if it looks like an ID (not a text description)
+        if (firstVal && /^[\d\w\-\/\.]+$/i.test(firstVal) && firstVal.length < 50) {
+          tagId = firstVal;
+        }
       }
     }
     
@@ -253,34 +291,35 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       errors.push('ID/Arete no encontrado');
     }
     
-    // Extract name (optional)
-    const name = rowData['name']?.toString().trim() || 
-                 rowData['nombre']?.toString().trim() || 
-                 null;
+    // Extract name (optional) - expanded field list
+    const nameFields = ['name', 'nombre', 'alias', 'apodo'];
+    const nameValue = findValue(rowData, nameFields);
+    const name = nameValue?.toString().trim() || null;
     
-    // Extract stage/phase and derive category/sex
-    let stageText = rowData['stage']?.toString() || 
-                    rowData['fase']?.toString() || 
-                    rowData['etapa']?.toString() || 
-                    rowData['estado_productivo']?.toString() || 
-                    rowData['category']?.toString() || 
-                    rowData['categoria']?.toString() || '';
+    // Extract stage/phase and derive category/sex - expanded field list
+    const stageFields = [
+      'stage', 'fase', 'etapa', 'estado_productivo', 'category', 'categoria',
+      'tipo', 'clasificacion', 'fase productiva', 'tipo animal', 'descripcion'
+    ];
+    let stageText = (findValue(rowData, stageFields) || '').toString();
     
     let category: AnimalCategory | null = null;
     let sex: AnimalSex | null = null;
     
-    // Try to get category directly
-    const directCategory = rowData['category']?.toString() || rowData['categoria']?.toString();
+    // Try to get category directly - expanded field list
+    const categoryFields = ['category', 'categoria', 'tipo', 'clasificacion'];
+    const directCategory = findValue(rowData, categoryFields);
     if (directCategory) {
-      category = normalizeCategory(directCategory, species);
+      category = normalizeCategory(directCategory.toString(), species);
     }
     
-    // Try to get sex directly
-    const directSex = rowData['sex']?.toString() || rowData['sexo']?.toString();
+    // Try to get sex directly - expanded field list
+    const sexFields = ['sex', 'sexo', 'genero', 'gender'];
+    const directSex = findValue(rowData, sexFields);
     if (directSex) {
-      const normalizedSex = directSex.toLowerCase().trim();
-      if (['hembra', 'h', 'f', 'female'].includes(normalizedSex)) sex = 'hembra';
-      else if (['macho', 'm', 'male'].includes(normalizedSex)) sex = 'macho';
+      const normalizedSex = directSex.toString().toLowerCase().trim();
+      if (['hembra', 'h', 'f', 'female', 'hem', 'fem'].includes(normalizedSex)) sex = 'hembra';
+      else if (['macho', 'm', 'male', 'mac'].includes(normalizedSex)) sex = 'macho';
     }
     
     // If stage text exists, try to infer category and sex
@@ -315,30 +354,31 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       warnings.push('Sexo no detectado - requiere selección manual');
     }
     
-    // Extract breed (optional)
-    const breed = rowData['breed']?.toString().trim() || 
-                  rowData['raza']?.toString().trim() || 
-                  null;
+    // Extract breed (optional) - expanded field list
+    const breedFields = ['breed', 'raza', 'raza animal', 'tipo raza'];
+    const breedValue = findValue(rowData, breedFields);
+    const breed = breedValue?.toString().trim() || null;
     
-    // Extract weight (optional)
-    const weightRaw = rowData['weight'] || rowData['peso'] || rowData['peso_actual'];
+    // Extract weight (optional) - expanded field list
+    const weightFields = ['weight', 'peso', 'peso_actual', 'peso_vivo', 'kg', 'peso kg', 'peso (kg)'];
+    const weightRaw = findValue(rowData, weightFields);
     const currentWeight = parseWeight(weightRaw);
     
-    // Extract lot (optional)
-    const lotName = rowData['lot_name']?.toString().trim() || 
-                    rowData['lote']?.toString().trim() || 
-                    rowData['potrero']?.toString().trim() || 
-                    null;
+    // Extract lot (optional) - expanded field list
+    const lotFields = ['lot_name', 'lote', 'potrero', 'corral', 'grupo', 'ubicacion', 'location'];
+    const lotValue = findValue(rowData, lotFields);
+    const lotName = lotValue?.toString().trim() || null;
     
-    // Extract status (default to activo)
+    // Extract status (default to activo) - expanded field list
     let status: AnimalStatus = 'activo';
-    const statusRaw = rowData['status']?.toString() || rowData['estado']?.toString();
+    const statusFields = ['status', 'estado', 'situacion', 'condicion'];
+    const statusRaw = findValue(rowData, statusFields);
     if (statusRaw) {
-      const normalizedStatus = statusRaw.toLowerCase().trim();
-      if (normalizedStatus.includes('vendido')) status = 'vendido';
-      else if (normalizedStatus.includes('muerto')) status = 'muerto';
-      else if (normalizedStatus.includes('descartado')) status = 'descartado';
-      else if (normalizedStatus.includes('trasladado')) status = 'trasladado';
+      const normalizedStatus = statusRaw.toString().toLowerCase().trim();
+      if (normalizedStatus.includes('vendido') || normalizedStatus.includes('venta')) status = 'vendido';
+      else if (normalizedStatus.includes('muerto') || normalizedStatus.includes('muerte')) status = 'muerto';
+      else if (normalizedStatus.includes('descartado') || normalizedStatus.includes('descarte')) status = 'descartado';
+      else if (normalizedStatus.includes('trasladado') || normalizedStatus.includes('traslado')) status = 'trasladado';
     }
     
     // Check for existing animal (matching)
@@ -366,7 +406,7 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       errors,
       warnings,
     };
-  }, [normalizeCategory, mapStageToCategory, inferSexFromText, parseWeight, findExistingAnimal]);
+  }, [normalizeCategory, mapStageToCategory, inferSexFromText, parseWeight, findExistingAnimal, findValue]);
 
   // Process Excel file
   const processExcelFile = useCallback(async (file: File, species: Species): Promise<ImportedAnimalRow[]> => {

@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOffline } from '@/contexts/OfflineContext';
+import { offlineDB, initDB } from '@/lib/offlineDB';
 
 export interface HealthEvent {
   id: string;
@@ -22,6 +24,7 @@ export interface HealthEvent {
   outcome: string | null;
   notes: string | null;
   created_at: string;
+  organization_id?: string;
   animal?: {
     id: string;
     tag_id: string;
@@ -95,41 +98,76 @@ export const useHealth = () => {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isOnline, saveOffline } = useOffline();
 
   const getOrganizationId = async () => {
+    // Try from cache first if offline
+    if (!isOnline) {
+      const cachedOrgId = await offlineDB.getMetadata<string>('organizationId');
+      if (cachedOrgId) return cachedOrgId;
+    }
+
     if (!user) return null;
     const { data } = await supabase
       .from('profiles')
       .select('organization_id')
       .eq('user_id', user.id)
       .maybeSingle();
-    return data?.organization_id || null;
-  };
-
-  const fetchHealthEvents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('health_events')
-        .select(`
-          *,
-          animal:animals(id, tag_id, name)
-        `)
-        .order('event_date', { ascending: false })
-        .limit(500);
-
-      if (error) throw error;
-      setHealthEvents((data || []) as HealthEvent[]);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar los eventos de salud',
-        variant: 'destructive',
-      });
+    
+    const orgId = data?.organization_id || null;
+    if (orgId) {
+      await offlineDB.setMetadata('organizationId', orgId);
     }
+    return orgId;
   };
+
+  const fetchHealthEvents = useCallback(async () => {
+    try {
+      await initDB();
+
+      if (isOnline) {
+        const { data, error } = await supabase
+          .from('health_events')
+          .select(`
+            *,
+            animal:animals(id, tag_id, name)
+          `)
+          .order('event_date', { ascending: false })
+          .limit(500);
+
+        if (error) throw error;
+        
+        const serverEvents = (data || []) as HealthEvent[];
+        setHealthEvents(serverEvents);
+
+        // Cache locally
+        if (serverEvents.length > 0) {
+          await offlineDB.bulkSave(
+            'health_events',
+            serverEvents.map(e => ({ id: e.id, data: e as unknown as Record<string, unknown> }))
+          );
+        }
+      } else {
+        // Load from offline storage
+        const offlineEvents = await offlineDB.getAllRecords<HealthEvent>('health_events');
+        setHealthEvents(offlineEvents);
+      }
+    } catch (error: unknown) {
+      console.error('Error fetching health events:', error);
+      // Fallback to offline
+      try {
+        const offlineEvents = await offlineDB.getAllRecords<HealthEvent>('health_events');
+        setHealthEvents(offlineEvents);
+      } catch {
+        // ignore
+      }
+    }
+  }, [isOnline]);
 
   const fetchVaccinations = async () => {
     try {
+      if (!isOnline) return;
+      
       const { data, error } = await supabase
         .from('vaccination_schedule')
         .select(`
@@ -141,12 +179,8 @@ export const useHealth = () => {
 
       if (error) throw error;
       setVaccinations((data || []) as VaccinationSchedule[]);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar las vacunaciones',
-        variant: 'destructive',
-      });
+    } catch (error: unknown) {
+      console.error('Error fetching vaccinations:', error);
     }
   };
 
@@ -171,7 +205,8 @@ export const useHealth = () => {
     cost?: number;
     notes?: string;
   }) => {
-    if (!organizationId) {
+    const orgId = organizationId || await getOrganizationId();
+    if (!orgId) {
       toast({ title: 'Error', description: 'Organización no encontrada', variant: 'destructive' });
       return null;
     }
@@ -184,27 +219,47 @@ export const useHealth = () => {
         withdrawal_end_date = endDate.toISOString().split('T')[0];
       }
 
-      const { data, error } = await supabase
-        .from('health_events')
-        .insert({
-          ...event,
-          withdrawal_end_date,
-          organization_id: organizationId,
-          created_by: user?.id,
-          status: 'activo',
-        })
-        .select()
-        .single();
+      const newEvent: HealthEvent = {
+        id: crypto.randomUUID(),
+        animal_id: event.animal_id,
+        event_type: event.event_type,
+        event_date: event.event_date,
+        diagnosis: event.diagnosis || null,
+        treatment: event.treatment || null,
+        medication: event.medication || null,
+        dosage: event.dosage || null,
+        duration_days: event.duration_days || null,
+        next_dose_date: event.next_dose_date || null,
+        withdrawal_days: event.withdrawal_days || null,
+        withdrawal_end_date,
+        veterinarian: event.veterinarian || null,
+        cost: event.cost || null,
+        notes: event.notes || null,
+        status: 'activo',
+        outcome: null,
+        organization_id: orgId,
+        created_at: new Date().toISOString(),
+      };
 
-      if (error) throw error;
+      // Add to local state immediately
+      setHealthEvents(prev => [newEvent, ...prev]);
 
-      toast({ title: 'Éxito', description: 'Evento de salud registrado' });
-      await fetchHealthEvents();
-      return data;
-    } catch (error: any) {
+      // Save with offline support
+      await saveOffline('health_events', 'health_events', 'INSERT', newEvent as unknown as Record<string, unknown>);
+
+      toast({ 
+        title: 'Éxito', 
+        description: isOnline 
+          ? 'Evento de salud registrado'
+          : 'Evento guardado localmente. Se sincronizará cuando haya conexión.'
+      });
+      
+      return newEvent;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo registrar el evento',
+        description: errorMessage || 'No se pudo registrar el evento',
         variant: 'destructive',
       });
       return null;
@@ -213,26 +268,43 @@ export const useHealth = () => {
 
   const updateHealthEvent = async (id: string, updates: Partial<HealthEvent>) => {
     try {
-      const { error } = await supabase
-        .from('health_events')
-        .update(updates)
-        .eq('id', id);
+      const existingEvent = healthEvents.find(e => e.id === id);
+      if (!existingEvent) throw new Error('Evento no encontrado');
 
-      if (error) throw error;
-      toast({ title: 'Éxito', description: 'Evento actualizado' });
-      await fetchHealthEvents();
-    } catch (error: any) {
+      const updatedEvent = { ...existingEvent, ...updates };
+
+      // Update local state
+      setHealthEvents(prev => prev.map(e => e.id === id ? updatedEvent : e));
+
+      // Save with offline support
+      await saveOffline('health_events', 'health_events', 'UPDATE', updatedEvent as unknown as Record<string, unknown>);
+
+      toast({ 
+        title: 'Éxito', 
+        description: isOnline 
+          ? 'Evento actualizado'
+          : 'Cambios guardados localmente. Se sincronizarán cuando haya conexión.'
+      });
+    } catch (error: unknown) {
       toast({ title: 'Error', description: 'No se pudo actualizar', variant: 'destructive' });
     }
   };
 
   const deleteHealthEvent = async (id: string) => {
     try {
-      const { error } = await supabase.from('health_events').delete().eq('id', id);
-      if (error) throw error;
-      toast({ title: 'Éxito', description: 'Evento eliminado' });
-      await fetchHealthEvents();
-    } catch (error: any) {
+      // Remove from local state
+      setHealthEvents(prev => prev.filter(e => e.id !== id));
+
+      // Save with offline support
+      await saveOffline('health_events', 'health_events', 'DELETE', { id } as unknown as Record<string, unknown>);
+
+      toast({ 
+        title: 'Éxito', 
+        description: isOnline 
+          ? 'Evento eliminado'
+          : 'Eliminación guardada. Se sincronizará cuando haya conexión.'
+      });
+    } catch (error: unknown) {
       toast({ title: 'Error', description: 'No se pudo eliminar', variant: 'destructive' });
     }
   };
@@ -244,31 +316,42 @@ export const useHealth = () => {
     scheduled_date: string;
     notes?: string;
   }) => {
-    if (!organizationId) {
+    const orgId = organizationId || await getOrganizationId();
+    if (!orgId) {
       toast({ title: 'Error', description: 'Organización no encontrada', variant: 'destructive' });
       return null;
     }
 
     try {
-      const { data, error } = await supabase
-        .from('vaccination_schedule')
-        .insert({
-          ...vaccination,
-          organization_id: organizationId,
-          created_by: user?.id,
-        })
-        .select()
-        .single();
+      if (isOnline) {
+        const { data, error } = await supabase
+          .from('vaccination_schedule')
+          .insert({
+            ...vaccination,
+            organization_id: orgId,
+            created_by: user?.id,
+          })
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({ title: 'Éxito', description: 'Vacunación programada' });
-      await fetchVaccinations();
-      return data;
-    } catch (error: any) {
+        toast({ title: 'Éxito', description: 'Vacunación programada' });
+        await fetchVaccinations();
+        return data;
+      } else {
+        toast({ 
+          title: 'Sin conexión', 
+          description: 'Las vacunaciones requieren conexión a internet',
+          variant: 'destructive'
+        });
+        return null;
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo programar la vacunación',
+        description: errorMessage || 'No se pudo programar la vacunación',
         variant: 'destructive',
       });
       return null;
@@ -277,6 +360,15 @@ export const useHealth = () => {
 
   const applyVaccination = async (id: string, appliedDate: string, nextDate?: string) => {
     try {
+      if (!isOnline) {
+        toast({ 
+          title: 'Sin conexión', 
+          description: 'Esta acción requiere conexión a internet',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('vaccination_schedule')
         .update({
@@ -289,18 +381,27 @@ export const useHealth = () => {
       if (error) throw error;
       toast({ title: 'Éxito', description: 'Vacuna aplicada' });
       await fetchVaccinations();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({ title: 'Error', description: 'No se pudo registrar la aplicación', variant: 'destructive' });
     }
   };
 
   const deleteVaccination = async (id: string) => {
     try {
+      if (!isOnline) {
+        toast({ 
+          title: 'Sin conexión', 
+          description: 'Esta acción requiere conexión a internet',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const { error } = await supabase.from('vaccination_schedule').delete().eq('id', id);
       if (error) throw error;
       toast({ title: 'Éxito', description: 'Vacunación eliminada' });
       await fetchVaccinations();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({ title: 'Error', description: 'No se pudo eliminar', variant: 'destructive' });
     }
   };
@@ -419,14 +520,22 @@ export const useHealth = () => {
 
   useEffect(() => {
     const init = async () => {
+      await initDB();
       const orgId = await getOrganizationId();
       setOrganizationId(orgId);
-      if (orgId) {
+      if (orgId || !isOnline) {
         await fetchAll();
       }
     };
     init();
   }, [user]);
+
+  // Re-fetch when coming back online
+  useEffect(() => {
+    if (isOnline && organizationId) {
+      fetchAll();
+    }
+  }, [isOnline]);
 
   return {
     healthEvents,

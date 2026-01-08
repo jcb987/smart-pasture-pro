@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOffline } from '@/contexts/OfflineContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { OnboardingSurvey } from '@/components/onboarding/OnboardingSurvey';
 
@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, hasOfflineSession } = useAuth();
   const { isOnline } = useOffline();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
@@ -19,14 +19,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
-      if (!user) {
+      // If offline with a valid session, skip onboarding checks
+      if (!isOnline && (user || hasOfflineSession)) {
+        setShowOnboarding(false);
         setCheckingOnboarding(false);
         return;
       }
 
-      // Offline: no bloqueamos el acceso por onboarding (requiere consultas online)
-      if (!isOnline) {
-        setShowOnboarding(false);
+      if (!user) {
         setCheckingOnboarding(false);
         return;
       }
@@ -53,38 +53,54 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         }
       } catch (error) {
         console.error('Error checking onboarding:', error);
+        // If offline and we got an error, just let them through
+        if (!isOnline) {
+          setShowOnboarding(false);
+        }
       } finally {
         setCheckingOnboarding(false);
       }
     };
 
-    if (user) {
+    if (user || (!isOnline && hasOfflineSession)) {
       checkOnboardingStatus();
     } else {
       setCheckingOnboarding(false);
     }
-  }, [user, isOnline]);
+  }, [user, isOnline, hasOfflineSession]);
 
   if (loading || checkingOnboarding) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          {!isOnline && (
+            <div className="flex items-center gap-2 text-amber-600">
+              <WifiOff className="h-4 w-4" />
+              <span className="text-sm">Cargando datos offline...</span>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
-  if (!user) {
+  // Allow access if user is logged in OR if offline with saved session
+  if (!user && !(!isOnline && hasOfflineSession)) {
     return <Navigate to="/auth" replace />;
   }
 
   return (
     <>
-      <OnboardingSurvey
-        open={showOnboarding}
-        onComplete={() => setShowOnboarding(false)}
-        userId={user.id}
-        organizationId={organizationId}
-      />
+      {/* Only show onboarding when online */}
+      {isOnline && (
+        <OnboardingSurvey
+          open={showOnboarding}
+          onComplete={() => setShowOnboarding(false)}
+          userId={user?.id || ''}
+          organizationId={organizationId}
+        />
+      )}
       {children}
     </>
   );

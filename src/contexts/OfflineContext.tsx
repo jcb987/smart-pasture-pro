@@ -9,11 +9,11 @@ interface OfflineContextType {
   pendingChanges: number;
   lastSyncDate: string | null;
   syncNow: () => Promise<void>;
-  saveOffline: <T extends Record<string, unknown>>(
+  saveOffline: (
     store: StoreName,
     table: string,
     operation: 'INSERT' | 'UPDATE' | 'DELETE',
-    data: T
+    data: Record<string, unknown>
   ) => Promise<void>;
 }
 
@@ -155,11 +155,11 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [isOnline, isSyncing]);
 
   // Save data with offline support
-  const saveOffline = useCallback(async <T extends Record<string, unknown>>(
+  const saveOffline = useCallback(async (
     store: StoreName,
     table: string,
     operation: 'INSERT' | 'UPDATE' | 'DELETE',
-    data: T
+    data: Record<string, unknown>
   ) => {
     // Always save to local DB first
     if (operation !== 'DELETE') {

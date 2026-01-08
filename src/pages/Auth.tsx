@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFounderAuth } from '@/hooks/useFounderAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useOffline } from '@/contexts/OfflineContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +20,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFounderLogin, setIsFounderLogin] = useState(false);
   const { signIn, signUp, user, loading } = useAuth();
+  const { isOnline } = useOffline();
   const { signInAsFounder, isLoading: founderLoading } = useFounderAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -26,6 +28,12 @@ const Auth = () => {
   useEffect(() => {
     const checkUserRole = async () => {
       if (!loading && user) {
+        // Si está offline y ya hay sesión, entra directo (no podemos consultar roles)
+        if (!isOnline) {
+          navigate('/dashboard');
+          return;
+        }
+
         // Check if user is founder
         const { data } = await supabase
           .from('user_roles')
@@ -33,7 +41,7 @@ const Auth = () => {
           .eq('user_id', user.id)
           .eq('role', 'founder')
           .maybeSingle();
-        
+
         if (data) {
           navigate('/founder');
         } else {
@@ -41,23 +49,34 @@ const Auth = () => {
         }
       }
     };
-    
+
     checkUserRole();
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, isOnline]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isOnline) {
+      toast({
+        variant: 'destructive',
+        title: 'Sin conexión',
+        description: 'Para iniciar sesión necesitas internet al menos una vez. Luego podrás usar la app offline.',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     const { error } = await signIn(email, password);
-    
+
     if (error) {
       toast({
         variant: 'destructive',
         title: 'Error al iniciar sesión',
-        description: error.message === 'Invalid login credentials' 
-          ? 'Credenciales inválidas. Verifica tu email y contraseña.'
-          : error.message,
+        description:
+          error.message === 'Invalid login credentials'
+            ? 'Credenciales inválidas. Verifica tu email y contraseña.'
+            : error.message,
       });
     } else {
       toast({
@@ -66,12 +85,22 @@ const Auth = () => {
       });
       navigate('/dashboard');
     }
-    
+
     setIsLoading(false);
   };
 
   const handleFounderSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isOnline) {
+      toast({
+        variant: 'destructive',
+        title: 'Sin conexión',
+        description: 'El acceso Founder requiere internet.',
+      });
+      return;
+    }
+
     const result = await signInAsFounder(email, password);
     if (result.success) {
       navigate('/founder');
@@ -80,6 +109,16 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isOnline) {
+      toast({
+        variant: 'destructive',
+        title: 'Sin conexión',
+        description: 'Para registrarte necesitas internet. Luego podrás usar la app offline.',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     if (password.length < 6) {
@@ -93,14 +132,15 @@ const Auth = () => {
     }
 
     const { error } = await signUp(email, password, fullName);
-    
+
     if (error) {
       toast({
         variant: 'destructive',
         title: 'Error al registrarse',
-        description: error.message === 'User already registered'
-          ? 'Este email ya está registrado. Intenta iniciar sesión.'
-          : error.message,
+        description:
+          error.message === 'User already registered'
+            ? 'Este email ya está registrado. Intenta iniciar sesión.'
+            : error.message,
       });
     } else {
       toast({
@@ -109,7 +149,7 @@ const Auth = () => {
       });
       navigate('/dashboard');
     }
-    
+
     setIsLoading(false);
   };
 

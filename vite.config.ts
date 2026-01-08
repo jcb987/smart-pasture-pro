@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'placeholder.svg'],
+      includeAssets: ['favicon.ico', 'placeholder.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'Agro Data - Software Ganadero',
         short_name: 'Agro Data',
@@ -23,8 +23,10 @@ export default defineConfig(({ mode }) => ({
         theme_color: '#16a34a',
         background_color: '#ffffff',
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'any',
         start_url: '/',
+        scope: '/',
+        categories: ['business', 'productivity'],
         icons: [
           {
             src: '/pwa-192x192.png',
@@ -42,28 +44,83 @@ export default defineConfig(({ mode }) => ({
             type: 'image/png',
             purpose: 'maskable'
           }
+        ],
+        screenshots: [],
+        shortcuts: [
+          {
+            name: 'Dashboard',
+            url: '/dashboard',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+          },
+          {
+            name: 'Animales',
+            url: '/animales',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+          }
         ]
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-cache',
-              networkTimeoutSeconds: 10,
+              cacheName: 'supabase-api-cache',
+              networkTimeoutSeconds: 5,
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
               },
               cacheableResponse: {
                 statuses: [0, 200]
               }
             }
+          },
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'supabase-storage-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+              }
+            }
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+              }
+            }
           }
         ]
+      },
+      devOptions: {
+        enabled: false
       }
     })
   ].filter(Boolean),

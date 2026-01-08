@@ -33,7 +33,8 @@ import {
   Settings, 
   HelpCircle,
   Leaf,
-  ChevronDown
+  ChevronDown,
+  Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -49,6 +50,12 @@ const menuItems = [
     title: 'Usuarios',
     url: '/usuarios',
     icon: Users,
+    group: 'principal',
+  },
+  {
+    title: 'Consultar Animales',
+    url: '/consultar-animal',
+    icon: Search,
     group: 'principal',
   },
   {

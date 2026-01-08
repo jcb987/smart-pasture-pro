@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOffline } from '@/contexts/OfflineContext';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { OnboardingSurvey } from '@/components/onboarding/OnboardingSurvey';
@@ -11,6 +12,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
+  const { isOnline } = useOffline();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
@@ -18,6 +20,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       if (!user) {
+        setCheckingOnboarding(false);
+        return;
+      }
+
+      // Offline: no bloqueamos el acceso por onboarding (requiere consultas online)
+      if (!isOnline) {
+        setShowOnboarding(false);
         setCheckingOnboarding(false);
         return;
       }
@@ -54,7 +63,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     } else {
       setCheckingOnboarding(false);
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   if (loading || checkingOnboarding) {
     return (

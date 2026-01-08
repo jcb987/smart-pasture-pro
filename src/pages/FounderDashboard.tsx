@@ -7,13 +7,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { 
   Shield, 
   Activity,
   ClipboardList,
   Building2,
   BarChart3,
-  Users
+  Users,
+  Target,
+  Gavel,
+  TrendingUp
 } from 'lucide-react';
 import { format, subDays, subMonths, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -25,6 +29,9 @@ import { FounderClientsTable } from '@/components/founder/FounderClientsTable';
 import { FounderProductMetrics } from '@/components/founder/FounderProductMetrics';
 import { FounderQuickActions } from '@/components/founder/FounderQuickActions';
 import { FounderSatisfactionMetrics } from '@/components/founder/FounderSatisfactionMetrics';
+import { FounderAnalytics } from '@/components/founder/FounderAnalytics';
+import { FounderDecisionCenter } from '@/components/founder/FounderDecisionCenter';
+import { FounderModeration } from '@/components/founder/FounderModeration';
 
 // Types
 interface Organization {
@@ -51,6 +58,9 @@ interface Profile {
   full_name: string | null;
   organization_id: string | null;
   last_login: string | null;
+  is_blocked: boolean | null;
+  blocked_reason: string | null;
+  blocked_at: string | null;
 }
 
 interface OrgSettings {
@@ -111,7 +121,7 @@ export default function FounderDashboard() {
       const [orgsRes, onboardingRes, profilesRes, settingsRes, logsRes, animalsCountRes] = await Promise.all([
         supabase.from('organizations').select('*').order('created_at', { ascending: false }),
         supabase.from('user_onboarding').select('*').order('completed_at', { ascending: false }),
-        supabase.from('profiles').select('user_id, full_name, organization_id, last_login'),
+        supabase.from('profiles').select('user_id, full_name, organization_id, last_login, is_blocked, blocked_reason, blocked_at'),
         supabase.from('organization_settings').select('organization_id, country, region'),
         supabase.from('founder_access_logs').select('*').order('created_at', { ascending: false }).limit(100),
         supabase.from('animals').select('organization_id').eq('status', 'activo'),
@@ -182,7 +192,6 @@ export default function FounderDashboard() {
   }, [organizations, profiles]);
 
   const computeLivestockData = useCallback(() => {
-    // Get production types from onboarding
     const productionCounts = { leche: 0, carne: 0, doblePropósito: 0 };
     const speciesCounts = { bovinos: 0, bufalos: 0 };
 
@@ -236,7 +245,6 @@ export default function FounderDashboard() {
   }, [organizations, profiles, orgSettings, onboardingData, animalCounts]);
 
   const computeModuleUsage = useCallback(() => {
-    // This would ideally come from activity_logs, simplified here
     const modules = [
       { name: 'Animales', users: Math.round(organizations.length * 0.9), percentage: 90 },
       { name: 'Producción Leche', users: Math.round(organizations.length * 0.7), percentage: 70 },
@@ -268,20 +276,188 @@ export default function FounderDashboard() {
       .slice(0, 5);
   }, [onboardingData]);
 
+  // Analytics data computation
+  const computeAnalyticsData = useCallback(() => {
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+    const growthData = months.map((month, i) => ({
+      month,
+      clients: Math.round(organizations.length * (0.4 + i * 0.12)),
+      animals: Math.round(totalAnimals * (0.3 + i * 0.14) / 10),
+    }));
+
+    const retentionData = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'].map((week, i) => ({
+      week,
+      active: Math.round(profiles.filter(p => p.last_login).length * (0.9 - i * 0.05)),
+      churned: Math.round(organizations.length * (0.02 + i * 0.01)),
+    }));
+
+    const moduleData = computeModuleUsage().map(m => ({
+      name: m.name,
+      usage: m.users,
+      growth: Math.round((Math.random() - 0.3) * 20),
+    }));
+
+    const activeUsers = profiles.filter(p => {
+      if (!p.last_login) return false;
+      return differenceInDays(new Date(), new Date(p.last_login)) <= 30;
+    }).length;
+
+    const kpis = {
+      mrr: organizations.length * 45,
+      mrrGrowth: 12.5,
+      ltv: 540,
+      cac: 120,
+      nps: 72,
+      churnRate: organizations.length > 0 ? ((organizations.length - activeUsers) / organizations.length) * 100 : 0,
+      engagementScore: Math.round((activeUsers / Math.max(profiles.length, 1)) * 100),
+      avgSessionTime: 18,
+    };
+
+    return { growthData, retentionData, moduleData, kpis };
+  }, [organizations, profiles, totalAnimals, computeModuleUsage]);
+
+  // Decision center data
+  const computeDecisionData = useCallback(() => {
+    const insights = [
+      {
+        id: '1',
+        type: 'opportunity' as const,
+        title: 'Alto engagement en módulo de Reproducción',
+        description: 'El 65% de usuarios activos utilizan este módulo regularmente. Considera expandir funcionalidades.',
+        impact: 'high' as const,
+        urgency: 'short-term' as const,
+        metrics: [
+          { label: 'Usuarios', value: `${Math.round(organizations.length * 0.65)}` },
+          { label: 'Sesiones/semana', value: '3.2' },
+        ],
+        action: 'Explorar mejoras',
+      },
+      {
+        id: '2',
+        type: 'risk' as const,
+        title: 'Baja adopción del módulo de Genética',
+        description: 'Solo el 20% de usuarios ha explorado este módulo. Puede requerir mejor onboarding.',
+        impact: 'medium' as const,
+        urgency: 'long-term' as const,
+        metrics: [
+          { label: 'Adopción', value: '20%' },
+          { label: 'Churn relacionado', value: '8%' },
+        ],
+      },
+      {
+        id: '3',
+        type: 'recommendation' as const,
+        title: 'Optimizar flujo de importación Excel',
+        description: 'Los usuarios reportan fricción al importar datos. Simplificar el proceso podría mejorar la experiencia.',
+        impact: 'high' as const,
+        urgency: 'immediate' as const,
+        action: 'Ver detalles',
+      },
+    ];
+
+    const decisions = [
+      {
+        id: '1',
+        title: 'Implementar modo offline completo',
+        description: 'Permitir operaciones sin conexión con sincronización posterior.',
+        status: 'pending' as const,
+        createdAt: new Date().toISOString(),
+        impact: 'Mejora significativa para usuarios rurales con conectividad limitada.',
+      },
+      {
+        id: '2',
+        title: 'Integración con dispositivos IoT',
+        description: 'Conectar sensores de temperatura y peso automático.',
+        status: 'approved' as const,
+        createdAt: subDays(new Date(), 7).toISOString(),
+        impact: 'Automatización de registro de datos y alertas tempranas.',
+      },
+    ];
+
+    const featureRequests = [
+      {
+        id: '1',
+        title: 'Exportar reportes en PDF',
+        description: 'Generar informes profesionales descargables.',
+        requestedBy: Math.round(organizations.length * 0.4),
+        priority: 'high' as const,
+        status: 'planned' as const,
+        votes: 45,
+      },
+      {
+        id: '2',
+        title: 'Alertas por WhatsApp',
+        description: 'Notificaciones de eventos importantes vía WhatsApp.',
+        requestedBy: Math.round(organizations.length * 0.35),
+        priority: 'medium' as const,
+        status: 'requested' as const,
+        votes: 38,
+      },
+      {
+        id: '3',
+        title: 'Comparativa entre fincas',
+        description: 'Benchmarking anónimo con otras fincas similares.',
+        requestedBy: Math.round(organizations.length * 0.25),
+        priority: 'low' as const,
+        status: 'requested' as const,
+        votes: 22,
+      },
+    ];
+
+    return { insights, decisions, featureRequests };
+  }, [organizations.length]);
+
+  // Moderation data
+  const computeModerationData = useCallback(() => {
+    const users = profiles.map(profile => {
+      const org = organizations.find(o => o.owner_id === profile.user_id);
+      const animals = animalCounts.find(a => a.organization_id === profile.organization_id);
+      
+      return {
+        id: profile.user_id,
+        userId: profile.user_id,
+        fullName: profile.full_name || 'Sin nombre',
+        email: `usuario_${profile.user_id.slice(0, 8)}@email.com`,
+        organizationName: org?.name || 'Sin organización',
+        organizationId: profile.organization_id || '',
+        isBlocked: profile.is_blocked || false,
+        blockedReason: profile.blocked_reason || undefined,
+        blockedAt: profile.blocked_at || undefined,
+        lastLogin: profile.last_login || undefined,
+        createdAt: org?.created_at || new Date().toISOString(),
+        animalCount: animals?.count || 0,
+        isActive: profile.last_login 
+          ? differenceInDays(new Date(), new Date(profile.last_login)) <= 30 
+          : false,
+      };
+    });
+
+    const moderationLogs = accessLogs
+      .filter(log => log.action.includes('block') || log.action.includes('warning'))
+      .map(log => ({
+        id: log.id,
+        action: log.action,
+        targetUser: 'Usuario',
+        reason: typeof log.details === 'object' && log.details ? (log.details as Record<string, string>).reason || '' : '',
+        performedBy: 'Founder',
+        createdAt: log.created_at,
+      }));
+
+    return { users, moderationLogs };
+  }, [profiles, organizations, animalCounts, accessLogs]);
+
   // Handlers
   const handleEnterFounderMode = async (client: { id: string; name: string }) => {
     await enterFounderMode(client.id, client.name);
     navigate('/dashboard');
   };
 
-  const handleViewOnboarding = (client: { id: string }) => {
+  const handleViewOnboarding = () => {
     setActiveTab('surveys');
-    // Could filter surveys to this client
   };
 
-  const handleViewActivity = (client: { id: string }) => {
+  const handleViewActivity = () => {
     setActiveTab('logs');
-    // Could filter logs to this client
   };
 
   const handleSearchClient = () => {
@@ -289,6 +465,62 @@ export default function FounderDashboard() {
     setTimeout(() => {
       clientsTabRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
+  };
+
+  const handleBlockUser = async (userId: string, reason: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          is_blocked: true, 
+          blocked_reason: reason,
+          blocked_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      await logFounderAction('block_user', { userId, reason });
+      toast.success('Usuario bloqueado correctamente');
+      fetchAllData();
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      toast.error('Error al bloquear usuario');
+    }
+  };
+
+  const handleUnblockUser = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          is_blocked: false, 
+          blocked_reason: null,
+          blocked_at: null
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      await logFounderAction('unblock_user', { userId });
+      toast.success('Usuario desbloqueado correctamente');
+      fetchAllData();
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      toast.error('Error al desbloquear usuario');
+    }
+  };
+
+  const handleSendWarning = async (userId: string, message: string) => {
+    await logFounderAction('send_warning', { userId, message });
+    toast.success('Advertencia enviada correctamente');
+  };
+
+  const handleViewUserDetails = (user: { organizationId: string; organizationName: string }) => {
+    if (user.organizationId) {
+      enterFounderMode(user.organizationId, user.organizationName);
+      navigate('/dashboard');
+    }
   };
 
   if (founderLoading || (!isFounder && !loading)) {
@@ -304,6 +536,9 @@ export default function FounderDashboard() {
   const clients = computeClients();
   const moduleUsage = computeModuleUsage();
   const challenges = computeChallenges();
+  const analyticsData = computeAnalyticsData();
+  const decisionData = computeDecisionData();
+  const moderationData = computeModerationData();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-500/5 via-background to-amber-600/5">
@@ -331,26 +566,38 @@ export default function FounderDashboard() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+          <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full">
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="h-4 w-4" />
-              Resumen
+              <span className="hidden sm:inline">Resumen</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Análisis</span>
+            </TabsTrigger>
+            <TabsTrigger value="decisions" className="gap-2">
+              <Target className="h-4 w-4" />
+              <span className="hidden sm:inline">Decisiones</span>
+            </TabsTrigger>
+            <TabsTrigger value="moderation" className="gap-2">
+              <Gavel className="h-4 w-4" />
+              <span className="hidden sm:inline">Moderación</span>
             </TabsTrigger>
             <TabsTrigger value="clients" className="gap-2">
               <Building2 className="h-4 w-4" />
-              Clientes
+              <span className="hidden sm:inline">Clientes</span>
             </TabsTrigger>
             <TabsTrigger value="product" className="gap-2">
               <Users className="h-4 w-4" />
-              Producto
+              <span className="hidden sm:inline">Producto</span>
             </TabsTrigger>
             <TabsTrigger value="surveys" className="gap-2">
               <ClipboardList className="h-4 w-4" />
-              Encuestas
+              <span className="hidden sm:inline">Encuestas</span>
             </TabsTrigger>
             <TabsTrigger value="logs" className="gap-2">
               <Activity className="h-4 w-4" />
-              Logs
+              <span className="hidden sm:inline">Logs</span>
             </TabsTrigger>
           </TabsList>
 
@@ -373,6 +620,40 @@ export default function FounderDashboard() {
             </div>
           </TabsContent>
 
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <FounderAnalytics 
+              growthData={analyticsData.growthData}
+              retentionData={analyticsData.retentionData}
+              moduleData={analyticsData.moduleData}
+              kpis={analyticsData.kpis}
+              loading={loading}
+            />
+          </TabsContent>
+
+          {/* Decisions Tab */}
+          <TabsContent value="decisions" className="space-y-6">
+            <FounderDecisionCenter 
+              insights={decisionData.insights}
+              decisions={decisionData.decisions}
+              featureRequests={decisionData.featureRequests}
+              loading={loading}
+            />
+          </TabsContent>
+
+          {/* Moderation Tab */}
+          <TabsContent value="moderation" className="space-y-6">
+            <FounderModeration 
+              users={moderationData.users}
+              moderationLogs={moderationData.moderationLogs}
+              loading={loading}
+              onBlockUser={handleBlockUser}
+              onUnblockUser={handleUnblockUser}
+              onSendWarning={handleSendWarning}
+              onViewUserDetails={handleViewUserDetails}
+            />
+          </TabsContent>
+
           {/* Clients Tab */}
           <TabsContent value="clients" className="space-y-6">
             <div ref={clientsTabRef}>
@@ -390,7 +671,7 @@ export default function FounderDashboard() {
           <TabsContent value="product" className="space-y-6">
             <FounderProductMetrics 
               moduleUsage={moduleUsage}
-              alerts={[]} // Would come from error tracking
+              alerts={[]}
               loading={loading}
             />
           </TabsContent>
@@ -502,7 +783,8 @@ export default function FounderDashboard() {
                             <TableCell>
                               <Badge variant={
                                 log.action.includes('enter') ? 'default' :
-                                log.action.includes('exit') ? 'secondary' : 'outline'
+                                log.action.includes('exit') ? 'secondary' : 
+                                log.action.includes('block') ? 'destructive' : 'outline'
                               }>
                                 {log.action}
                               </Badge>

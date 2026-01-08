@@ -55,8 +55,8 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <Routes>
-                {/* Auth route - now the main entry point */}
-                <Route path="/" element={<Auth />} />
+                {/* Public routes */}
+                <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
 
                 {/* Legal routes */}

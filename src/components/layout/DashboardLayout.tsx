@@ -45,8 +45,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   };
 
   const getUserInitials = () => {
-    const email = user?.email || '';
-    return email.substring(0, 2).toUpperCase();
+    return 'A'; // Logo de Agro Data
   };
 
   return (

@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useOffline } from '@/contexts/OfflineContext';
+import { offlineDB, initDB } from '@/lib/offlineDB';
 
 export type AnimalCategory = 'vaca' | 'toro' | 'novilla' | 'novillo' | 'ternera' | 'ternero' | 'becerra' | 'becerro' | 'bufala' | 'bufalo';
 export type AnimalStatus = 'activo' | 'vendido' | 'muerto' | 'descartado' | 'trasladado';
@@ -67,8 +69,15 @@ export function useAnimals() {
   const [loading, setLoading] = useState(true);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { isOnline, saveOffline } = useOffline();
 
   const getOrganizationId = async () => {
+    // Try from cache first if offline
+    if (!isOnline) {
+      const cachedOrgId = await offlineDB.getMetadata<string>('organizationId');
+      if (cachedOrgId) return cachedOrgId;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -78,52 +87,107 @@ export function useAnimals() {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    return profile?.organization_id || null;
+    const orgId = profile?.organization_id || null;
+    
+    // Cache for offline use
+    if (orgId) {
+      await offlineDB.setMetadata('organizationId', orgId);
+    }
+    
+    return orgId;
   };
 
-  const fetchAnimals = async () => {
+  const fetchAnimals = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('animals')
-        .select('*')
-        .order('created_at', { ascending: false });
+      await initDB();
 
-      if (error) throw error;
-      setAnimals((data as Animal[]) || []);
+      if (isOnline) {
+        // Try to fetch from server
+        const { data, error } = await supabase
+          .from('animals')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        const serverAnimals = (data as Animal[]) || [];
+        setAnimals(serverAnimals);
+        
+        // Cache animals locally for offline use
+        if (serverAnimals.length > 0) {
+          await offlineDB.bulkSave(
+            'animals',
+            serverAnimals.map(animal => ({ id: animal.id, data: animal as unknown as Record<string, unknown> }))
+          );
+          await offlineDB.setMetadata('lastSync_animals', new Date().toISOString());
+        }
+      } else {
+        // Load from offline storage
+        const offlineAnimals = await offlineDB.getAllRecords<Animal>('animals');
+        setAnimals(offlineAnimals);
+        
+        toast({
+          title: 'Modo Offline',
+          description: `Mostrando ${offlineAnimals.length} animales guardados localmente`,
+        });
+      }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      toast({
-        title: 'Error',
-        description: `No se pudieron cargar los animales: ${errorMessage}`,
-        variant: 'destructive',
-      });
+      console.error('Error fetching animals:', error);
+      
+      // Fallback to offline data
+      try {
+        const offlineAnimals = await offlineDB.getAllRecords<Animal>('animals');
+        setAnimals(offlineAnimals);
+        
+        if (offlineAnimals.length > 0) {
+          toast({
+            title: 'Usando datos offline',
+            description: `Mostrando ${offlineAnimals.length} animales guardados localmente`,
+          });
+        }
+      } catch {
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        toast({
+          title: 'Error',
+          description: `No se pudieron cargar los animales: ${errorMessage}`,
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [isOnline, toast]);
 
   const createAnimal = async (animal: Omit<Animal, 'id' | 'created_at' | 'updated_at' | 'organization_id'>) => {
     try {
-      if (!organizationId) {
+      const orgId = organizationId || await getOrganizationId();
+      if (!orgId) {
         throw new Error('No se encontró la organización');
       }
 
-      const { data, error } = await supabase
-        .from('animals')
-        .insert({ ...animal, organization_id: organizationId })
-        .select()
-        .single();
+      const newAnimal: Animal = {
+        ...animal,
+        id: crypto.randomUUID(),
+        organization_id: orgId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) throw error;
+      // Add to local state immediately
+      setAnimals(prev => [newAnimal, ...prev]);
+
+      // Save with offline support
+      await saveOffline('animals', 'animals', 'INSERT', newAnimal as unknown as Record<string, unknown>);
 
       toast({
         title: 'Animal registrado',
-        description: `${animal.tag_id} ha sido agregado exitosamente`,
+        description: isOnline 
+          ? `${animal.tag_id} ha sido agregado exitosamente`
+          : `${animal.tag_id} guardado localmente. Se sincronizará cuando haya conexión.`,
       });
 
-      await fetchAnimals();
-      return data;
+      return newAnimal;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
@@ -137,19 +201,29 @@ export function useAnimals() {
 
   const updateAnimal = async (id: string, updates: Partial<Animal>) => {
     try {
-      const { error } = await supabase
-        .from('animals')
-        .update(updates)
-        .eq('id', id);
+      const existingAnimal = animals.find(a => a.id === id);
+      if (!existingAnimal) {
+        throw new Error('Animal no encontrado');
+      }
 
-      if (error) throw error;
+      const updatedAnimal: Animal = {
+        ...existingAnimal,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update local state immediately
+      setAnimals(prev => prev.map(a => a.id === id ? updatedAnimal : a));
+
+      // Save with offline support
+      await saveOffline('animals', 'animals', 'UPDATE', updatedAnimal as unknown as Record<string, unknown>);
 
       toast({
         title: 'Animal actualizado',
-        description: 'Los datos han sido actualizados',
+        description: isOnline 
+          ? 'Los datos han sido actualizados'
+          : 'Cambios guardados localmente. Se sincronizarán cuando haya conexión.',
       });
-
-      await fetchAnimals();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
@@ -162,19 +236,18 @@ export function useAnimals() {
 
   const deleteAnimal = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('animals')
-        .delete()
-        .eq('id', id);
+      // Remove from local state immediately
+      setAnimals(prev => prev.filter(a => a.id !== id));
 
-      if (error) throw error;
+      // Save with offline support
+      await saveOffline('animals', 'animals', 'DELETE', { id } as unknown as Record<string, unknown>);
 
       toast({
         title: 'Animal eliminado',
-        description: 'El registro ha sido eliminado',
+        description: isOnline 
+          ? 'El registro ha sido eliminado'
+          : 'Eliminación guardada. Se sincronizará cuando haya conexión.',
       });
-
-      await fetchAnimals();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
@@ -186,6 +259,12 @@ export function useAnimals() {
   };
 
   const getAnimalEvents = async (animalId: string): Promise<AnimalEvent[]> => {
+    if (!isOnline) {
+      // Try to get from local cache
+      const allEvents = await offlineDB.getAllRecords<AnimalEvent>('health_events');
+      return allEvents.filter(e => e.animal_id === animalId);
+    }
+
     const { data, error } = await supabase
       .from('animal_events')
       .select('*')
@@ -206,38 +285,38 @@ export function useAnimals() {
 
   const addAnimalEvent = async (event: { animal_id: string; event_type: string; event_date: string; weight?: number | null; notes?: string | null }) => {
     try {
-      if (!organizationId) throw new Error('No se encontró la organización');
+      const orgId = organizationId || await getOrganizationId();
+      if (!orgId) throw new Error('No se encontró la organización');
 
-      const { error } = await supabase
-        .from('animal_events')
-        .insert({
-          animal_id: event.animal_id,
-          event_type: event.event_type,
-          event_date: event.event_date,
-          weight: event.weight || null,
-          notes: event.notes || null,
-          organization_id: organizationId,
-        });
+      const newEvent = {
+        id: crypto.randomUUID(),
+        animal_id: event.animal_id,
+        event_type: event.event_type,
+        event_date: event.event_date,
+        weight: event.weight || null,
+        notes: event.notes || null,
+        organization_id: orgId,
+        created_at: new Date().toISOString(),
+        details: null,
+      };
 
-      if (error) throw error;
+      // Save event with offline support
+      await saveOffline('health_events', 'animal_events', 'INSERT', newEvent);
 
       // Si es un pesaje, actualizar el peso actual del animal
       if (event.event_type === 'pesaje' && event.weight) {
-        await supabase
-          .from('animals')
-          .update({ 
-            current_weight: event.weight, 
-            last_weight_date: event.event_date 
-          })
-          .eq('id', event.animal_id);
+        await updateAnimal(event.animal_id, { 
+          current_weight: event.weight, 
+          last_weight_date: event.event_date 
+        });
       }
 
       toast({
         title: 'Evento registrado',
-        description: 'El evento ha sido agregado al historial',
+        description: isOnline 
+          ? 'El evento ha sido agregado al historial'
+          : 'Evento guardado localmente. Se sincronizará cuando haya conexión.',
       });
-
-      await fetchAnimals();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
@@ -323,12 +402,20 @@ export function useAnimals() {
 
   useEffect(() => {
     const init = async () => {
+      await initDB();
       const orgId = await getOrganizationId();
       setOrganizationId(orgId);
       await fetchAnimals();
     };
     init();
   }, []);
+
+  // Re-fetch when coming back online
+  useEffect(() => {
+    if (isOnline) {
+      fetchAnimals();
+    }
+  }, [isOnline, fetchAnimals]);
 
   return {
     animals,

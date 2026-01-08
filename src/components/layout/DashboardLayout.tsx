@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/s
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { NotificationsDropdown } from '@/components/layout/NotificationsDropdown';
 import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
+import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
@@ -103,9 +104,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
           </header>
 
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-6 pb-20">
             {children}
           </main>
+          <OfflineBanner />
         </SidebarInset>
       </div>
     </SidebarProvider>

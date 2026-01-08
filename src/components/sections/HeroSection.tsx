@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 import heroBackground from "@/assets/hero-background.png";
 
 // SVG Icons for stores
@@ -28,9 +29,22 @@ const WindowsIcon = () => (
   </svg>
 );
 
+// Detect user's operating system
+const getOS = (): 'windows' | 'ios' | 'android' | 'mac' | 'unknown' => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  if (/iphone|ipad|ipod/.test(userAgent)) return 'ios';
+  if (/android/.test(userAgent)) return 'android';
+  if (/mac/.test(userAgent)) return 'mac';
+  if (/win/.test(userAgent)) return 'windows';
+  return 'unknown';
+};
+
 const HeroSection = () => {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [userOS] = useState(getOS());
 
   const categories = [
     { icon: Milk, label: "Lechería", tooltip: "Gestión completa de producción lechera" },
@@ -65,6 +79,18 @@ const HeroSection = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Listen for PWA install prompt
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
   const handleStartFree = () => {
     navigate('/auth');
   };
@@ -73,6 +99,53 @@ const HeroSection = () => {
     const featuresSection = document.querySelector('#features');
     if (featuresSection) {
       featuresSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleInstallPWA = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        toast.success('¡Aplicación instalada correctamente!');
+      }
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    } else {
+      // Fallback instructions based on OS
+      if (userOS === 'ios') {
+        toast.info('Para instalar en iOS: toca el botón Compartir y selecciona "Agregar a pantalla de inicio"', { duration: 6000 });
+      } else if (userOS === 'android') {
+        toast.info('Para instalar en Android: toca el menú del navegador y selecciona "Instalar aplicación"', { duration: 6000 });
+      } else {
+        toast.info('Para instalar: usa el menú del navegador y busca "Instalar aplicación"', { duration: 6000 });
+      }
+    }
+  };
+
+  const handleWindowsDownload = () => {
+    if (isInstallable && deferredPrompt) {
+      handleInstallPWA();
+    } else {
+      toast.info('Para Windows: usa Chrome o Edge y haz clic en el icono de instalación en la barra de direcciones', { duration: 6000 });
+    }
+  };
+
+  const handleIOSDownload = () => {
+    if (userOS === 'ios') {
+      toast.info('Toca el botón Compartir (📤) en Safari y selecciona "Agregar a pantalla de inicio"', { duration: 6000 });
+    } else {
+      toast.info('Para instalar en iPhone/iPad: abre esta página en Safari, toca Compartir y selecciona "Agregar a pantalla de inicio"', { duration: 6000 });
+    }
+  };
+
+  const handleAndroidDownload = () => {
+    if (isInstallable && deferredPrompt) {
+      handleInstallPWA();
+    } else if (userOS === 'android') {
+      toast.info('Toca el menú (⋮) del navegador y selecciona "Instalar aplicación" o "Agregar a pantalla de inicio"', { duration: 6000 });
+    } else {
+      toast.info('Para instalar en Android: abre esta página en Chrome y toca el menú para "Instalar aplicación"', { duration: 6000 });
     }
   };
 
@@ -167,12 +240,14 @@ const HeroSection = () => {
 
           {/* Download Buttons */}
           <div className="flex flex-col items-center gap-3 mb-12 animate-slide-up" style={{ animationDelay: "0.25s" }}>
-            <p className="text-primary-foreground/60 text-sm">Descarga la app para tu dispositivo:</p>
+            <p className="text-primary-foreground/60 text-sm">
+              {isInstallable ? '¡Instala la app ahora!' : 'Descarga la app para tu dispositivo:'}
+            </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <a 
-                    href="#" 
+                  <button 
+                    onClick={handleWindowsDownload}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 transition-all hover:scale-105"
                   >
                     <WindowsIcon />
@@ -180,46 +255,46 @@ const HeroSection = () => {
                       <span className="text-[10px] text-primary-foreground/60 leading-none">Descargar para</span>
                       <span className="text-sm font-semibold leading-tight">Windows</span>
                     </div>
-                  </a>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="bg-background text-foreground">
-                  <p className="text-sm">Descarga la aplicación de escritorio para Windows</p>
+                  <p className="text-sm">Instala la aplicación en tu PC con Windows</p>
                 </TooltipContent>
               </Tooltip>
               
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <a 
-                    href="#" 
+                  <button 
+                    onClick={handleIOSDownload}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 transition-all hover:scale-105"
                   >
                     <AppStoreIcon />
                     <div className="flex flex-col items-start">
-                      <span className="text-[10px] text-primary-foreground/60 leading-none">Disponible en</span>
-                      <span className="text-sm font-semibold leading-tight">App Store</span>
+                      <span className="text-[10px] text-primary-foreground/60 leading-none">Instalar en</span>
+                      <span className="text-sm font-semibold leading-tight">iPhone/iPad</span>
                     </div>
-                  </a>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="bg-background text-foreground">
-                  <p className="text-sm">Descarga para iPhone y iPad</p>
+                  <p className="text-sm">Instrucciones para instalar en iOS</p>
                 </TooltipContent>
               </Tooltip>
               
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <a 
-                    href="#" 
+                  <button 
+                    onClick={handleAndroidDownload}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 transition-all hover:scale-105"
                   >
                     <PlayStoreIcon />
                     <div className="flex flex-col items-start">
-                      <span className="text-[10px] text-primary-foreground/60 leading-none">Disponible en</span>
-                      <span className="text-sm font-semibold leading-tight">Google Play</span>
+                      <span className="text-[10px] text-primary-foreground/60 leading-none">Instalar en</span>
+                      <span className="text-sm font-semibold leading-tight">Android</span>
                     </div>
-                  </a>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="bg-background text-foreground">
-                  <p className="text-sm">Descarga para Android</p>
+                  <p className="text-sm">{isInstallable ? 'Toca para instalar ahora' : 'Instrucciones para instalar en Android'}</p>
                 </TooltipContent>
               </Tooltip>
             </div>

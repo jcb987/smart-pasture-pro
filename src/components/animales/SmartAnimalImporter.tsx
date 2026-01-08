@@ -216,7 +216,16 @@ export function SmartAnimalImporter({
   const errorCount = processedRows.filter(r => r.errors.length > 0).length;
   const updateCount = processedRows.filter(r => r.is_update).length;
   const newCount = processedRows.filter(r => !r.is_update && r.errors.length === 0).length;
-  const needsAttention = processedRows.filter(r => !r.category || !r.sex).length;
+  // For buffalos, all animals are auto-assigned category/sex, so no manual attention needed
+  const needsAttention = selectedSpecies === 'bufalo' 
+    ? 0 
+    : processedRows.filter(r => !r.category || !r.sex).length;
+  
+  // For buffalo imports, determine category options (only buffalo categories)
+  const isBuffaloImport = selectedSpecies === 'bufalo';
+  const categoryOptionsForSpecies = isBuffaloImport 
+    ? CATEGORY_OPTIONS.filter(c => c.value === 'bufala' || c.value === 'bufalo')
+    : CATEGORY_OPTIONS;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -354,10 +363,18 @@ export function SmartAnimalImporter({
               </div>
 
               {/* Instructions */}
-              {needsAttention > 0 && (
+              {needsAttention > 0 && !isBuffaloImport && (
                 <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg text-sm text-amber-700 dark:text-amber-400">
                   <AlertTriangle className="h-4 w-4 flex-shrink-0" />
                   Algunos registros necesitan que selecciones la categoría o sexo manualmente
+                </div>
+              )}
+              
+              {/* Buffalo auto-assignment info */}
+              {isBuffaloImport && (
+                <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/20 rounded-lg text-sm text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                  Categoría asignada automáticamente: Macho → Búfalo, Hembra → Búfala
                 </div>
               )}
 
@@ -405,35 +422,49 @@ export function SmartAnimalImporter({
                           {row.productive_stage || '-'}
                         </TableCell>
                         <TableCell>
-                          <Select
-                            value={row.category || ''}
-                            onValueChange={(val) => handleCategoryChange(row.row_number, val as AnimalCategory)}
-                          >
-                            <SelectTrigger className={`h-8 w-28 ${!row.category ? 'border-amber-500' : ''}`}>
-                              <SelectValue placeholder="Seleccionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CATEGORY_OPTIONS.map(cat => (
-                                <SelectItem key={cat.value} value={cat.value}>
-                                  {cat.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {isBuffaloImport ? (
+                            // For buffalo imports, show the auto-assigned category as text (read-only)
+                            <Badge variant="outline" className="font-normal">
+                              {row.category === 'bufalo' ? 'Búfalo' : 'Búfala'}
+                            </Badge>
+                          ) : (
+                            <Select
+                              value={row.category || ''}
+                              onValueChange={(val) => handleCategoryChange(row.row_number, val as AnimalCategory)}
+                            >
+                              <SelectTrigger className={`h-8 w-28 ${!row.category ? 'border-amber-500' : ''}`}>
+                                <SelectValue placeholder="Seleccionar" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categoryOptionsForSpecies.map(cat => (
+                                  <SelectItem key={cat.value} value={cat.value}>
+                                    {cat.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                         </TableCell>
                         <TableCell>
-                          <Select
-                            value={row.sex || ''}
-                            onValueChange={(val) => handleSexChange(row.row_number, val as AnimalSex)}
-                          >
-                            <SelectTrigger className={`h-8 w-24 ${!row.sex ? 'border-amber-500' : ''}`}>
-                              <SelectValue placeholder="Seleccionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="hembra">Hembra</SelectItem>
-                              <SelectItem value="macho">Macho</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          {isBuffaloImport ? (
+                            // For buffalo imports, show the auto-assigned sex as text (read-only)
+                            <Badge variant="outline" className="font-normal">
+                              {row.sex === 'macho' ? 'Macho' : 'Hembra'}
+                            </Badge>
+                          ) : (
+                            <Select
+                              value={row.sex || ''}
+                              onValueChange={(val) => handleSexChange(row.row_number, val as AnimalSex)}
+                            >
+                              <SelectTrigger className={`h-8 w-24 ${!row.sex ? 'border-amber-500' : ''}`}>
+                                <SelectValue placeholder="Seleccionar" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="hembra">Hembra</SelectItem>
+                                <SelectItem value="macho">Macho</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </TableCell>
                         <TableCell>
                           {row.current_weight ? `${row.current_weight} kg` : '-'}

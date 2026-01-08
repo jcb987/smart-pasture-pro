@@ -68,9 +68,27 @@ const PRODUCTIVE_STAGES: ProductiveStage[] = [
   { label: 'Búfalo', category: 'bufalo', sex: 'macho', species: ['bufalo'] },
 ];
 
-// Sex inference rules
-const FEMALE_KEYWORDS = ['vaca', 'novilla', 'nov.', 'hemb', 'hembra', 'cría hembra', 'ternera', 'becerra', 'búfala', 'cerda'];
-const MALE_KEYWORDS = ['toro', 'reproductor', 'mac', 'macho', 'cría macho', 'ternero', 'becerro', 'búfalo', 'verraco'];
+// Sex inference rules - comprehensive list for automatic detection
+const FEMALE_KEYWORDS = [
+  'vaca', 'vaca seca', 'vaca parida', 'vaca horra', 'vaca gestante', 'vaca lactante',
+  'novilla', 'novilla de vientre', 'nov. vientre', 'nov.', 'nva',
+  'hemb', 'hembra', 'hem', 'h', 'f', 'female',
+  'ternera', 'ternerita', 'cría hembra', 'cria hembra',
+  'becerra', 'becerrita',
+  'búfala', 'bufala',
+  'cerda', 'marrana', 'puerca', 'hembra levante', 'hemb. levante', 'hemb levante',
+  'vientre', 'parida', 'seca', 'gestante', 'preñada'
+];
+const MALE_KEYWORDS = [
+  'toro', 'torete', 'toro reproductor',
+  'reproductor', 'semental', 'padrote',
+  'mac', 'macho', 'm', 'male',
+  'ternero', 'ternerito', 'cría macho', 'cria macho',
+  'becerro', 'becerrito',
+  'novillo', 'torillo',
+  'búfalo', 'bufalo',
+  'verraco', 'macho levante', 'mac. levante', 'mac levante'
+];
 
 export function useSmartAnimalImport(existingAnimals: Animal[]) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -95,16 +113,29 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
     return existingAnimals.find(a => normalizeTagId(a.tag_id) === normalizedInput) || null;
   }, [existingAnimals, normalizeTagId]);
 
-  // Infer sex from phase/stage text
+  // Infer sex from phase/stage text - intelligent detection
   const inferSexFromText = useCallback((text: string): AnimalSex | null => {
-    const normalized = text.toLowerCase().trim();
+    if (!text) return null;
     
-    for (const keyword of FEMALE_KEYWORDS) {
-      if (normalized.includes(keyword)) return 'hembra';
+    const normalized = text.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // Remove accents
+    
+    // Check single letter codes first (they're most specific)
+    if (normalized === 'h' || normalized === 'f') return 'hembra';
+    if (normalized === 'm') return 'macho';
+    
+    // Check for female keywords (prioritize longer matches first)
+    const sortedFemaleKeywords = [...FEMALE_KEYWORDS].sort((a, b) => b.length - a.length);
+    for (const keyword of sortedFemaleKeywords) {
+      const normalizedKeyword = keyword.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (normalized.includes(normalizedKeyword)) return 'hembra';
     }
     
-    for (const keyword of MALE_KEYWORDS) {
-      if (normalized.includes(keyword)) return 'macho';
+    // Check for male keywords
+    const sortedMaleKeywords = [...MALE_KEYWORDS].sort((a, b) => b.length - a.length);
+    for (const keyword of sortedMaleKeywords) {
+      const normalizedKeyword = keyword.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (normalized.includes(normalizedKeyword)) return 'macho';
     }
     
     return null;
@@ -306,14 +337,14 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
     let category: AnimalCategory | null = null;
     let sex: AnimalSex | null = null;
     
-    // Try to get category directly - expanded field list
-    const categoryFields = ['category', 'categoria', 'tipo', 'clasificacion'];
-    const directCategory = findValue(rowData, categoryFields);
-    if (directCategory) {
-      category = normalizeCategory(directCategory.toString(), species);
-    }
+    // INTELLIGENT SEX DETECTION: Scan ALL text fields for sex indicators
+    // This is the primary method for detecting sex - analyze entire row content
+    const allTextContent = Object.values(rowData)
+      .filter(v => v !== null && v !== undefined)
+      .map(v => v.toString())
+      .join(' ');
     
-    // Try to get sex directly - expanded field list
+    // First try explicit sex field
     const sexFields = ['sex', 'sexo', 'genero', 'gender'];
     const directSex = findValue(rowData, sexFields);
     if (directSex) {
@@ -322,35 +353,50 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       else if (['macho', 'm', 'male', 'mac'].includes(normalizedSex)) sex = 'macho';
     }
     
-    // If stage text exists, try to infer category and sex
-    if (stageText && (!category || !sex)) {
-      const stageResult = mapStageToCategory(stageText, species);
-      if (!category && stageResult.category) category = stageResult.category;
-      if (!sex && stageResult.sex) sex = stageResult.sex;
+    // If no explicit sex, infer from stage/phase text
+    if (!sex && stageText) {
+      sex = inferSexFromText(stageText);
     }
     
-    // If still no sex, try to infer from any text field
+    // If still no sex, try to infer from ALL text content in the row
     if (!sex) {
-      const allText = Object.values(rowData).filter(v => typeof v === 'string').join(' ');
-      sex = inferSexFromText(allText);
+      sex = inferSexFromText(allTextContent);
     }
     
-    // FORCE BUFFALO CATEGORIES: If species is bufalo, override any detected bovine categories
+    // Try to get category directly - expanded field list
+    const categoryFields = ['category', 'categoria', 'tipo', 'clasificacion'];
+    const directCategory = findValue(rowData, categoryFields);
+    if (directCategory) {
+      category = normalizeCategory(directCategory.toString(), species);
+    }
+    
+    // If stage text exists, try to infer category
+    if (stageText && !category) {
+      const stageResult = mapStageToCategory(stageText, species);
+      if (stageResult.category) category = stageResult.category;
+    }
+    
+    // BUFFALO SPECIES: Auto-assign category based on sex (PRIORITY RULE)
+    // When species is 'bufalo', the user should NOT need to select category manually
     if (species === 'bufalo') {
-      if (category && !['bufala', 'bufalo'].includes(category)) {
-        // Convert bovine categories to buffalo based on sex
+      // For buffalos, category is ALWAYS determined by sex:
+      // - Hembra → Búfala
+      // - Macho → Búfalo
+      if (sex) {
         category = sex === 'macho' ? 'bufalo' : 'bufala';
-      } else if (!category && sex) {
-        // If no category but sex detected, assign buffalo category
-        category = sex === 'macho' ? 'bufalo' : 'bufala';
+      } else {
+        // If sex couldn't be determined, default to hembra (most common in cattle/buffalo farms)
+        // This is a safe assumption and can be corrected if needed
+        sex = 'hembra';
+        category = 'bufala';
       }
     }
     
-    // Warnings for missing data (not blocking)
-    if (!category) {
+    // Warnings for missing data (only for non-buffalo species)
+    if (!category && species !== 'bufalo') {
       warnings.push('Categoría no detectada - requiere selección manual');
     }
-    if (!sex) {
+    if (!sex && species !== 'bufalo') {
       warnings.push('Sexo no detectado - requiere selección manual');
     }
     

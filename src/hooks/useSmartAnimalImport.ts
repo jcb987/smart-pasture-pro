@@ -135,10 +135,38 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
     return { category: null, sex };
   }, [inferSexFromText]);
 
-  // Normalize category from text
+  // Normalize category from text - FORCES buffalo categories when species is bufalo
   const normalizeCategory = useCallback((value: string, species: Species): AnimalCategory | null => {
     const normalized = value.toLowerCase().trim()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    // If species is bufalo, force buffalo categories
+    if (species === 'bufalo') {
+      // Map bovine categories to buffalo equivalents based on sex inference
+      const sex = inferSexFromText(value);
+      
+      // Check if it's explicitly buffalo
+      if (normalized.includes('bufala') || normalized.includes('bufalo')) {
+        return sex === 'macho' ? 'bufalo' : 'bufala';
+      }
+      
+      // Map common bovine terms to buffalo
+      const femaleTerms = ['vaca', 'novilla', 'ternera', 'becerra', 'hembra'];
+      const maleTerms = ['toro', 'novillo', 'ternero', 'becerro', 'macho', 'reproductor'];
+      
+      for (const term of femaleTerms) {
+        if (normalized.includes(term)) return 'bufala';
+      }
+      for (const term of maleTerms) {
+        if (normalized.includes(term)) return 'bufalo';
+      }
+      
+      // If sex was detected, use it
+      if (sex === 'hembra') return 'bufala';
+      if (sex === 'macho') return 'bufalo';
+      
+      return null;
+    }
     
     const categoryMap: Record<string, AnimalCategory> = {
       'vaca': 'vaca',
@@ -165,7 +193,7 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
     }
     
     return null;
-  }, [mapStageToCategory]);
+  }, [mapStageToCategory, inferSexFromText]);
 
   // Parse date from various formats
   const parseDate = useCallback((value: unknown): string | null => {
@@ -266,6 +294,17 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
     if (!sex) {
       const allText = Object.values(rowData).filter(v => typeof v === 'string').join(' ');
       sex = inferSexFromText(allText);
+    }
+    
+    // FORCE BUFFALO CATEGORIES: If species is bufalo, override any detected bovine categories
+    if (species === 'bufalo') {
+      if (category && !['bufala', 'bufalo'].includes(category)) {
+        // Convert bovine categories to buffalo based on sex
+        category = sex === 'macho' ? 'bufalo' : 'bufala';
+      } else if (!category && sex) {
+        // If no category but sex detected, assign buffalo category
+        category = sex === 'macho' ? 'bufalo' : 'bufala';
+      }
     }
     
     // Warnings for missing data (not blocking)

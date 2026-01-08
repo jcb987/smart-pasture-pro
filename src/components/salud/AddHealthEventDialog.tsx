@@ -12,6 +12,7 @@ interface Animal {
   id: string;
   tag_id: string;
   name: string | null;
+  sex: string;
 }
 
 interface AddHealthEventDialogProps {
@@ -19,7 +20,7 @@ interface AddHealthEventDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmitEvent: (event: {
     animal_id: string;
-    event_type: 'tratamiento' | 'vacuna' | 'diagnostico';
+    event_type: 'tratamiento' | 'vacuna' | 'diagnostico' | 'palpacion';
     event_date: string;
     diagnosis?: string;
     treatment?: string;
@@ -32,6 +33,14 @@ interface AddHealthEventDialogProps {
     cost?: number;
     notes?: string;
   }) => Promise<any>;
+  onPalpationSubmit?: (data: {
+    animal_id: string;
+    event_date: string;
+    result: 'positivo' | 'negativo';
+    gestation_days?: number;
+    veterinarian?: string;
+    notes?: string;
+  }) => Promise<any>;
   commonDiagnoses: string[];
 }
 
@@ -39,11 +48,12 @@ export const AddHealthEventDialog = ({
   open, 
   onOpenChange, 
   onSubmitEvent,
+  onPalpationSubmit,
   commonDiagnoses 
 }: AddHealthEventDialogProps) => {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(false);
-  const [eventType, setEventType] = useState<'tratamiento' | 'vacuna' | 'diagnostico'>('tratamiento');
+  const [eventType, setEventType] = useState<'tratamiento' | 'vacuna' | 'diagnostico' | 'palpacion'>('tratamiento');
   const [form, setForm] = useState({
     animal_id: '',
     event_date: new Date().toISOString().split('T')[0],
@@ -58,18 +68,25 @@ export const AddHealthEventDialog = ({
     cost: '',
     notes: '',
   });
+  
+  // Palpation specific state
+  const [palpationResult, setPalpationResult] = useState<'positivo' | 'negativo' | ''>('');
+  const [gestationDays, setGestationDays] = useState('');
 
   useEffect(() => {
     const fetchAnimals = async () => {
       const { data } = await supabase
         .from('animals')
-        .select('id, tag_id, name')
+        .select('id, tag_id, name, sex')
         .eq('status', 'activo')
         .order('tag_id');
       setAnimals(data || []);
     };
     if (open) fetchAnimals();
   }, [open]);
+
+  // Filter females for palpation
+  const femaleAnimals = animals.filter(a => a.sex === 'hembra');
 
   const resetForm = () => {
     setForm({
@@ -87,6 +104,8 @@ export const AddHealthEventDialog = ({
       notes: '',
     });
     setEventType('tratamiento');
+    setPalpationResult('');
+    setGestationDays('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,6 +113,29 @@ export const AddHealthEventDialog = ({
     if (!form.animal_id) return;
 
     setLoading(true);
+
+    // Handle palpation separately
+    if (eventType === 'palpacion' && onPalpationSubmit) {
+      if (!palpationResult) {
+        setLoading(false);
+        return;
+      }
+      const result = await onPalpationSubmit({
+        animal_id: form.animal_id,
+        event_date: form.event_date,
+        result: palpationResult,
+        gestation_days: gestationDays ? parseInt(gestationDays) : undefined,
+        veterinarian: form.veterinarian || undefined,
+        notes: form.notes || undefined,
+      });
+      setLoading(false);
+      if (result) {
+        resetForm();
+        onOpenChange(false);
+      }
+      return;
+    }
+
     const result = await onSubmitEvent({
       animal_id: form.animal_id,
       event_type: eventType,
@@ -117,6 +159,9 @@ export const AddHealthEventDialog = ({
     }
   };
 
+  const isPalpation = eventType === 'palpacion';
+  const animalsToShow = isPalpation ? femaleAnimals : animals;
+
   return (
     <Dialog open={open} onOpenChange={(open) => { onOpenChange(open); if (!open) resetForm(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -125,22 +170,23 @@ export const AddHealthEventDialog = ({
         </DialogHeader>
 
         <Tabs value={eventType} onValueChange={(v) => setEventType(v as typeof eventType)}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="tratamiento">Tratamiento</TabsTrigger>
             <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>
             <TabsTrigger value="vacuna">Vacuna</TabsTrigger>
+            <TabsTrigger value="palpacion">Palpación</TabsTrigger>
           </TabsList>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Animal *</Label>
+                <Label>Animal * {isPalpation && <span className="text-xs text-muted-foreground">(solo hembras)</span>}</Label>
                 <Select value={form.animal_id} onValueChange={(v) => setForm({ ...form, animal_id: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent>
-                    {animals.map((animal) => (
+                    {animalsToShow.map((animal) => (
                       <SelectItem key={animal.id} value={animal.id}>
                         {animal.tag_id} {animal.name && `- ${animal.name}`}
                       </SelectItem>
@@ -276,6 +322,36 @@ export const AddHealthEventDialog = ({
               </div>
             </TabsContent>
 
+            {/* Palpación */}
+            <TabsContent value="palpacion" className="space-y-4 mt-0">
+              <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+                <h4 className="font-medium">Resultado de Palpación</h4>
+                <div className="space-y-2">
+                  <Label>Resultado *</Label>
+                  <Select value={palpationResult} onValueChange={(v) => setPalpationResult(v as 'positivo' | 'negativo')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar resultado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="negativo">Vacía (Negativo)</SelectItem>
+                      <SelectItem value="positivo">Preñada (Positivo)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {palpationResult === 'positivo' && (
+                  <div className="space-y-2">
+                    <Label>Días de Gestación Estimados</Label>
+                    <Input
+                      type="number"
+                      placeholder="Ej: 90"
+                      value={gestationDays}
+                      onChange={(e) => setGestationDays(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
             <div className="space-y-2">
               <Label>Veterinario</Label>
               <Input
@@ -298,7 +374,10 @@ export const AddHealthEventDialog = ({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading || !form.animal_id}>
+              <Button 
+                type="submit" 
+                disabled={loading || !form.animal_id || (isPalpation && !palpationResult)}
+              >
                 {loading ? 'Guardando...' : 'Guardar'}
               </Button>
             </div>

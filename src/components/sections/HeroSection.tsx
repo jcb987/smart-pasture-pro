@@ -139,13 +139,26 @@ const HeroSection = () => {
     }
   };
 
-  const handleAndroidDownload = () => {
-    if (isInstallable && deferredPrompt) {
-      handleInstallPWA();
+  const handleAndroidDownload = async () => {
+    if (deferredPrompt) {
+      // Instalación directa con un clic
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          toast.success('¡Aplicación instalada! Funciona sin internet después de instalarse.', { duration: 5000 });
+        } else {
+          toast.info('Puedes instalar la app más tarde desde el menú del navegador.', { duration: 4000 });
+        }
+        setDeferredPrompt(null);
+        setIsInstallable(false);
+      } catch (error) {
+        toast.error('Error al instalar. Intenta desde el menú del navegador.', { duration: 4000 });
+      }
     } else if (userOS === 'android') {
-      toast.info('Toca el menú (⋮) del navegador y selecciona "Instalar aplicación" o "Agregar a pantalla de inicio"', { duration: 6000 });
+      toast.info('Toca el menú (⋮) del navegador → "Instalar aplicación". Funcionará sin internet.', { duration: 6000 });
     } else {
-      toast.info('Para instalar en Android: abre esta página en Chrome y toca el menú para "Instalar aplicación"', { duration: 6000 });
+      toast.info('Abre esta página en Chrome en tu Android y toca el menú para "Instalar aplicación".', { duration: 6000 });
     }
   };
 

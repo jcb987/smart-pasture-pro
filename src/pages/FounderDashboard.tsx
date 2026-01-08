@@ -113,6 +113,20 @@ export default function FounderDashboard() {
     }
   }, [isFounder, founderLoading, navigate]);
 
+  // Listen for tab change events from sidebar
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent<string>) => {
+      if (event.detail) {
+        setActiveTab(event.detail);
+      }
+    };
+
+    window.addEventListener('founder-tab-change', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('founder-tab-change', handleTabChange as EventListener);
+    };
+  }, []);
+
   const fetchAllData = async () => {
     try {
       setLoading(true);

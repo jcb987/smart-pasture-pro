@@ -22,6 +22,7 @@ import Cookies from "./pages/legal/Cookies";
 import Dashboard from "./pages/Dashboard";
 import Usuarios from "./pages/Usuarios";
 import Animales from "./pages/Animales";
+import ConsultarAnimal from "./pages/ConsultarAnimal";
 import Reproduccion from "./pages/Reproduccion";
 import ProduccionLeche from "./pages/ProduccionLeche";
 import ProduccionCarne from "./pages/ProduccionCarne";
@@ -68,6 +69,7 @@ const App = () => (
               {/* Protected routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
+              <Route path="/consultar-animal" element={<ProtectedRoute><ConsultarAnimal /></ProtectedRoute>} />
               <Route path="/animales" element={<ProtectedRoute><Animales /></ProtectedRoute>} />
               <Route path="/reproduccion" element={<ProtectedRoute><Reproduccion /></ProtectedRoute>} />
               <Route path="/produccion-leche" element={<ProtectedRoute><ProduccionLeche /></ProtectedRoute>} />

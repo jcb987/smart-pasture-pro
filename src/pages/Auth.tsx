@@ -19,39 +19,52 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFounderLogin, setIsFounderLogin] = useState(false);
-  const { signIn, signUp, user, loading } = useAuth();
+  const { signIn, signUp, user, loading, hasOfflineSession } = useAuth();
   const { isOnline } = useOffline();
   const { signInAsFounder, isLoading: founderLoading } = useFounderAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
+    // Si está offline y tiene sesión offline válida, ir directo al dashboard
+    if (!isOnline && hasOfflineSession && user) {
+      console.log('[Auth] Offline with valid session, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+
     const checkUserRole = async () => {
       if (!loading && user) {
         // Si está offline y ya hay sesión, entra directo (no podemos consultar roles)
         if (!isOnline) {
-          navigate('/dashboard');
+          navigate('/dashboard', { replace: true });
           return;
         }
 
         // Check if user is founder
-        const { data } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'founder')
-          .maybeSingle();
+        try {
+          const { data } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('role', 'founder')
+            .maybeSingle();
 
-        if (data) {
-          navigate('/founder');
-        } else {
-          navigate('/dashboard');
+          if (data) {
+            navigate('/founder', { replace: true });
+          } else {
+            navigate('/dashboard', { replace: true });
+          }
+        } catch (err) {
+          // If query fails (offline), just go to dashboard
+          console.log('[Auth] Role check failed, going to dashboard');
+          navigate('/dashboard', { replace: true });
         }
       }
     };
 
     checkUserRole();
-  }, [user, loading, navigate, isOnline]);
+  }, [user, loading, navigate, isOnline, hasOfflineSession]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

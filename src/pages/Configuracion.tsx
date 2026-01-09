@@ -12,11 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   Settings, Save, User, Bell, Database, Globe, Shield, 
-  Download, Upload, RotateCcw, CheckCircle, Loader2, AlertTriangle
+  Download, Upload, RotateCcw, CheckCircle, Loader2, AlertTriangle, Cloud
 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { CloudBackupSettings } from '@/components/configuracion/CloudBackupSettings';
 
 const Configuracion = () => {
   const { settings, preferences, saveSettings, savePreferences, exportData, resetSettings, loading } = useSettings();
@@ -475,58 +476,32 @@ const Configuracion = () => {
 
           {/* Backup */}
           <TabsContent value="backup" className="space-y-4">
+            {/* Cloud Backup - New Feature */}
+            <CloudBackupSettings />
+
+            <Separator className="my-6" />
+
+            {/* Local Backup Settings */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Copias de Seguridad</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Download className="h-5 w-5" />
+                  Exportar Datos Localmente
+                </CardTitle>
                 <CardDescription>
-                  Gestiona tus respaldos de datos
+                  Descarga una copia de tus datos en formato JSON
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Backup Automático</p>
-                    <p className="text-sm text-muted-foreground">Realizar respaldos automáticos</p>
-                  </div>
-                  <Switch
-                    checked={localSettings.autoBackup}
-                    onCheckedChange={(checked) => 
-                      setLocalSettings({ ...localSettings, autoBackup: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Frecuencia</p>
-                    <p className="text-sm text-muted-foreground">Cada cuánto hacer backup</p>
-                  </div>
-                  <Select
-                    value={localSettings.backupFrequency}
-                    onValueChange={(value: 'daily' | 'weekly' | 'monthly') => 
-                      setLocalSettings({ ...localSettings, backupFrequency: value })}
-                  >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Diario</SelectItem>
-                      <SelectItem value="weekly">Semanal</SelectItem>
-                      <SelectItem value="monthly">Mensual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {settings.lastBackupDate && (
                   <Alert>
                     <CheckCircle className="h-4 w-4" />
-                    <AlertTitle>Último backup</AlertTitle>
+                    <AlertTitle>Última exportación local</AlertTitle>
                     <AlertDescription>
                       {new Date(settings.lastBackupDate).toLocaleString()}
                     </AlertDescription>
                   </Alert>
                 )}
-
-                <Separator />
 
                 <div className="flex gap-4">
                   <Button onClick={handleExport} disabled={exporting} className="flex-1">
@@ -535,21 +510,9 @@ const Configuracion = () => {
                     ) : (
                       <Download className="mr-2 h-4 w-4" />
                     )}
-                    Exportar Backup
-                  </Button>
-                  <Button variant="outline" className="flex-1">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Restaurar Backup
+                    Descargar Backup Local
                   </Button>
                 </div>
-
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Precaución</AlertTitle>
-                  <AlertDescription>
-                    Restaurar un backup reemplazará todos los datos actuales. Esta acción no se puede deshacer.
-                  </AlertDescription>
-                </Alert>
               </CardContent>
             </Card>
 

@@ -79,26 +79,33 @@ const clearOfflineSession = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [hasOfflineSession, setHasOfflineSession] = useState(false);
+  // Check for offline session IMMEDIATELY (sync) before any state initialization
+  const offlineData = getOfflineSession();
+  const hasValidOfflineSession = !!(offlineData.session && offlineData.user);
+  
+  const [user, setUser] = useState<User | null>(hasValidOfflineSession ? offlineData.user : null);
+  const [session, setSession] = useState<Session | null>(hasValidOfflineSession ? offlineData.session : null);
+  const [loading, setLoading] = useState(!hasValidOfflineSession); // If we have offline session, don't show loading
+  const [hasOfflineSession, setHasOfflineSession] = useState(hasValidOfflineSession);
 
   useEffect(() => {
-    // Check for offline session first
-    const { session: offlineSession, user: offlineUser } = getOfflineSession();
-    setHasOfflineSession(!!(offlineSession && offlineUser));
+    // If we're offline and already have a session from initialization, skip Supabase calls
+    if (!navigator.onLine && hasValidOfflineSession) {
+      console.log('[Auth] Offline mode with valid session - skipping Supabase');
+      return;
+    }
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event, newSession) => {
+        console.log('[Auth] State change:', event, !!newSession);
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
         setLoading(false);
         
         // Save session for offline use
-        if (session?.user) {
-          saveOfflineSession(session, session.user);
+        if (newSession?.user) {
+          saveOfflineSession(newSession, newSession.user);
           setHasOfflineSession(true);
         }
         
@@ -110,26 +117,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error || !session) {
+    supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
+      console.log('[Auth] getSession result:', !!currentSession, error?.message);
+      
+      if (error || !currentSession) {
         // If we're offline and have an offline session, use it
-        if (!navigator.onLine && offlineSession && offlineUser) {
-          setSession(offlineSession);
-          setUser(offlineUser);
+        if (!navigator.onLine && offlineData.session && offlineData.user) {
+          console.log('[Auth] Using offline session');
+          setSession(offlineData.session);
+          setUser(offlineData.user);
           setLoading(false);
           return;
         }
       }
       
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      // Save session for offline use
-      if (session?.user) {
-        saveOfflineSession(session, session.user);
+      if (currentSession) {
+        setSession(currentSession);
+        setUser(currentSession.user ?? null);
+        // Save session for offline use
+        saveOfflineSession(currentSession, currentSession.user);
         setHasOfflineSession(true);
       }
+      
+      setLoading(false);
+    }).catch((err) => {
+      console.log('[Auth] getSession error (likely offline):', err);
+      // If getSession fails (network error) and we have offline session, use it
+      if (offlineData.session && offlineData.user) {
+        console.log('[Auth] Falling back to offline session');
+        setSession(offlineData.session);
+        setUser(offlineData.user);
+        setHasOfflineSession(true);
+      }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();

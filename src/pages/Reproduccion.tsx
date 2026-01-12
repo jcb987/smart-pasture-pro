@@ -3,12 +3,17 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, Plus, TrendingUp, Calendar, AlertTriangle, Baby, Upload, Download } from 'lucide-react';
+import { Heart, Plus, TrendingUp, Calendar, AlertTriangle, Baby, Upload, Download, Brain, CalendarClock } from 'lucide-react';
 import { useReproduction } from '@/hooks/useReproduction';
+import { useAnimals } from '@/hooks/useAnimals';
+import { useFertilityAnalysis } from '@/hooks/useFertilityAnalysis';
+import { useAutomatedEvents } from '@/hooks/useAutomatedEvents';
 import { RegisterEventDialog } from '@/components/reproduccion/RegisterEventDialog';
 import { ReproductiveTable } from '@/components/reproduccion/ReproductiveTable';
 import { ReproductiveHistoryDialog } from '@/components/reproduccion/ReproductiveHistoryDialog';
 import { ReproductiveAlerts } from '@/components/reproduccion/ReproductiveAlerts';
+import { FertilityAnalysisCard } from '@/components/reproduccion/FertilityAnalysisCard';
+import { AutomatedEventsCard } from '@/components/reproduccion/AutomatedEventsCard';
 import { SmartImportDialog } from '@/components/shared/SmartImportDialog';
 import { reproductionImportConfig } from '@/config/importConfigs';
 import { useExportReproduction } from '@/hooks/useExportReproduction';
@@ -18,6 +23,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const Reproduccion = () => {
   const { females, bulls, events, stats, isLoading, addEvent, deleteEvent } = useReproduction();
+  const { animals } = useAnimals();
+  const { getAllFertilityAnalysis, herdStats } = useFertilityAnalysis(females, events);
+  const { generatedEvents, urgentEvents, summary, completeEvent } = useAutomatedEvents(animals);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -218,9 +226,17 @@ const Reproduccion = () => {
           <div className="lg:col-span-2">
             <Tabs defaultValue="females" className="space-y-4">
               <TabsList>
-                <TabsTrigger value="females">Hembras Reproductivas</TabsTrigger>
-                <TabsTrigger value="events">Historial de Eventos</TabsTrigger>
-              </TabsList>
+              <TabsTrigger value="females">Hembras Reproductivas</TabsTrigger>
+              <TabsTrigger value="events">Historial de Eventos</TabsTrigger>
+              <TabsTrigger value="fertility">
+                <Brain className="mr-1 h-4 w-4" />
+                Análisis Fertilidad
+              </TabsTrigger>
+              <TabsTrigger value="automated">
+                <CalendarClock className="mr-1 h-4 w-4" />
+                Eventos Auto
+              </TabsTrigger>
+            </TabsList>
 
               <TabsContent value="females">
                 <Card>
@@ -305,6 +321,22 @@ const Reproduccion = () => {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="fertility">
+                <FertilityAnalysisCard 
+                  allMetrics={getAllFertilityAnalysis}
+                  herdStats={herdStats}
+                />
+              </TabsContent>
+
+              <TabsContent value="automated">
+                <AutomatedEventsCard
+                  events={generatedEvents}
+                  urgentEvents={urgentEvents}
+                  summary={summary}
+                  onComplete={completeEvent}
+                />
               </TabsContent>
             </Tabs>
           </div>

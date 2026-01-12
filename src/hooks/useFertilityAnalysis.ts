@@ -40,7 +40,7 @@ interface ReproductiveEvent {
 interface Female {
   id: string;
   tag_id: string;
-  name: string | null;
+  name?: string | null;
   category: string;
   reproductive_status?: string | null;
   last_calving_date?: string | null;

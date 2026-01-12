@@ -3,7 +3,8 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Beef, Plus, FileSpreadsheet, AlertTriangle, Upload, Brain } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Beef, Plus, FileSpreadsheet, AlertTriangle, Upload, Brain, Calculator, List } from 'lucide-react';
 import { useAnimals, type Animal, type AnimalFilters } from '@/hooks/useAnimals';
 import { CreateAnimalDialog } from '@/components/animales/CreateAnimalDialog';
 import { AnimalEditDetailDialog } from '@/components/animales/AnimalEditDetailDialog';
@@ -13,6 +14,7 @@ import { AddWeightDialog } from '@/components/animales/AddWeightDialog';
 import { ExportDialog } from '@/components/animales/ExportDialog';
 import { SmartAnimalImporter } from '@/components/animales/SmartAnimalImporter';
 import { AnimalScanner } from '@/components/animales/AnimalScanner';
+import { WeightPredictionCard } from '@/components/animales/WeightPredictionCard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -199,57 +201,77 @@ const Animales = () => {
           </Card>
         )}
 
-        {/* Filters */}
-        <AnimalsFilters
-          filters={filters}
-          onFiltersChange={setFilters}
-          lotes={stats.lotes}
-        />
+        {/* Tabs for Animals */}
+        <Tabs defaultValue="list" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="list">
+              <List className="mr-1 h-4 w-4" />
+              Inventario
+            </TabsTrigger>
+            <TabsTrigger value="prediction">
+              <Calculator className="mr-1 h-4 w-4" />
+              Predicción Peso
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Listado de Animales</CardTitle>
-            <CardDescription>
-              {filteredAnimals.length} de {animals.length} animales
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : filteredAnimals.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Beef className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                <h3 className="text-lg font-medium">
-                  {animals.length === 0 ? 'Sin animales registrados' : 'Sin resultados'}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {animals.length === 0 
-                    ? 'Comienza registrando tu primer animal'
-                    : 'Intenta ajustar los filtros de búsqueda'}
-                </p>
-                {animals.length === 0 && (
-                  <Button onClick={() => setCreateDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Registrar Animal
-                  </Button>
+          <TabsContent value="list" className="space-y-4">
+            {/* Filters */}
+            <AnimalsFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              lotes={stats.lotes}
+            />
+
+            {/* Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Listado de Animales</CardTitle>
+                <CardDescription>
+                  {filteredAnimals.length} de {animals.length} animales
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : filteredAnimals.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Beef className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium">
+                      {animals.length === 0 ? 'Sin animales registrados' : 'Sin resultados'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {animals.length === 0 
+                        ? 'Comienza registrando tu primer animal'
+                        : 'Intenta ajustar los filtros de búsqueda'}
+                    </p>
+                    {animals.length === 0 && (
+                      <Button onClick={() => setCreateDialogOpen(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Registrar Animal
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <AnimalsTable
+                    animals={filteredAnimals}
+                    onView={handleViewAnimal}
+                    onEdit={handleEditAnimal}
+                    onAddWeight={handleAddWeight}
+                    onDelete={handleDeleteAnimal}
+                  />
                 )}
-              </div>
-            ) : (
-              <AnimalsTable
-                animals={filteredAnimals}
-                onView={handleViewAnimal}
-                onEdit={handleEditAnimal}
-                onAddWeight={handleAddWeight}
-                onDelete={handleDeleteAnimal}
-              />
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="prediction">
+            <WeightPredictionCard animals={animals} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Dialogs */}

@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCostos } from '@/hooks/useCostos';
+import { useCostPrediction } from '@/hooks/useCostPrediction';
 import { AddTransactionDialog } from '@/components/costos/AddTransactionDialog';
 import { TransactionsTable } from '@/components/costos/TransactionsTable';
 import { FinancialCharts } from '@/components/costos/FinancialCharts';
 import { CostAnalysis } from '@/components/costos/CostAnalysis';
 import { FinancialProjections } from '@/components/costos/FinancialProjections';
+import { CostPredictionCard } from '@/components/costos/CostPredictionCard';
 import { 
   DollarSign, 
   Plus, 
@@ -18,11 +20,13 @@ import {
   BarChart3,
   Calculator,
   FileSpreadsheet,
-  PiggyBank
+  PiggyBank,
+  Brain
 } from 'lucide-react';
 
 const Costos = () => {
-  const { summary, isLoading } = useCostos();
+  const { summary, isLoading, transactions } = useCostos();
+  const { forecast } = useCostPrediction(transactions || []);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [defaultType, setDefaultType] = useState<'ingreso' | 'egreso'>('ingreso');
 
@@ -130,7 +134,7 @@ const Costos = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="transactions" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="transactions" className="flex items-center gap-2">
               <FileSpreadsheet className="h-4 w-4" />
               <span className="hidden sm:inline">Transacciones</span>
@@ -146,6 +150,10 @@ const Costos = () => {
             <TabsTrigger value="projections" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               <span className="hidden sm:inline">Proyecciones</span>
+            </TabsTrigger>
+            <TabsTrigger value="prediction" className="flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              <span className="hidden sm:inline">Predicción IA</span>
             </TabsTrigger>
           </TabsList>
 
@@ -170,6 +178,10 @@ const Costos = () => {
 
           <TabsContent value="projections">
             <FinancialProjections />
+          </TabsContent>
+
+          <TabsContent value="prediction">
+            <CostPredictionCard forecast={forecast} />
           </TabsContent>
         </Tabs>
       </div>

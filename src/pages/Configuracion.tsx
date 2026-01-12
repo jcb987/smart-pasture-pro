@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   Settings, Save, User, Bell, Database, Globe, Shield, 
-  Download, Upload, RotateCcw, CheckCircle, Loader2, AlertTriangle, Cloud
+  Download, Upload, RotateCcw, CheckCircle, Loader2, AlertTriangle, Cloud, Heart
 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
@@ -78,7 +78,7 @@ const Configuracion = () => {
         </div>
 
         <Tabs defaultValue="general" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="general">
               <Globe className="mr-2 h-4 w-4" />
               General
@@ -86,6 +86,10 @@ const Configuracion = () => {
             <TabsTrigger value="alerts">
               <Bell className="mr-2 h-4 w-4" />
               Alertas
+            </TabsTrigger>
+            <TabsTrigger value="fertility">
+              <Heart className="mr-2 h-4 w-4" />
+              Fertilidad
             </TabsTrigger>
             <TabsTrigger value="profile">
               <User className="mr-2 h-4 w-4" />
@@ -435,6 +439,154 @@ const Configuracion = () => {
                           notifications: { ...localPreferences.notifications, whatsapp: checked }
                         })}
                     />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Estándares de Fertilidad */}
+          <TabsContent value="fertility" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Estándares de Fertilidad</CardTitle>
+                <CardDescription>
+                  Configura los valores objetivo para el análisis de fertilidad del hato
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Días Abiertos Máximo</Label>
+                    <Input
+                      type="number"
+                      placeholder="120"
+                      defaultValue={120}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Días máximos aceptables del parto al servicio
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Intervalo Entre Partos Objetivo (días)</Label>
+                    <Input
+                      type="number"
+                      placeholder="365"
+                      defaultValue={365}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      IEP ideal para el hato
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tasa de Concepción Objetivo (%)</Label>
+                    <Input
+                      type="number"
+                      placeholder="55"
+                      defaultValue={55}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Porcentaje mínimo esperado
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Servicios por Concepción Máximo</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="2.5"
+                      defaultValue={2.5}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Número máximo aceptable
+                    </p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h4 className="font-medium">Alertas de Reproducción</h4>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Días para detección de celo</Label>
+                      <Input
+                        type="number"
+                        placeholder="21"
+                        defaultValue={21}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Ciclo estral promedio
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Días gestación para palpación</Label>
+                      <Input
+                        type="number"
+                        placeholder="40"
+                        defaultValue={40}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Días post-servicio para confirmar preñez
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Días antes del parto para secado</Label>
+                      <Input
+                        type="number"
+                        placeholder="60"
+                        defaultValue={60}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Período seco recomendado
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Días gestación estándar</Label>
+                      <Input
+                        type="number"
+                        placeholder="283"
+                        defaultValue={283}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Duración promedio de gestación
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h4 className="font-medium">Calificación de Fertilidad</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Umbrales para clasificar la fertilidad de cada animal (0-100)
+                  </p>
+                  
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <div className="space-y-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                      <Label className="text-red-700 dark:text-red-400">Baja</Label>
+                      <div className="text-lg font-bold text-red-600">0 - 40</div>
+                    </div>
+                    <div className="space-y-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+                      <Label className="text-amber-700 dark:text-amber-400">Regular</Label>
+                      <div className="text-lg font-bold text-amber-600">40 - 60</div>
+                    </div>
+                    <div className="space-y-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                      <Label className="text-blue-700 dark:text-blue-400">Buena</Label>
+                      <div className="text-lg font-bold text-blue-600">60 - 80</div>
+                    </div>
+                    <div className="space-y-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                      <Label className="text-green-700 dark:text-green-400">Excelente</Label>
+                      <div className="text-lg font-bold text-green-600">80 - 100</div>
+                    </div>
                   </div>
                 </div>
               </CardContent>

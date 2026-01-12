@@ -3,13 +3,15 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Stethoscope, Plus, Syringe, AlertTriangle, Pill, ShieldCheck, Calendar, Brain } from 'lucide-react';
+import { Stethoscope, Plus, Syringe, AlertTriangle, Pill, ShieldCheck, Calendar, Brain, Bug } from 'lucide-react';
 import { useHealth } from '@/hooks/useHealth';
 import { useReproduction } from '@/hooks/useReproduction';
+import { useParasiteControl } from '@/hooks/useParasiteControl';
 import { AddHealthEventDialog } from '@/components/salud/AddHealthEventDialog';
 import { AddVaccinationDialog } from '@/components/salud/AddVaccinationDialog';
 import { HealthEventsTable, VaccinationTable } from '@/components/salud/HealthTables';
 import { HealthAlerts, DiagnosisStatsCard } from '@/components/salud/HealthAlerts';
+import { ParasiteControlCard } from '@/components/salud/ParasiteControlCard';
 import { AIHealthPredictor } from '@/components/ai/AIHealthPredictor';
 import { toast } from 'sonner';
 
@@ -35,6 +37,9 @@ const Salud = () => {
   } = useHealth();
 
   const { addEvent: addReproductiveEvent } = useReproduction();
+  
+  // Control parasitario
+  const { schedules, stats: parasiteStats, urgentAnimals, upcomingAnimals } = useParasiteControl();
 
   const stats = getStats();
   const diagnosisStats = getDiagnosisStats();
@@ -185,6 +190,10 @@ const Salud = () => {
               <Brain className="mr-1 h-4 w-4" />
               Predicción IA
             </TabsTrigger>
+            <TabsTrigger value="parasites">
+              <Bug className="mr-1 h-4 w-4" />
+              Parásitos
+            </TabsTrigger>
             <TabsTrigger value="stats">Estadísticas</TabsTrigger>
           </TabsList>
 
@@ -206,6 +215,15 @@ const Salud = () => {
 
           <TabsContent value="ai-prediction" className="space-y-4">
             <AIHealthPredictor />
+          </TabsContent>
+
+          <TabsContent value="parasites" className="space-y-4">
+            <ParasiteControlCard
+              schedules={schedules}
+              stats={parasiteStats}
+              urgentAnimals={urgentAnimals}
+              upcomingAnimals={upcomingAnimals}
+            />
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-4">

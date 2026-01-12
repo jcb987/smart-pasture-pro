@@ -3,12 +3,14 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Upload, Download } from 'lucide-react';
+import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Upload, Download, Activity, Target } from 'lucide-react';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
+import { useLactationAnalysis } from '@/hooks/useLactationAnalysis';
 import { AddMilkRecordDialog } from '@/components/produccion/AddMilkRecordDialog';
 import { ProductionChart } from '@/components/produccion/ProductionChart';
 import { RankingTable } from '@/components/produccion/RankingTable';
 import { ProductionRecordsTable } from '@/components/produccion/ProductionRecordsTable';
+import { LactationAnalysisCard } from '@/components/produccion/LactationAnalysisCard';
 import { SmartImportDialog } from '@/components/shared/SmartImportDialog';
 import { milkImportConfig } from '@/config/importConfigs';
 import { useExportMilk } from '@/hooks/useExportMilk';
@@ -34,6 +36,14 @@ const ProduccionLeche = () => {
   const stats = getStats();
   const rankings = getRankings(rankingPeriod);
   const productionCurve = getProductionCurve();
+
+  // Análisis de lactancia y CCS
+  const { 
+    getAllLactationAnalysis, 
+    getAllSCCAnalysis, 
+    mastitisAlerts, 
+    topPersistency 
+  } = useLactationAnalysis(records);
 
   const rankingItems = rankings.map((r, i) => ({
     position: i + 1,
@@ -126,58 +136,82 @@ const ProduccionLeche = () => {
           </Card>
         </div>
 
-        {/* Charts and Rankings */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <ProductionChart 
-            data={productionCurve} 
-            title="Curva de Producción (30 días)" 
-            unit=" L"
-            color="hsl(var(--primary))"
-          />
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" />
-              <span className="font-medium">Ranking por Período</span>
-              <div className="ml-auto flex gap-1">
-                <Button 
-                  variant={rankingPeriod === 'week' ? 'default' : 'outline'} 
-                  size="sm"
-                  onClick={() => setRankingPeriod('week')}
-                >
-                  Semana
-                </Button>
-                <Button 
-                  variant={rankingPeriod === 'month' ? 'default' : 'outline'} 
-                  size="sm"
-                  onClick={() => setRankingPeriod('month')}
-                >
-                  Mes
-                </Button>
-                <Button 
-                  variant={rankingPeriod === 'year' ? 'default' : 'outline'} 
-                  size="sm"
-                  onClick={() => setRankingPeriod('year')}
-                >
-                  Año
-                </Button>
+        {/* Tabs for different views */}
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Resumen</TabsTrigger>
+            <TabsTrigger value="lactation">
+              <Activity className="mr-1 h-4 w-4" />
+              Curvas Lactancia
+            </TabsTrigger>
+            <TabsTrigger value="records">Registros</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            {/* Charts and Rankings */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <ProductionChart 
+                data={productionCurve} 
+                title="Curva de Producción (30 días)" 
+                unit=" L"
+                color="hsl(var(--primary))"
+              />
+              
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Ranking por Período</span>
+                  <div className="ml-auto flex gap-1">
+                    <Button 
+                      variant={rankingPeriod === 'week' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setRankingPeriod('week')}
+                    >
+                      Semana
+                    </Button>
+                    <Button 
+                      variant={rankingPeriod === 'month' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setRankingPeriod('month')}
+                    >
+                      Mes
+                    </Button>
+                    <Button 
+                      variant={rankingPeriod === 'year' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setRankingPeriod('year')}
+                    >
+                      Año
+                    </Button>
+                  </div>
+                </div>
+                <RankingTable 
+                  title={`Top Productoras - ${rankingPeriod === 'week' ? 'Semana' : rankingPeriod === 'month' ? 'Mes' : 'Año'}`}
+                  items={rankingItems}
+                  valueLabel="Total"
+                  secondaryLabel="Promedio"
+                />
               </div>
             </div>
-            <RankingTable 
-              title={`Top Productoras - ${rankingPeriod === 'week' ? 'Semana' : rankingPeriod === 'month' ? 'Mes' : 'Año'}`}
-              items={rankingItems}
-              valueLabel="Total"
-              secondaryLabel="Promedio"
-            />
-          </div>
-        </div>
+          </TabsContent>
 
-        {/* Records Table */}
-        <ProductionRecordsTable 
-          type="milk" 
-          records={records} 
-          onDelete={deleteRecord} 
-        />
+          <TabsContent value="lactation">
+            <LactationAnalysisCard 
+              lactationData={getAllLactationAnalysis}
+              sccData={getAllSCCAnalysis}
+              mastitisAlerts={mastitisAlerts}
+            />
+          </TabsContent>
+
+          <TabsContent value="records">
+            {/* Records Table */}
+            <ProductionRecordsTable 
+              type="milk" 
+              records={records} 
+              onDelete={deleteRecord} 
+            />
+          </TabsContent>
+        </Tabs>
 
         {/* Info Card */}
         <Card>

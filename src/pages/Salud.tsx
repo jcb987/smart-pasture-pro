@@ -3,22 +3,26 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Stethoscope, Plus, Syringe, AlertTriangle, Pill, ShieldCheck, Calendar, Brain, Bug } from 'lucide-react';
+import { Stethoscope, Plus, Syringe, AlertTriangle, Pill, ShieldCheck, Calendar, Brain, Bug, Baby } from 'lucide-react';
 import { useHealth } from '@/hooks/useHealth';
 import { useReproduction } from '@/hooks/useReproduction';
 import { useParasiteControl } from '@/hooks/useParasiteControl';
+import { usePalpationRecords } from '@/hooks/usePalpationRecords';
 import { AddHealthEventDialog } from '@/components/salud/AddHealthEventDialog';
 import { AddVaccinationDialog } from '@/components/salud/AddVaccinationDialog';
+import { ReproductivePalpationDialog } from '@/components/salud/ReproductivePalpationDialog';
 import { HealthEventsTable, VaccinationTable } from '@/components/salud/HealthTables';
 import { HealthAlerts, DiagnosisStatsCard } from '@/components/salud/HealthAlerts';
 import { ParasiteControlCard } from '@/components/salud/ParasiteControlCard';
+import { PalpationRecordsTable } from '@/components/salud/PalpationRecordsTable';
+import { BirthDelayAlertsCard } from '@/components/salud/BirthDelayAlertsCard';
 import { AIHealthPredictor } from '@/components/ai/AIHealthPredictor';
 import { toast } from 'sonner';
 
 const Salud = () => {
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showVaccinationDialog, setShowVaccinationDialog] = useState(false);
-
+  const [showPalpationDialog, setShowPalpationDialog] = useState(false);
   const {
     healthEvents,
     vaccinations,
@@ -40,6 +44,15 @@ const Salud = () => {
   
   // Control parasitario
   const { schedules, stats: parasiteStats, urgentAnimals, upcomingAnimals } = useParasiteControl();
+  
+  // Palpaciones reproductivas
+  const { 
+    palpationRecords, 
+    birthDelayAlerts, 
+    stats: palpationStats, 
+    addPalpation, 
+    deletePalpation 
+  } = usePalpationRecords();
 
   const stats = getStats();
   const diagnosisStats = getDiagnosisStats();
@@ -94,6 +107,10 @@ const Salud = () => {
             <Button variant="outline" onClick={() => setShowVaccinationDialog(true)}>
               <Syringe className="mr-2 h-4 w-4" />
               Programar Vacuna
+            </Button>
+            <Button variant="outline" onClick={() => setShowPalpationDialog(true)}>
+              <Baby className="mr-2 h-4 w-4" />
+              Palpación Reproductiva
             </Button>
             <Button onClick={() => setShowEventDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -194,6 +211,10 @@ const Salud = () => {
               <Bug className="mr-1 h-4 w-4" />
               Parásitos
             </TabsTrigger>
+            <TabsTrigger value="palpation">
+              <Baby className="mr-1 h-4 w-4" />
+              Palpación
+            </TabsTrigger>
             <TabsTrigger value="stats">Estadísticas</TabsTrigger>
           </TabsList>
 
@@ -224,6 +245,16 @@ const Salud = () => {
               urgentAnimals={urgentAnimals}
               upcomingAnimals={upcomingAnimals}
             />
+          </TabsContent>
+
+          <TabsContent value="palpation" className="space-y-4">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <PalpationRecordsTable 
+                records={palpationRecords} 
+                onDelete={deletePalpation} 
+              />
+              <BirthDelayAlertsCard alerts={birthDelayAlerts} />
+            </div>
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-4">
@@ -310,6 +341,13 @@ const Salud = () => {
         onSubmit={addVaccination}
         commonVaccines={COMMON_VACCINES}
       />
+
+      <ReproductivePalpationDialog
+        open={showPalpationDialog}
+        onOpenChange={setShowPalpationDialog}
+        onSubmit={addPalpation}
+      />
+    </DashboardLayout>
     </DashboardLayout>
   );
 };

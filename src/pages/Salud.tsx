@@ -348,7 +348,6 @@ const Salud = () => {
         onSubmit={addPalpation}
       />
     </DashboardLayout>
-    </DashboardLayout>
   );
 };
 

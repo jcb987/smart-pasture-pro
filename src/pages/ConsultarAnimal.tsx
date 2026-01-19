@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,13 +15,15 @@ import {
   Stethoscope,
   MapPin,
   AlertTriangle,
-  Activity
+  Activity,
+  WifiOff
 } from 'lucide-react';
 import { useHealth } from '@/hooks/useHealth';
 import { useReproduction } from '@/hooks/useReproduction';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { useWeightRecords } from '@/hooks/useWeightRecords';
-import { supabase } from '@/integrations/supabase/client';
+import { useAnimals } from '@/hooks/useAnimals';
+import { useOffline } from '@/contexts/OfflineContext';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -48,8 +50,8 @@ interface AnimalComplete {
 }
 
 const ConsultarAnimal = () => {
-  const [animals, setAnimals] = useState<AnimalComplete[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { animals, loading: animalsLoading } = useAnimals();
+  const { isOnline } = useOffline();
   const { healthEvents, vaccinations } = useHealth();
   const { events: reproductiveEvents } = useReproduction();
   const { records: milkRecords } = useMilkProduction();
@@ -60,35 +62,8 @@ const ConsultarAnimal = () => {
   const [filteredAnimals, setFilteredAnimals] = useState<AnimalComplete[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Cargar animales desde la BD
-  useEffect(() => {
-    const fetchAnimals = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!profile?.organization_id) return;
-
-      const { data } = await supabase
-        .from('animals')
-        .select('id, tag_id, name, category, sex, breed, color, birth_date, entry_date, status, current_weight, origin, lot_name, notes, reproductive_status, total_calvings, last_calving_date, expected_calving_date')
-        .eq('organization_id', profile.organization_id)
-        .eq('status', 'activo')
-        .order('tag_id');
-
-      if (data) {
-        setAnimals(data);
-      }
-      setLoading(false);
-    };
-
-    fetchAnimals();
-  }, []);
+  // Use animals from the hook (which has offline support)
+  const activeAnimals = animals.filter(a => a.status === 'activo') as unknown as AnimalComplete[];
 
   // Secciones colapsables
   const [openSections, setOpenSections] = useState({
@@ -99,10 +74,7 @@ const ConsultarAnimal = () => {
     ubicacion: true,
   });
 
-  // Filtrar animales activos
-  const activeAnimals = animals;
-
-  // Búsqueda con autocompletado
+  // Búsqueda con autocompletado - now uses cached animals
   useEffect(() => {
     if (searchTerm.length >= 2) {
       const filtered = activeAnimals.filter(a => 
@@ -115,17 +87,17 @@ const ConsultarAnimal = () => {
       setFilteredAnimals([]);
       setShowSuggestions(false);
     }
-  }, [searchTerm, animals]);
+  }, [searchTerm, activeAnimals]);
 
   // Seleccionar animal
-  const selectAnimal = (animal: AnimalComplete) => {
+  const selectAnimal = useCallback((animal: AnimalComplete) => {
     setSelectedAnimal(animal);
     setSearchTerm(animal.tag_id);
     setShowSuggestions(false);
-  };
+  }, []);
 
   // Navegación entre animales
-  const navigateAnimal = (direction: 'prev' | 'next') => {
+  const navigateAnimal = useCallback((direction: 'prev' | 'next') => {
     if (!selectedAnimal) return;
     const currentIndex = activeAnimals.findIndex(a => a.id === selectedAnimal.id);
     if (currentIndex === -1) return;
@@ -135,15 +107,15 @@ const ConsultarAnimal = () => {
       : (currentIndex - 1 + activeAnimals.length) % activeAnimals.length;
     
     selectAnimal(activeAnimals[newIndex]);
-  };
+  }, [selectedAnimal, activeAnimals, selectAnimal]);
 
   // Toggle sección
-  const toggleSection = (section: keyof typeof openSections) => {
+  const toggleSection = useCallback((section: keyof typeof openSections) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
+  }, []);
 
   // Obtener datos específicos del animal seleccionado
-  const getAnimalData = () => {
+  const getAnimalData = useCallback(() => {
     if (!selectedAnimal) return null;
 
     // Eventos de salud del animal
@@ -199,7 +171,7 @@ const ConsultarAnimal = () => {
       avgDailyGain,
       healthEventsCount: animalHealthEvents.length,
     };
-  };
+  }, [selectedAnimal, healthEvents, vaccinations, reproductiveEvents, milkRecords, weightRecords]);
 
   const animalData = getAnimalData();
 
@@ -268,8 +240,19 @@ const ConsultarAnimal = () => {
       <div className="space-y-6 max-w-4xl mx-auto">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold">Consultar Animal</h1>
-          <p className="text-muted-foreground">Vista 360° - Hoja de vida del animal</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">Consultar Animal</h1>
+            {!isOnline && (
+              <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                <WifiOff className="h-3 w-3 mr-1" />
+                Offline
+              </Badge>
+            )}
+          </div>
+          <p className="text-muted-foreground">
+            Vista 360° - Hoja de vida del animal
+            {!isOnline && ` (${activeAnimals.length} animales en caché)`}
+          </p>
         </div>
 
         {/* Búsqueda */}
@@ -318,14 +301,26 @@ const ConsultarAnimal = () => {
           </CardContent>
         </Card>
 
+        {/* Loading state */}
+        {animalsLoading && (
+          <Card className="py-12">
+            <CardContent className="text-center">
+              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-muted-foreground">Cargando animales...</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Estado vacío */}
-        {!selectedAnimal && (
+        {!animalsLoading && !selectedAnimal && (
           <Card className="py-12">
             <CardContent className="text-center">
               <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Selecciona un animal</h3>
               <p className="text-muted-foreground">
-                Busca por arete o nombre para ver la información completa
+                {activeAnimals.length > 0 
+                  ? `Busca entre ${activeAnimals.length} animales por arete o nombre`
+                  : 'No hay animales disponibles'}
               </p>
             </CardContent>
           </Card>
@@ -436,21 +431,23 @@ const ConsultarAnimal = () => {
                   <CardContent className="pt-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                       <InfoRow 
-                        label="Última vacuna" 
-                        value={animalData.lastVaccine ? (
-                          <span>{animalData.lastVaccine.vaccine_name} ({formatDate(animalData.lastVaccine.applied_date)})</span>
-                        ) : null} 
+                        label="Total eventos de salud" 
+                        value={animalData.healthEventsCount} 
                       />
                       <InfoRow 
                         label="Último tratamiento" 
-                        value={animalData.lastTreatment ? (
-                          <span>{animalData.lastTreatment.diagnosis} ({formatDate(animalData.lastTreatment.event_date)})</span>
-                        ) : null} 
+                        value={animalData.lastTreatment ? formatDate(animalData.lastTreatment.event_date) : null} 
                       />
                       <InfoRow 
-                        label="Total eventos salud" 
-                        value={animalData.healthEventsCount} 
+                        label="Última vacuna" 
+                        value={animalData.lastVaccine?.applied_date ? formatDate(animalData.lastVaccine.applied_date) : null} 
                       />
+                      {animalData.lastTreatment && (
+                        <InfoRow 
+                          label="Diagnóstico" 
+                          value={animalData.lastTreatment.diagnosis} 
+                        />
+                      )}
                     </div>
                   </CardContent>
                 </CollapsibleContent>
@@ -464,18 +461,9 @@ const ConsultarAnimal = () => {
                 <CollapsibleContent>
                   <CardContent className="pt-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                      <InfoRow 
-                        label="Lote / Potrero" 
-                        value={selectedAnimal.lot_name || 'Sin asignar'} 
-                      />
-                      <InfoRow 
-                        label="Origen" 
-                        value={selectedAnimal.origin} 
-                      />
-                      <InfoRow 
-                        label="Fecha de entrada" 
-                        value={formatDate(selectedAnimal.entry_date)} 
-                      />
+                      <InfoRow label="Lote actual" value={selectedAnimal.lot_name} />
+                      <InfoRow label="Origen" value={selectedAnimal.origin} />
+                      <InfoRow label="Fecha de ingreso" value={formatDate(selectedAnimal.entry_date)} />
                     </div>
                   </CardContent>
                 </CollapsibleContent>
@@ -485,8 +473,11 @@ const ConsultarAnimal = () => {
             {/* Notas */}
             {selectedAnimal.notes && (
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Notas</CardTitle>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                    Notas
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{selectedAnimal.notes}</p>

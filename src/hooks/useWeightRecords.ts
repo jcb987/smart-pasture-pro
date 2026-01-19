@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOffline } from '@/contexts/OfflineContext';
+import { offlineDB, initDB } from '@/lib/offlineDB';
 
 export interface WeightRecord {
   id: string;
   animal_id: string;
+  organization_id?: string;
   weight_date: string;
   weight_kg: number;
   weight_type: string;
@@ -13,6 +16,7 @@ export interface WeightRecord {
   daily_gain: number | null;
   notes: string | null;
   created_at: string;
+  created_by?: string;
   animal?: {
     id: string;
     tag_id: string;
@@ -47,41 +51,86 @@ export const useWeightRecords = () => {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isOnline, saveOffline } = useOffline();
 
-  const getOrganizationId = async () => {
+  const getOrganizationId = useCallback(async () => {
+    if (!isOnline) {
+      const cachedOrgId = await offlineDB.getMetadata<string>('organizationId');
+      if (cachedOrgId) return cachedOrgId;
+    }
+
     if (!user) return null;
     const { data } = await supabase
       .from('profiles')
       .select('organization_id')
       .eq('user_id', user.id)
       .maybeSingle();
-    return data?.organization_id || null;
-  };
+    
+    const orgId = data?.organization_id || null;
+    if (orgId) {
+      await offlineDB.setMetadata('organizationId', orgId);
+    }
+    return orgId;
+  }, [user, isOnline]);
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('weight_records')
-        .select(`
-          *,
-          animal:animals(id, tag_id, name, category)
-        `)
-        .order('weight_date', { ascending: false })
-        .limit(500);
+      await initDB();
 
-      if (error) throw error;
-      setRecords(data || []);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar los registros de peso',
-        variant: 'destructive',
-      });
+      if (isOnline) {
+        const { data, error } = await supabase
+          .from('weight_records')
+          .select(`
+            *,
+            animal:animals(id, tag_id, name, category)
+          `)
+          .order('weight_date', { ascending: false })
+          .limit(500);
+
+        if (error) throw error;
+        
+        const serverRecords = (data as WeightRecord[]) || [];
+        setRecords(serverRecords);
+
+        // Cache locally
+        if (serverRecords.length > 0) {
+          await offlineDB.bulkSave(
+            'weight_records',
+            serverRecords.map(r => ({ id: r.id, data: r as unknown as Record<string, unknown> }))
+          );
+          await offlineDB.setMetadata('lastSync_weight_records', new Date().toISOString());
+        }
+      } else {
+        // Load from offline storage
+        const offlineRecords = await offlineDB.getAllRecords<WeightRecord>('weight_records');
+        setRecords(offlineRecords);
+        
+        if (offlineRecords.length > 0) {
+          toast({
+            title: 'Modo Offline',
+            description: `Mostrando ${offlineRecords.length} registros de peso guardados`,
+          });
+        }
+      }
+    } catch (error: unknown) {
+      console.error('Error fetching weight records:', error);
+      
+      // Fallback to offline
+      const offlineRecords = await offlineDB.getAllRecords<WeightRecord>('weight_records');
+      setRecords(offlineRecords);
+      
+      if (offlineRecords.length === 0) {
+        toast({
+          title: 'Error',
+          description: 'No se pudieron cargar los registros de peso',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [isOnline, toast]);
 
   const addRecord = async (record: {
     animal_id: string;
@@ -91,24 +140,21 @@ export const useWeightRecords = () => {
     condition_score?: number;
     notes?: string;
   }) => {
-    if (!organizationId) {
+    const orgId = organizationId || await getOrganizationId();
+    if (!orgId) {
       toast({ title: 'Error', description: 'Organización no encontrada', variant: 'destructive' });
       return null;
     }
 
     try {
-      // Calculate daily gain based on previous record
-      const { data: prevRecords } = await supabase
-        .from('weight_records')
-        .select('weight_kg, weight_date')
-        .eq('animal_id', record.animal_id)
-        .lt('weight_date', record.weight_date)
-        .order('weight_date', { ascending: false })
-        .limit(1);
-
+      // Calculate daily gain based on previous records in local state
       let daily_gain: number | null = null;
-      if (prevRecords && prevRecords.length > 0) {
-        const prev = prevRecords[0];
+      const animalRecords = records
+        .filter(r => r.animal_id === record.animal_id && r.weight_date < record.weight_date)
+        .sort((a, b) => new Date(b.weight_date).getTime() - new Date(a.weight_date).getTime());
+      
+      if (animalRecords.length > 0) {
+        const prev = animalRecords[0];
         const daysDiff = Math.ceil(
           (new Date(record.weight_date).getTime() - new Date(prev.weight_date).getTime()) / (1000 * 60 * 60 * 24)
         );
@@ -117,35 +163,47 @@ export const useWeightRecords = () => {
         }
       }
 
-      const { data, error } = await supabase
-        .from('weight_records')
-        .insert({
-          ...record,
-          daily_gain,
-          organization_id: organizationId,
-          created_by: user?.id,
-        })
-        .select()
-        .single();
+      const newRecord: WeightRecord = {
+        id: crypto.randomUUID(),
+        animal_id: record.animal_id,
+        organization_id: orgId,
+        weight_date: record.weight_date,
+        weight_kg: record.weight_kg,
+        weight_type: record.weight_type || 'normal',
+        condition_score: record.condition_score || null,
+        daily_gain,
+        notes: record.notes || null,
+        created_at: new Date().toISOString(),
+        created_by: user?.id,
+      };
 
-      if (error) throw error;
+      // Add to local state immediately
+      setRecords(prev => [newRecord, ...prev]);
 
-      // Update animal's current weight
-      await supabase
-        .from('animals')
-        .update({ 
-          current_weight: record.weight_kg, 
-          last_weight_date: record.weight_date 
-        })
-        .eq('id', record.animal_id);
+      // Save with offline support
+      await saveOffline('weight_records', 'weight_records', 'INSERT', newRecord as unknown as Record<string, unknown>);
 
-      toast({ title: 'Éxito', description: 'Peso registrado correctamente' });
-      await fetchRecords();
-      return data;
-    } catch (error: any) {
+      // Also update the animal's current weight
+      const animalUpdate = {
+        id: record.animal_id,
+        current_weight: record.weight_kg,
+        last_weight_date: record.weight_date,
+      };
+      await saveOffline('animals', 'animals', 'UPDATE', animalUpdate);
+
+      toast({ 
+        title: 'Éxito', 
+        description: isOnline 
+          ? 'Peso registrado correctamente'
+          : 'Registro guardado localmente. Se sincronizará cuando haya conexión.'
+      });
+      
+      return newRecord;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo registrar el peso',
+        description: errorMessage || 'No se pudo registrar el peso',
         variant: 'destructive',
       });
       return null;
@@ -154,38 +212,55 @@ export const useWeightRecords = () => {
 
   const deleteRecord = async (id: string) => {
     try {
-      const { error } = await supabase.from('weight_records').delete().eq('id', id);
-      if (error) throw error;
-      toast({ title: 'Éxito', description: 'Registro eliminado' });
-      await fetchRecords();
-    } catch (error: any) {
+      // Remove from local state immediately
+      setRecords(prev => prev.filter(r => r.id !== id));
+
+      // Save with offline support
+      await saveOffline('weight_records', 'weight_records', 'DELETE', { id });
+
+      toast({ 
+        title: 'Éxito', 
+        description: isOnline 
+          ? 'Registro eliminado'
+          : 'Eliminación guardada. Se sincronizará cuando haya conexión.'
+      });
+    } catch (error: unknown) {
       toast({ title: 'Error', description: 'No se pudo eliminar el registro', variant: 'destructive' });
     }
   };
 
   const getStats = async (): Promise<MeatStats> => {
-    // Get animals in fattening categories
-    const { data: fatteningAnimals } = await supabase
-      .from('animals')
-      .select('id, current_weight')
-      .in('category', ['novillo', 'novilla', 'ternero', 'ternera'])
-      .eq('status', 'activo');
+    // Use cached animals data if available
+    let fatteningAnimals: { id: string; current_weight: number | null }[] = [];
+    
+    if (isOnline) {
+      const { data } = await supabase
+        .from('animals')
+        .select('id, current_weight')
+        .in('category', ['novillo', 'novilla', 'ternero', 'ternera'])
+        .eq('status', 'activo');
+      fatteningAnimals = data || [];
+    } else {
+      // Use cached animals
+      const cached = await offlineDB.getAllRecords<{ id: string; current_weight: number | null; category: string; status: string }>('animals');
+      fatteningAnimals = cached.filter(a => 
+        ['novillo', 'novilla', 'ternero', 'ternera'].includes(a.category) && 
+        a.status === 'activo'
+      );
+    }
 
-    const animalsInFattening = fatteningAnimals?.length || 0;
-    const weights = fatteningAnimals?.filter(a => a.current_weight).map(a => a.current_weight) || [];
+    const animalsInFattening = fatteningAnimals.length;
+    const weights = fatteningAnimals.filter(a => a.current_weight).map(a => a.current_weight!);
     const avgWeight = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0;
 
-    // Get average daily gain from recent records
     const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const recentRecords = records.filter(r => r.weight_date >= monthAgo && r.daily_gain);
     const avgDailyGain = recentRecords.length > 0 
       ? recentRecords.reduce((sum, r) => sum + (r.daily_gain || 0), 0) / recentRecords.length 
       : 0;
 
-    // Animals ready for sale (weight > 450kg)
-    const readyForSale = fatteningAnimals?.filter(a => a.current_weight && a.current_weight >= 450).length || 0;
+    const readyForSale = fatteningAnimals.filter(a => a.current_weight && a.current_weight >= 450).length;
 
-    // Total weight gain this month
     const totalWeightGainMonth = recentRecords.reduce((sum, r) => {
       const prevWeight = r.daily_gain ? r.weight_kg - (r.daily_gain / 1000) : r.weight_kg;
       return sum + (r.weight_kg - prevWeight);
@@ -249,6 +324,7 @@ export const useWeightRecords = () => {
 
   useEffect(() => {
     const init = async () => {
+      await initDB();
       const orgId = await getOrganizationId();
       setOrganizationId(orgId);
       if (orgId) {
@@ -257,6 +333,13 @@ export const useWeightRecords = () => {
     };
     init();
   }, [user]);
+
+  // Re-fetch when coming back online
+  useEffect(() => {
+    if (isOnline && organizationId) {
+      fetchRecords();
+    }
+  }, [isOnline, organizationId, fetchRecords]);
 
   return {
     records,

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
+import { useOffline } from '@/contexts/OfflineContext';
+import { offlineDB, initDB } from '@/lib/offlineDB';
 import { addDays, differenceInDays, parseISO } from 'date-fns';
 
 export interface ReproductiveEvent {
@@ -56,95 +57,176 @@ export interface ReproductiveStats {
   heatAlerts: number;
 }
 
-const GESTATION_DAYS = 283; // Días promedio de gestación bovina
-const HEAT_CYCLE_DAYS = 21; // Ciclo de celo promedio
+const GESTATION_DAYS = 283;
+const HEAT_CYCLE_DAYS = 21;
 
 export const useReproduction = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { isOnline, saveOffline } = useOffline();
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [females, setFemales] = useState<FemaleAnimal[]>([]);
+  const [bulls, setBulls] = useState<{ id: string; tag_id: string; name: string | null }[]>([]);
+  const [events, setEvents] = useState<ReproductiveEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Obtener organization_id del perfil del usuario
-  useEffect(() => {
-    const fetchOrgId = async () => {
-      if (!user) {
-        setOrganizationId(null);
-        return;
+  // Get organization ID with offline cache
+  const getOrganizationId = useCallback(async () => {
+    if (!isOnline) {
+      const cachedOrgId = await offlineDB.getMetadata<string>('organizationId');
+      if (cachedOrgId) return cachedOrgId;
+    }
+
+    if (!user) return null;
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    const orgId = data?.organization_id || null;
+    if (orgId) {
+      await offlineDB.setMetadata('organizationId', orgId);
+    }
+    return orgId;
+  }, [user, isOnline]);
+
+  // Fetch females with offline support
+  const fetchFemales = useCallback(async (orgId: string) => {
+    try {
+      if (isOnline) {
+        const { data, error } = await supabase
+          .from('animals')
+          .select('*')
+          .eq('organization_id', orgId)
+          .eq('sex', 'hembra')
+          .eq('status', 'activo')
+          .in('category', ['vaca', 'novilla', 'bufala'])
+          .order('tag_id');
+        
+        if (error) throw error;
+        
+        const femaleData = (data as FemaleAnimal[]) || [];
+        setFemales(femaleData);
+        
+        // Cache for offline
+        await offlineDB.setMetadata('reproductive_females', femaleData);
+      } else {
+        // Load from cache
+        const cached = await offlineDB.getMetadata<FemaleAnimal[]>('reproductive_females');
+        setFemales(cached || []);
       }
+    } catch (error) {
+      console.error('Error fetching females:', error);
+      const cached = await offlineDB.getMetadata<FemaleAnimal[]>('reproductive_females');
+      setFemales(cached || []);
+    }
+  }, [isOnline]);
+
+  // Fetch bulls with offline support
+  const fetchBulls = useCallback(async (orgId: string) => {
+    try {
+      if (isOnline) {
+        const { data, error } = await supabase
+          .from('animals')
+          .select('id, tag_id, name')
+          .eq('organization_id', orgId)
+          .eq('sex', 'macho')
+          .eq('status', 'activo')
+          .in('category', ['toro', 'bufalo'])
+          .order('tag_id');
+        
+        if (error) throw error;
+        
+        const bullData = data || [];
+        setBulls(bullData);
+        
+        // Cache for offline
+        await offlineDB.setMetadata('reproductive_bulls', bullData);
+      } else {
+        const cached = await offlineDB.getMetadata<typeof bulls>('reproductive_bulls');
+        setBulls(cached || []);
+      }
+    } catch (error) {
+      console.error('Error fetching bulls:', error);
+      const cached = await offlineDB.getMetadata<typeof bulls>('reproductive_bulls');
+      setBulls(cached || []);
+    }
+  }, [isOnline]);
+
+  // Fetch events with offline support
+  const fetchEvents = useCallback(async (orgId: string) => {
+    try {
+      if (isOnline) {
+        const { data, error } = await supabase
+          .from('reproductive_events')
+          .select('*')
+          .eq('organization_id', orgId)
+          .order('event_date', { ascending: false });
+        
+        if (error) throw error;
+        
+        const eventData = (data as ReproductiveEvent[]) || [];
+        setEvents(eventData);
+        
+        // Cache locally
+        if (eventData.length > 0) {
+          await offlineDB.bulkSave(
+            'reproductive_events',
+            eventData.map(e => ({ id: e.id, data: e as unknown as Record<string, unknown> }))
+          );
+          await offlineDB.setMetadata('lastSync_reproductive_events', new Date().toISOString());
+        }
+      } else {
+        // Load from offline storage
+        const offlineEvents = await offlineDB.getAllRecords<ReproductiveEvent>('reproductive_events');
+        setEvents(offlineEvents);
+        
+        if (offlineEvents.length > 0) {
+          toast({
+            title: 'Modo Offline',
+            description: `Mostrando ${offlineEvents.length} eventos reproductivos guardados`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      const offlineEvents = await offlineDB.getAllRecords<ReproductiveEvent>('reproductive_events');
+      setEvents(offlineEvents);
+    }
+  }, [isOnline, toast]);
+
+  // Initialize
+  useEffect(() => {
+    const init = async () => {
+      setIsLoading(true);
+      await initDB();
+      const orgId = await getOrganizationId();
+      setOrganizationId(orgId);
       
-      const { data } = await supabase
-        .from('profiles')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      setOrganizationId(data?.organization_id || null);
+      if (orgId) {
+        await Promise.all([
+          fetchFemales(orgId),
+          fetchBulls(orgId),
+          fetchEvents(orgId),
+        ]);
+      }
+      setIsLoading(false);
     };
     
-    fetchOrgId();
+    init();
   }, [user]);
 
-  // Obtener hembras reproductivas
-  const { data: females = [], isLoading: loadingFemales } = useQuery({
-    queryKey: ['reproductive-females', organizationId],
-    queryFn: async () => {
-      if (!organizationId) return [];
-      
-      const { data, error } = await supabase
-        .from('animals')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('sex', 'hembra')
-        .eq('status', 'activo')
-        .in('category', ['vaca', 'novilla'])
-        .order('tag_id');
-      
-      if (error) throw error;
-      return data as FemaleAnimal[];
-    },
-    enabled: !!organizationId,
-  });
+  // Re-fetch when coming back online
+  useEffect(() => {
+    if (isOnline && organizationId) {
+      fetchEvents(organizationId);
+      fetchFemales(organizationId);
+    }
+  }, [isOnline, organizationId, fetchEvents, fetchFemales]);
 
-  // Obtener toros para servicios
-  const { data: bulls = [] } = useQuery({
-    queryKey: ['bulls', organizationId],
-    queryFn: async () => {
-      if (!organizationId) return [];
-      
-      const { data, error } = await supabase
-        .from('animals')
-        .select('id, tag_id, name')
-        .eq('organization_id', organizationId)
-        .eq('sex', 'macho')
-        .eq('status', 'activo')
-        .in('category', ['toro'])
-        .order('tag_id');
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!organizationId,
-  });
-
-  // Obtener eventos reproductivos
-  const { data: events = [], isLoading: loadingEvents } = useQuery({
-    queryKey: ['reproductive-events', organizationId],
-    queryFn: async () => {
-      if (!organizationId) return [];
-      
-      const { data, error } = await supabase
-        .from('reproductive_events')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .order('event_date', { ascending: false });
-      
-      if (error) throw error;
-      return data as ReproductiveEvent[];
-    },
-    enabled: !!organizationId,
-  });
-
-  // Calcular estadísticas reproductivas
+  // Calculate stats
   const stats: ReproductiveStats = {
     totalFemales: females.length,
     pregnantCount: females.filter(f => f.reproductive_status === 'preñada').length,
@@ -159,13 +241,11 @@ export const useReproduction = () => {
     heatAlerts: 0,
   };
 
-  // Calcular tasa de preñez
   const servicedOrPregnant = stats.pregnantCount + stats.servicedCount;
   if (servicedOrPregnant > 0) {
     stats.pregnancyRate = Math.round((stats.pregnantCount / stats.totalFemales) * 100);
   }
 
-  // Calcular partos esperados este mes y atrasados
   const today = new Date();
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   
@@ -181,7 +261,6 @@ export const useReproduction = () => {
     }
   });
 
-  // Calcular alertas de celo (hembras vacías sin servicio reciente)
   const recentCeloEvents = events.filter(e => 
     e.event_type === 'celo' && 
     differenceInDays(today, parseISO(e.event_date)) <= HEAT_CYCLE_DAYS * 2
@@ -199,7 +278,6 @@ export const useReproduction = () => {
     }
   });
 
-  // Calcular días abiertos promedio
   const femalesWithData = females.filter(f => f.last_calving_date && f.reproductive_status !== 'preñada');
   if (femalesWithData.length > 0) {
     const totalOpenDays = femalesWithData.reduce((sum, f) => {
@@ -208,79 +286,51 @@ export const useReproduction = () => {
     stats.avgOpenDays = Math.round(totalOpenDays / femalesWithData.length);
   }
 
-  // Registrar evento reproductivo
-  const addEventMutation = useMutation({
-    mutationFn: async (event: Omit<ReproductiveEvent, 'id' | 'created_at' | 'organization_id'> & {
-      create_calf?: boolean;
-      calf_tag_id?: string;
-      calf_name?: string;
-      father_id?: string;
-    }) => {
-      if (!organizationId) throw new Error('No organization');
+  // Add event with offline support
+  const addEvent = async (event: Omit<ReproductiveEvent, 'id' | 'created_at' | 'organization_id'> & {
+    create_calf?: boolean;
+    calf_tag_id?: string;
+    calf_name?: string;
+    father_id?: string;
+  }) => {
+    try {
+      const orgId = organizationId || await getOrganizationId();
+      if (!orgId) throw new Error('No organization');
       
-      // Calcular fecha esperada de parto si es servicio o inseminación
       let expectedBirthDate = event.expected_birth_date;
       if ((event.event_type === 'servicio' || event.event_type === 'inseminacion') && !expectedBirthDate) {
         expectedBirthDate = addDays(parseISO(event.event_date), GESTATION_DAYS).toISOString().split('T')[0];
       }
 
-      // Create calf record if it's a birth event and create_calf is true
-      let calfId: string | undefined = undefined;
-      if (event.event_type === 'parto' && event.create_calf && event.calf_tag_id && event.calf_sex) {
-        const calfCategory = event.calf_sex === 'macho' ? 'ternero' : 'ternera';
-        
-        const { data: calfData, error: calfError } = await supabase
-          .from('animals')
-          .insert({
-            tag_id: event.calf_tag_id,
-            name: event.calf_name || null,
-            category: calfCategory,
-            sex: event.calf_sex,
-            birth_date: event.event_date,
-            entry_date: event.event_date,
-            current_weight: event.calf_weight || null,
-            last_weight_date: event.calf_weight ? event.event_date : null,
-            mother_id: event.animal_id,
-            father_id: event.father_id && event.father_id !== 'unknown' ? event.father_id : null,
-            organization_id: organizationId,
-            status: 'activo',
-            reproductive_status: 'vacia',
-          })
-          .select('id')
-          .single();
-        
-        if (calfError) throw calfError;
-        calfId = calfData.id;
-      }
+      const newEvent: ReproductiveEvent = {
+        id: crypto.randomUUID(),
+        animal_id: event.animal_id,
+        event_type: event.event_type,
+        event_date: event.event_date,
+        bull_id: event.bull_id || event.father_id,
+        semen_batch: event.semen_batch,
+        technician: event.technician,
+        pregnancy_result: event.pregnancy_result,
+        estimated_gestation_days: event.estimated_gestation_days,
+        birth_type: event.birth_type,
+        calf_sex: event.calf_sex,
+        calf_weight: event.calf_weight,
+        calf_id: event.calf_id,
+        organization_id: orgId,
+        expected_birth_date: expectedBirthDate,
+        notes: event.notes,
+        created_by: user?.id,
+        created_at: new Date().toISOString(),
+      };
 
-      const { data, error } = await supabase
-        .from('reproductive_events')
-        .insert({
-          animal_id: event.animal_id,
-          event_type: event.event_type,
-          event_date: event.event_date,
-          bull_id: event.bull_id || event.father_id || undefined,
-          semen_batch: event.semen_batch,
-          technician: event.technician,
-          pregnancy_result: event.pregnancy_result,
-          estimated_gestation_days: event.estimated_gestation_days,
-          birth_type: event.birth_type,
-          calf_sex: event.calf_sex,
-          calf_weight: event.calf_weight,
-          calf_id: calfId,
-          organization_id: organizationId,
-          expected_birth_date: expectedBirthDate,
-          notes: event.notes,
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
+      // Add to local state immediately
+      setEvents(prev => [newEvent, ...prev]);
 
-      // Actualizar estado reproductivo del animal
+      // Save with offline support
+      await saveOffline('reproductive_events', 'reproductive_events', 'INSERT', newEvent as unknown as Record<string, unknown>);
+
+      // Update animal reproductive status locally
       let reproductiveStatus = undefined;
-      let updates: Record<string, unknown> = {};
-
       switch (event.event_type) {
         case 'celo':
           reproductiveStatus = 'vacia';
@@ -288,25 +338,16 @@ export const useReproduction = () => {
         case 'servicio':
         case 'inseminacion':
           reproductiveStatus = 'servida';
-          updates.last_service_date = event.event_date;
-          updates.expected_calving_date = expectedBirthDate;
           break;
         case 'palpacion':
-          if (event.pregnancy_result === 'positivo') {
-            reproductiveStatus = 'preñada';
-          } else if (event.pregnancy_result === 'negativo') {
-            reproductiveStatus = 'vacia';
-            updates.expected_calving_date = null;
-          }
+          if (event.pregnancy_result === 'positivo') reproductiveStatus = 'preñada';
+          else if (event.pregnancy_result === 'negativo') reproductiveStatus = 'vacia';
           break;
         case 'parto':
           reproductiveStatus = 'lactando';
-          updates.last_calving_date = event.event_date;
-          updates.expected_calving_date = null;
           break;
         case 'aborto':
           reproductiveStatus = 'vacia';
-          updates.expected_calving_date = null;
           break;
         case 'secado':
           reproductiveStatus = 'seca';
@@ -314,68 +355,66 @@ export const useReproduction = () => {
       }
 
       if (reproductiveStatus) {
-        // Get current total_calvings for parto event
-        if (event.event_type === 'parto') {
-          const { data: animalData } = await supabase
-            .from('animals')
-            .select('total_calvings, first_calving_date')
-            .eq('id', event.animal_id)
-            .single();
-          
-          updates.total_calvings = (animalData?.total_calvings || 0) + 1;
-          if (!animalData?.first_calving_date) {
-            updates.first_calving_date = event.event_date;
-          }
-        }
-
-        await supabase
-          .from('animals')
-          .update({
-            reproductive_status: reproductiveStatus,
-            ...updates,
-          })
-          .eq('id', event.animal_id);
+        setFemales(prev => prev.map(f => 
+          f.id === event.animal_id 
+            ? { ...f, reproductive_status: reproductiveStatus }
+            : f
+        ));
       }
 
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reproductive-events'] });
-      queryClient.invalidateQueries({ queryKey: ['reproductive-females'] });
-      queryClient.invalidateQueries({ queryKey: ['animals'] });
-      toast.success('Evento reproductivo registrado');
-    },
-    onError: (error) => {
-      toast.error('Error al registrar evento: ' + error.message);
-    },
-  });
+      toast({
+        title: 'Evento registrado',
+        description: isOnline 
+          ? 'Evento reproductivo guardado correctamente'
+          : 'Evento guardado localmente. Se sincronizará cuando haya conexión.',
+      });
 
-  // Eliminar evento reproductivo
-  const deleteEventMutation = useMutation({
-    mutationFn: async (eventId: string) => {
-      const { error } = await supabase
-        .from('reproductive_events')
-        .delete()
-        .eq('id', eventId);
+      return newEvent;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      toast({
+        title: 'Error',
+        description: `No se pudo registrar: ${errorMessage}`,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  };
+
+  // Delete event with offline support
+  const deleteEvent = async (eventId: string) => {
+    try {
+      setEvents(prev => prev.filter(e => e.id !== eventId));
       
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reproductive-events'] });
-      toast.success('Evento eliminado');
-    },
-    onError: (error) => {
-      toast.error('Error al eliminar: ' + error.message);
-    },
-  });
+      await saveOffline('reproductive_events', 'reproductive_events', 'DELETE', { id: eventId });
 
-  // Obtener historial reproductivo de un animal
+      toast({
+        title: 'Evento eliminado',
+        description: isOnline 
+          ? 'Registro eliminado'
+          : 'Eliminación guardada. Se sincronizará cuando haya conexión.',
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      toast({
+        title: 'Error',
+        description: `No se pudo eliminar: ${errorMessage}`,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getAnimalHistory = (animalId: string) => {
     return events.filter(e => e.animal_id === animalId);
   };
 
-  // Obtener pedigrí de un animal
   const getPedigree = async (animalId: string) => {
+    if (!isOnline) {
+      // Return basic info from cached animals
+      const animal = females.find(f => f.id === animalId);
+      return animal || null;
+    }
+
     const { data: animal } = await supabase
       .from('animals')
       .select('*, mother:mother_id(id, tag_id, name), father:father_id(id, tag_id, name)')
@@ -390,9 +429,9 @@ export const useReproduction = () => {
     bulls,
     events,
     stats,
-    isLoading: loadingFemales || loadingEvents,
-    addEvent: addEventMutation.mutate,
-    deleteEvent: deleteEventMutation.mutate,
+    isLoading,
+    addEvent,
+    deleteEvent,
     getAnimalHistory,
     getPedigree,
     GESTATION_DAYS,

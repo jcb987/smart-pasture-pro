@@ -146,7 +146,27 @@ export const SalesChatWidget = () => {
 
   const formatMessage = (content: string) => {
     // Remove the redirect trigger from displayed content
-    return content.replace("CONECTAR_CON_ASESOR", "").trim();
+    let text = content.replace("CONECTAR_CON_ASESOR", "").trim();
+    
+    // Convert markdown bold **text** to HTML
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert markdown italic *text* to HTML (but not already processed bold)
+    text = text.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, '<em>$1</em>');
+    
+    // Convert emoji checkmarks ✅ and similar for better display
+    // Keep line breaks
+    return text;
+  };
+
+  const renderFormattedMessage = (content: string) => {
+    const formatted = formatMessage(content);
+    return (
+      <span 
+        className="whitespace-pre-wrap" 
+        dangerouslySetInnerHTML={{ __html: formatted }} 
+      />
+    );
   };
 
   if (!isOpen) {
@@ -257,7 +277,7 @@ export const SalesChatWidget = () => {
                         : "bg-muted"
                     )}
                   >
-                    <p className="whitespace-pre-wrap">{formatMessage(msg.content)}</p>
+                    {renderFormattedMessage(msg.content)}
                   </div>
                   {msg.role === "user" && (
                     <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">

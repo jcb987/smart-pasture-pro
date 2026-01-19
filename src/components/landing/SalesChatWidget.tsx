@@ -179,8 +179,8 @@ export const SalesChatWidget = () => {
   }
 
   return (
-    <Card className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[600px] shadow-2xl border-2 flex flex-col overflow-hidden">
-      <CardHeader className="bg-primary text-primary-foreground py-3 px-4 flex flex-row items-center justify-between">
+    <Card className="fixed bottom-6 right-6 z-50 w-[380px] h-[500px] shadow-2xl border-2 flex flex-col overflow-hidden">
+      <CardHeader className="bg-primary text-primary-foreground py-3 px-4 flex flex-row items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
             <Bot className="h-5 w-5" />
@@ -210,8 +210,9 @@ export const SalesChatWidget = () => {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+        <ScrollArea className="flex-1 h-full" ref={scrollRef}>
+          <div className="p-4">
           {messages.length === 0 ? (
             <div className="space-y-4">
               <div className="bg-muted rounded-lg p-3 text-sm">
@@ -281,6 +282,7 @@ export const SalesChatWidget = () => {
               )}
             </div>
           )}
+          </div>
         </ScrollArea>
 
         {showRedirect && (

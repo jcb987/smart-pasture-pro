@@ -87,7 +87,55 @@ serve(async (req) => {
   }
 
   try {
-    const { messages }: ChatRequest = await req.json();
+    // Validate content length to prevent resource exhaustion
+    const contentLength = req.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 100000) {
+      return new Response(
+        JSON.stringify({ error: "Solicitud demasiado grande" }), 
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { messages } = body as ChatRequest;
+
+    // Validate messages array
+    if (!Array.isArray(messages)) {
+      return new Response(
+        JSON.stringify({ error: "Formato de mensajes inválido" }), 
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (messages.length === 0 || messages.length > 50) {
+      return new Response(
+        JSON.stringify({ error: "Número de mensajes inválido (1-50)" }), 
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate each message
+    for (const msg of messages) {
+      if (!msg || typeof msg.content !== 'string' || !msg.role) {
+        return new Response(
+          JSON.stringify({ error: "Formato de mensaje inválido" }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (msg.content.length > 5000) {
+        return new Response(
+          JSON.stringify({ error: "Mensaje demasiado largo (máx 5000 caracteres)" }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!['user', 'assistant', 'system'].includes(msg.role)) {
+        return new Response(
+          JSON.stringify({ error: "Rol de mensaje inválido" }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {

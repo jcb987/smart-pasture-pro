@@ -38,14 +38,52 @@ serve(async (req) => {
       );
     }
 
-    const { pdfBase64, expectedColumns, tableName } = await req.json();
+    // Validate content length to prevent resource exhaustion (max 15MB)
+    const contentLength = req.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 15 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({ error: 'Request too large (max 15MB)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    if (!pdfBase64) {
+    const body = await req.json();
+    const { pdfBase64, expectedColumns, tableName } = body;
+
+    // Validate pdfBase64
+    if (!pdfBase64 || typeof pdfBase64 !== 'string') {
       return new Response(
         JSON.stringify({ error: 'No PDF data provided' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Check PDF size (base64 is ~33% larger than binary, so 10MB PDF = ~13MB base64)
+    if (pdfBase64.length > 13 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({ error: 'PDF too large (max 10MB)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate expectedColumns
+    if (!Array.isArray(expectedColumns) || expectedColumns.length === 0 || expectedColumns.length > 50) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid expectedColumns (must be array with 1-50 items)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate tableName
+    if (!tableName || typeof tableName !== 'string' || tableName.length > 100) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid table name' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize tableName to prevent injection in prompts
+    const safeTableName = tableName.replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 50);
 
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
@@ -63,7 +101,7 @@ serve(async (req) => {
     const systemPrompt = `Eres un experto en extracción de datos de inventarios ganaderos de documentos PDF.
 Tu tarea es analizar el contenido del PDF y extraer los datos de animales en formato tabular.
 
-El documento debe contener datos para la tabla "${tableName}".
+El documento debe contener datos para la tabla "${safeTableName}".
 
 Columnas esperadas:
 ${columnsDescription}

@@ -14,8 +14,10 @@ import SecuritySection from "@/components/sections/SecuritySection";
 import UseCasesSection from "@/components/sections/UseCasesSection";
 import TestimonialsSection from "@/components/sections/TestimonialsSection";
 import CTASection from "@/components/sections/CTASection";
+import { PricingSection } from "@/components/sections/PricingSection";
 import Footer from "@/components/layout/Footer";
 import CookieBanner from "@/components/layout/CookieBanner";
+import { SalesChatWidget } from "@/components/landing/SalesChatWidget";
 
 // Detecta si la app está instalada como PWA
 const isInstalledPWA = () => {
@@ -48,6 +50,7 @@ const Index = () => {
         <FeaturesSection />
         <DashboardPreviewSection />
         <BenefitsSection />
+        <PricingSection />
         <MobileAppSection />
         <ProjectionsSection />
         <ActionListsSection />
@@ -59,6 +62,7 @@ const Index = () => {
       </main>
       <Footer />
       <CookieBanner />
+      <SalesChatWidget />
     </div>
   );
 };

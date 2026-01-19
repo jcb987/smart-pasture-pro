@@ -84,7 +84,75 @@ serve(async (req) => {
       );
     }
 
-    const { messages, type = "chat", context }: ChatRequest = await req.json();
+    // Validate content length to prevent resource exhaustion
+    const contentLength = req.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 500000) {
+      return new Response(
+        JSON.stringify({ error: "Solicitud demasiado grande" }), 
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { messages, type = "chat", context } = body as ChatRequest;
+
+    // Validate messages array
+    if (!Array.isArray(messages)) {
+      return new Response(
+        JSON.stringify({ error: "Formato de mensajes inválido" }), 
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (messages.length === 0 || messages.length > 50) {
+      return new Response(
+        JSON.stringify({ error: "Número de mensajes inválido (1-50)" }), 
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate each message
+    for (const msg of messages) {
+      if (!msg || typeof msg.content !== 'string' || !msg.role) {
+        return new Response(
+          JSON.stringify({ error: "Formato de mensaje inválido" }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (msg.content.length > 10000) {
+        return new Response(
+          JSON.stringify({ error: "Mensaje demasiado largo (máx 10000 caracteres)" }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!['user', 'assistant', 'system'].includes(msg.role)) {
+        return new Response(
+          JSON.stringify({ error: "Rol de mensaje inválido" }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Validate type parameter
+    const validTypes = ['chat', 'predict-health', 'optimize-feeding', 'breeding-suggestion'];
+    if (type && !validTypes.includes(type)) {
+      return new Response(
+        JSON.stringify({ error: "Tipo de asistente inválido" }), 
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate context size if provided
+    if (context) {
+      const contextStr = JSON.stringify(context);
+      if (contextStr.length > 50000) {
+        return new Response(
+          JSON.stringify({ error: "Contexto demasiado grande (máx 50KB)" }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {

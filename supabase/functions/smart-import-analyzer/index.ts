@@ -36,7 +36,54 @@ serve(async (req) => {
       );
     }
 
-    const { headers, expectedColumns, tableName } = await req.json();
+    // Validate content length
+    const contentLength = req.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 100000) {
+      return new Response(
+        JSON.stringify({ error: 'Request too large' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { headers, expectedColumns, tableName } = body;
+
+    // Validate headers
+    if (!Array.isArray(headers) || headers.length === 0 || headers.length > 100) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid headers (must be array with 1-100 items)' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate each header is a string with reasonable length
+    for (const header of headers) {
+      if (typeof header !== 'string' || header.length > 200) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid header format' }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Validate expectedColumns
+    if (!Array.isArray(expectedColumns) || expectedColumns.length === 0 || expectedColumns.length > 50) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid expectedColumns (must be array with 1-50 items)' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate tableName
+    if (!tableName || typeof tableName !== 'string' || tableName.length > 100) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid table name' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Sanitize tableName to prevent injection in prompts
+    const safeTableName = tableName.replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 50);
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -52,12 +99,12 @@ Reglas:
 4. Identifica unidades de medida (kg, litros, etc.)
 5. Advierte sobre columnas que podrían causar problemas
 
-Tabla destino: ${tableName}
+Tabla destino: ${safeTableName}
 
-Columnas del Excel: ${JSON.stringify(headers)}
+Columnas del Excel: ${JSON.stringify(headers.slice(0, 100))}
 
 Campos esperados (db = nombre en base de datos, labels = nombres posibles, required = obligatorio):
-${JSON.stringify(expectedColumns, null, 2)}
+${JSON.stringify(expectedColumns.slice(0, 50), null, 2)}
 
 Responde SOLO con JSON válido en este formato exacto:
 {

@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOffline } from '@/contexts/OfflineContext';
+import { offlineDB, initDB } from '@/lib/offlineDB';
 
 export interface MilkRecord {
   id: string;
   animal_id: string;
+  organization_id?: string;
   production_date: string;
   morning_liters: number;
   afternoon_liters: number;
@@ -16,6 +19,7 @@ export interface MilkRecord {
   somatic_cell_count: number | null;
   notes: string | null;
   created_at: string;
+  created_by?: string;
   animal?: {
     id: string;
     tag_id: string;
@@ -48,41 +52,86 @@ export const useMilkProduction = () => {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isOnline, saveOffline } = useOffline();
 
-  const getOrganizationId = async () => {
+  const getOrganizationId = useCallback(async () => {
+    if (!isOnline) {
+      const cachedOrgId = await offlineDB.getMetadata<string>('organizationId');
+      if (cachedOrgId) return cachedOrgId;
+    }
+
     if (!user) return null;
     const { data } = await supabase
       .from('profiles')
       .select('organization_id')
       .eq('user_id', user.id)
       .maybeSingle();
-    return data?.organization_id || null;
-  };
+    
+    const orgId = data?.organization_id || null;
+    if (orgId) {
+      await offlineDB.setMetadata('organizationId', orgId);
+    }
+    return orgId;
+  }, [user, isOnline]);
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('milk_production')
-        .select(`
-          *,
-          animal:animals(id, tag_id, name)
-        `)
-        .order('production_date', { ascending: false })
-        .limit(500);
+      await initDB();
 
-      if (error) throw error;
-      setRecords(data || []);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar los registros de leche',
-        variant: 'destructive',
-      });
+      if (isOnline) {
+        const { data, error } = await supabase
+          .from('milk_production')
+          .select(`
+            *,
+            animal:animals(id, tag_id, name)
+          `)
+          .order('production_date', { ascending: false })
+          .limit(500);
+
+        if (error) throw error;
+        
+        const serverRecords = (data as MilkRecord[]) || [];
+        setRecords(serverRecords);
+
+        // Cache locally
+        if (serverRecords.length > 0) {
+          await offlineDB.bulkSave(
+            'milk_production',
+            serverRecords.map(r => ({ id: r.id, data: r as unknown as Record<string, unknown> }))
+          );
+          await offlineDB.setMetadata('lastSync_milk_production', new Date().toISOString());
+        }
+      } else {
+        // Load from offline storage
+        const offlineRecords = await offlineDB.getAllRecords<MilkRecord>('milk_production');
+        setRecords(offlineRecords);
+        
+        if (offlineRecords.length > 0) {
+          toast({
+            title: 'Modo Offline',
+            description: `Mostrando ${offlineRecords.length} registros de leche guardados`,
+          });
+        }
+      }
+    } catch (error: unknown) {
+      console.error('Error fetching milk records:', error);
+      
+      // Fallback to offline
+      const offlineRecords = await offlineDB.getAllRecords<MilkRecord>('milk_production');
+      setRecords(offlineRecords);
+      
+      if (offlineRecords.length === 0) {
+        toast({
+          title: 'Error',
+          description: 'No se pudieron cargar los registros de leche',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [isOnline, toast]);
 
   const addRecord = async (record: {
     animal_id: string;
@@ -95,31 +144,54 @@ export const useMilkProduction = () => {
     somatic_cell_count?: number;
     notes?: string;
   }) => {
-    if (!organizationId) {
+    const orgId = organizationId || await getOrganizationId();
+    if (!orgId) {
       toast({ title: 'Error', description: 'Organización no encontrada', variant: 'destructive' });
       return null;
     }
 
     try {
-      const { data, error } = await supabase
-        .from('milk_production')
-        .insert({
-          ...record,
-          organization_id: organizationId,
-          created_by: user?.id,
-        })
-        .select()
-        .single();
+      const morning = record.morning_liters || 0;
+      const afternoon = record.afternoon_liters || 0;
+      const evening = record.evening_liters || 0;
+      const total = morning + afternoon + evening;
 
-      if (error) throw error;
+      const newRecord: MilkRecord = {
+        id: crypto.randomUUID(),
+        animal_id: record.animal_id,
+        organization_id: orgId,
+        production_date: record.production_date,
+        morning_liters: morning,
+        afternoon_liters: afternoon,
+        evening_liters: evening,
+        total_liters: total,
+        fat_percentage: record.fat_percentage || null,
+        protein_percentage: record.protein_percentage || null,
+        somatic_cell_count: record.somatic_cell_count || null,
+        notes: record.notes || null,
+        created_at: new Date().toISOString(),
+        created_by: user?.id,
+      };
 
-      toast({ title: 'Éxito', description: 'Producción registrada correctamente' });
-      await fetchRecords();
-      return data;
-    } catch (error: any) {
+      // Add to local state immediately
+      setRecords(prev => [newRecord, ...prev]);
+
+      // Save with offline support
+      await saveOffline('milk_production', 'milk_production', 'INSERT', newRecord as unknown as Record<string, unknown>);
+
+      toast({ 
+        title: 'Éxito', 
+        description: isOnline 
+          ? 'Producción registrada correctamente'
+          : 'Registro guardado localmente. Se sincronizará cuando haya conexión.'
+      });
+      
+      return newRecord;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo registrar la producción',
+        description: errorMessage || 'No se pudo registrar la producción',
         variant: 'destructive',
       });
       return null;
@@ -128,11 +200,19 @@ export const useMilkProduction = () => {
 
   const deleteRecord = async (id: string) => {
     try {
-      const { error } = await supabase.from('milk_production').delete().eq('id', id);
-      if (error) throw error;
-      toast({ title: 'Éxito', description: 'Registro eliminado' });
-      await fetchRecords();
-    } catch (error: any) {
+      // Remove from local state immediately
+      setRecords(prev => prev.filter(r => r.id !== id));
+
+      // Save with offline support
+      await saveOffline('milk_production', 'milk_production', 'DELETE', { id });
+
+      toast({ 
+        title: 'Éxito', 
+        description: isOnline 
+          ? 'Registro eliminado'
+          : 'Eliminación guardada. Se sincronizará cuando haya conexión.'
+      });
+    } catch (error: unknown) {
       toast({ title: 'Error', description: 'No se pudo eliminar el registro', variant: 'destructive' });
     }
   };
@@ -220,6 +300,7 @@ export const useMilkProduction = () => {
 
   useEffect(() => {
     const init = async () => {
+      await initDB();
       const orgId = await getOrganizationId();
       setOrganizationId(orgId);
       if (orgId) {
@@ -228,6 +309,13 @@ export const useMilkProduction = () => {
     };
     init();
   }, [user]);
+
+  // Re-fetch when coming back online
+  useEffect(() => {
+    if (isOnline && organizationId) {
+      fetchRecords();
+    }
+  }, [isOnline, organizationId, fetchRecords]);
 
   return {
     records,

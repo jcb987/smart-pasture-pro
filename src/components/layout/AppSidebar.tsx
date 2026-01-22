@@ -52,7 +52,9 @@ import {
   FileSpreadsheet,
   MessageSquare,
   Zap,
-  Globe
+  Globe,
+  Wrench,
+  Radio
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -76,6 +78,7 @@ const userMenuItems = [
   { title: 'Insumos', url: '/insumos', icon: Package, group: 'finanzas' },
   { title: 'Genética', url: '/genetica', icon: Dna, group: 'avanzado' },
   { title: 'Intercambio', url: '/intercambio', icon: FileText, group: 'avanzado' },
+  { title: 'Herramientas', url: '/herramientas', icon: Wrench, group: 'avanzado' },
   { title: 'App Móvil', url: '/app-movil', icon: Smartphone, group: 'sistema' },
   { title: 'Configuración', url: '/configuracion', icon: Settings, group: 'sistema' },
   { title: 'Ayuda', url: '/ayuda', icon: HelpCircle, group: 'sistema' },

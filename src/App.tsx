@@ -40,6 +40,7 @@ import Intercambio from "./pages/Intercambio";
 import AppMovil from "./pages/AppMovil";
 import Configuracion from "./pages/Configuracion";
 import Ayuda from "./pages/Ayuda";
+import Herramientas from "./pages/Herramientas";
 
 // Founder pages
 import FounderDashboard from "./pages/FounderDashboard";
@@ -104,6 +105,7 @@ const App = () => (
                   <Route path="/app-movil" element={<ProtectedRoute><ErrorBoundary moduleName="App Móvil"><AppMovil /></ErrorBoundary></ProtectedRoute>} />
                   <Route path="/configuracion" element={<ProtectedRoute><ErrorBoundary moduleName="Configuración"><Configuracion /></ErrorBoundary></ProtectedRoute>} />
                   <Route path="/ayuda" element={<ProtectedRoute><ErrorBoundary moduleName="Ayuda"><Ayuda /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/herramientas" element={<ProtectedRoute><ErrorBoundary moduleName="Herramientas"><Herramientas /></ErrorBoundary></ProtectedRoute>} />
 
                   {/* Catch-all route */}
                   <Route path="*" element={<NotFound />} />

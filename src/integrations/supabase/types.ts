@@ -55,6 +55,77 @@ export type Database = {
           },
         ]
       }
+      animal_custom_scores: {
+        Row: {
+          animal_id: string
+          boolean_value: boolean | null
+          created_at: string
+          id: string
+          notes: string | null
+          numeric_value: number | null
+          organization_id: string
+          recorded_at: string
+          recorded_by: string | null
+          score_definition_id: string
+          text_value: string | null
+        }
+        Insert: {
+          animal_id: string
+          boolean_value?: boolean | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          numeric_value?: number | null
+          organization_id: string
+          recorded_at?: string
+          recorded_by?: string | null
+          score_definition_id: string
+          text_value?: string | null
+        }
+        Update: {
+          animal_id?: string
+          boolean_value?: boolean | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          numeric_value?: number | null
+          organization_id?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          score_definition_id?: string
+          text_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "animal_custom_scores_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "animal_custom_scores_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "animal_custom_scores_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "animal_custom_scores_score_definition_id_fkey"
+            columns: ["score_definition_id"]
+            isOneToOne: false
+            referencedRelation: "custom_score_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       animal_events: {
         Row: {
           animal_id: string
@@ -268,6 +339,63 @@ export type Database = {
           },
         ]
       }
+      api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          organization_id: string
+          permissions: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          organization_id: string
+          permissions?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          organization_id?: string
+          permissions?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       birth_delay_config: {
         Row: {
           bovine_gestation_days: number
@@ -377,6 +505,56 @@ export type Database = {
             columns: ["male_id"]
             isOneToOne: false
             referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_score_definitions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          max_value: number | null
+          min_value: number | null
+          name: string
+          organization_id: string
+          scale_labels: Json | null
+          score_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_value?: number | null
+          min_value?: number | null
+          name: string
+          organization_id: string
+          scale_labels?: Json | null
+          score_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_value?: number | null
+          min_value?: number | null
+          name?: string
+          organization_id?: string
+          scale_labels?: Json | null
+          score_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_score_definitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -587,6 +765,99 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      field_tasks: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          priority: string
+          related_animal_id: string | null
+          related_paddock_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          priority?: string
+          related_animal_id?: string | null
+          related_paddock_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          priority?: string
+          related_animal_id?: string | null
+          related_paddock_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "field_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "field_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_tasks_related_animal_id_fkey"
+            columns: ["related_animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_tasks_related_paddock_id_fkey"
+            columns: ["related_paddock_id"]
+            isOneToOne: false
+            referencedRelation: "paddocks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_budgets: {
         Row: {
@@ -1079,6 +1350,93 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          due_date: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          invoice_number: string | null
+          invoice_type: string
+          issue_date: string | null
+          items: Json | null
+          notes: string | null
+          organization_id: string
+          parsed_data: Json | null
+          status: string
+          subtotal: number
+          supplier_id: string | null
+          supplier_name: string | null
+          tax_amount: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_date?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          invoice_number?: string | null
+          invoice_type?: string
+          issue_date?: string | null
+          items?: Json | null
+          notes?: string | null
+          organization_id: string
+          parsed_data?: Json | null
+          status?: string
+          subtotal?: number
+          supplier_id?: string | null
+          supplier_name?: string | null
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_date?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          invoice_number?: string | null
+          invoice_type?: string
+          issue_date?: string | null
+          items?: Json | null
+          notes?: string | null
+          organization_id?: string
+          parsed_data?: Json | null
+          status?: string
+          subtotal?: number
+          supplier_id?: string | null
+          supplier_name?: string | null
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milk_production: {
         Row: {
           afternoon_liters: number | null
@@ -1554,6 +1912,120 @@ export type Database = {
           },
           {
             foreignKeyName: "reproductive_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfid_devices: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          device_name: string
+          device_type: string
+          id: string
+          is_active: boolean
+          last_connected_at: string | null
+          organization_id: string
+          settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          device_name: string
+          device_type?: string
+          id?: string
+          is_active?: boolean
+          last_connected_at?: string | null
+          organization_id: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          device_name?: string
+          device_type?: string
+          id?: string
+          is_active?: boolean
+          last_connected_at?: string | null
+          organization_id?: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfid_devices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfid_readings: {
+        Row: {
+          action_triggered: string | null
+          animal_id: string | null
+          created_at: string
+          device_id: string | null
+          id: string
+          latitude: number | null
+          location: string | null
+          longitude: number | null
+          organization_id: string
+          read_at: string
+          signal_strength: number | null
+          tag_id: string
+        }
+        Insert: {
+          action_triggered?: string | null
+          animal_id?: string | null
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
+          organization_id: string
+          read_at?: string
+          signal_strength?: number | null
+          tag_id: string
+        }
+        Update: {
+          action_triggered?: string | null
+          animal_id?: string | null
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
+          organization_id?: string
+          read_at?: string
+          signal_strength?: number | null
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfid_readings_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfid_readings_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "rfid_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfid_readings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

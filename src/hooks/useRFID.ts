@@ -256,7 +256,7 @@ export const useRFID = () => {
     }
   };
 
-  // Simulated Bluetooth scan for demo purposes
+  // Real Bluetooth RFID scanner integration
   const startBluetoothScan = useCallback(async () => {
     setIsScanning(true);
     
@@ -273,33 +273,164 @@ export const useRFID = () => {
     }
 
     try {
-      // This would connect to a real RFID reader
-      // For now, we show a toast explaining the feature
       toast({
         title: 'Buscando dispositivos...',
         description: 'Asegúrate de que tu lector RFID esté encendido y en modo de emparejamiento.',
       });
 
-      // Simulated delay
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
-      toast({
-        title: 'Escaneo completado',
-        description: 'Conecta un lector RFID Bluetooth compatible para usar esta función.',
+      // Request Bluetooth device - looking for common RFID reader services
+      const device = await nav.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [
+          '00001800-0000-1000-8000-00805f9b34fb', // Generic Access
+          '00001801-0000-1000-8000-00805f9b34fb', // Generic Attribute
+          '0000180f-0000-1000-8000-00805f9b34fb', // Battery Service
+          '0000ffe0-0000-1000-8000-00805f9b34fb', // Common RFID/BLE module service
+          '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART Service
+        ],
       });
+
+      if (device) {
+        toast({
+          title: '¡Dispositivo encontrado!',
+          description: `Conectado a: ${device.name || 'Dispositivo RFID'}`,
+        });
+
+        // Register the device
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .single();
+
+        if (profile?.organization_id) {
+          await supabase.from('rfid_devices').insert({
+            organization_id: profile.organization_id,
+            device_name: device.name || 'Lector RFID Bluetooth',
+            device_type: 'bluetooth',
+            device_id: device.id,
+            last_connected_at: new Date().toISOString(),
+            is_active: true,
+          });
+
+          await fetchDevices();
+        }
+
+        // Try to connect and listen for data
+        try {
+          const server = await device.gatt?.connect();
+          
+          if (server) {
+            // Try common RFID service UUIDs
+            const serviceUUIDs = [
+              '0000ffe0-0000-1000-8000-00805f9b34fb',
+              '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+            ];
+
+            for (const uuid of serviceUUIDs) {
+              try {
+                const service = await server.getPrimaryService(uuid);
+                const characteristics = await service.getCharacteristics();
+                
+                for (const char of characteristics) {
+                  if (char.properties.notify) {
+                    await char.startNotifications();
+                    char.addEventListener('characteristicvaluechanged', async (event: any) => {
+                      const value = event.target.value;
+                      const decoder = new TextDecoder('utf-8');
+                      const tagId = decoder.decode(value).trim();
+                      
+                      if (tagId && tagId.length > 0) {
+                        console.log('RFID Tag detected:', tagId);
+                        
+                        const result = await recordReading(tagId);
+                        
+                        if (result.success) {
+                          if (result.animal) {
+                            toast({
+                              title: '✅ Animal identificado',
+                              description: `Tag: ${tagId} → ${result.animal.tag_id}`,
+                            });
+                          } else {
+                            toast({
+                              title: '⚠️ Tag sin vincular',
+                              description: `Tag: ${tagId} - No está asociado a ningún animal`,
+                            });
+                          }
+                        }
+                      }
+                    });
+                    
+                    toast({
+                      title: '🔄 Escuchando tags...',
+                      description: 'Acerca un tag RFID al lector para identificar animales.',
+                    });
+                  }
+                }
+                break; // Found working service
+              } catch (e) {
+                // Try next service UUID
+                continue;
+              }
+            }
+          }
+        } catch (connError) {
+          console.log('Could not connect to GATT server:', connError);
+          toast({
+            title: 'Dispositivo registrado',
+            description: 'El dispositivo se guardó pero la conexión GATT no está disponible.',
+          });
+        }
+      }
 
       setIsScanning(false);
       return { success: true };
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error de conexión',
-        description: error.message,
-      });
+      if (error.name === 'NotFoundError') {
+        toast({
+          title: 'Búsqueda cancelada',
+          description: 'No se seleccionó ningún dispositivo.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error de conexión',
+          description: error.message || 'No se pudo conectar al dispositivo',
+        });
+      }
       setIsScanning(false);
       return { success: false, error };
     }
-  }, [toast]);
+  }, [toast, recordReading, fetchDevices]);
+
+  // Manual tag input for testing without hardware
+  const manualTagRead = useCallback(async (tagId: string, location?: string) => {
+    if (!tagId.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'El ID del tag no puede estar vacío',
+      });
+      return { success: false };
+    }
+
+    const result = await recordReading(tagId.trim(), undefined, location);
+    
+    if (result.success) {
+      if (result.animal) {
+        toast({
+          title: '✅ Animal identificado',
+          description: `${result.animal.tag_id} ${result.animal.name ? `- ${result.animal.name}` : ''}`,
+        });
+      } else {
+        toast({
+          title: '⚠️ Tag nuevo detectado',
+          description: `Tag ${tagId} no está vinculado a ningún animal`,
+        });
+      }
+    }
+    
+    return result;
+  }, [recordReading, toast]);
 
   useEffect(() => {
     fetchDevices();
@@ -324,6 +455,7 @@ export const useRFID = () => {
     recordReading,
     linkTagToAnimal,
     startBluetoothScan,
+    manualTagRead,
     refetchDevices: fetchDevices,
     refetchReadings: fetchReadings,
   };

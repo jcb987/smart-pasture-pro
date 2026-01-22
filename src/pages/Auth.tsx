@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Leaf, Eye, EyeOff, Loader2, Shield } from 'lucide-react';
+import { Leaf, Eye, EyeOff, Loader2, Shield, ArrowLeft, Mail } from 'lucide-react';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -19,6 +19,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFounderLogin, setIsFounderLogin] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
   const { signIn, signUp, user, loading, hasOfflineSession } = useAuth();
   const { isOnline } = useOffline();
   const { signInAsFounder, isLoading: founderLoading } = useFounderAuth();
@@ -166,10 +167,117 @@ const Auth = () => {
     setIsLoading(false);
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isOnline) {
+      toast({
+        variant: 'destructive',
+        title: 'Sin conexión',
+        description: 'Para recuperar tu contraseña necesitas internet.',
+      });
+      return;
+    }
+
+    if (!email) {
+      toast({
+        variant: 'destructive',
+        title: 'Email requerido',
+        description: 'Por favor ingresa tu correo electrónico.',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth?reset=true`,
+    });
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: '¡Correo enviado!',
+        description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.',
+      });
+      setIsPasswordReset(false);
+    }
+
+    setIsLoading(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Password Reset View
+  if (isPasswordReset) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <div className="p-2 bg-primary rounded-xl">
+              <Leaf className="h-8 w-8 text-primary-foreground" />
+            </div>
+            <span className="text-2xl font-bold text-foreground">Agro Data</span>
+          </div>
+
+          <Card className="border-border/50 shadow-lg">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Recuperar Contraseña</CardTitle>
+              <CardDescription>
+                Te enviaremos un enlace para restablecer tu contraseña
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Correo electrónico</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Enviar enlace de recuperación
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            <button 
+              onClick={() => setIsPasswordReset(false)}
+              className="text-primary hover:underline flex items-center justify-center gap-1 mx-auto"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Volver al inicio de sesión
+            </button>
+          </p>
+        </div>
       </div>
     );
   }
@@ -306,7 +414,16 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Contraseña</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="login-password">Contraseña</Label>
+                      <button
+                        type="button"
+                        onClick={() => setIsPasswordReset(true)}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    </div>
                     <div className="relative">
                       <Input
                         id="login-password"

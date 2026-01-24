@@ -44,6 +44,7 @@ import Herramientas from "./pages/Herramientas";
 
 // Founder pages
 import FounderDashboard from "./pages/FounderDashboard";
+import Inteligencia from "./pages/Inteligencia";
 
 // Configure QueryClient with retry logic
 const queryClient = new QueryClient({
@@ -106,6 +107,7 @@ const App = () => (
                   <Route path="/configuracion" element={<ProtectedRoute><ErrorBoundary moduleName="Configuración"><Configuracion /></ErrorBoundary></ProtectedRoute>} />
                   <Route path="/ayuda" element={<ProtectedRoute><ErrorBoundary moduleName="Ayuda"><Ayuda /></ErrorBoundary></ProtectedRoute>} />
                   <Route path="/herramientas" element={<ProtectedRoute><ErrorBoundary moduleName="Herramientas"><Herramientas /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/inteligencia" element={<ProtectedRoute><ErrorBoundary moduleName="Inteligencia"><Inteligencia /></ErrorBoundary></ProtectedRoute>} />
 
                   {/* Catch-all route */}
                   <Route path="*" element={<NotFound />} />

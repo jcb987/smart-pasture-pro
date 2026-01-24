@@ -16,8 +16,11 @@ import {
   MapPin,
   AlertTriangle,
   Activity,
-  WifiOff
+  WifiOff,
+  Edit
 } from 'lucide-react';
+import { AnimalEditDetailDialog } from '@/components/animales/AnimalEditDetailDialog';
+import { type Animal, type AnimalEvent } from '@/hooks/useAnimals';
 import { useHealth } from '@/hooks/useHealth';
 import { useReproduction } from '@/hooks/useReproduction';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
@@ -50,7 +53,7 @@ interface AnimalComplete {
 }
 
 const ConsultarAnimal = () => {
-  const { animals, loading: animalsLoading } = useAnimals();
+  const { animals, loading: animalsLoading, updateAnimal, getAnimalEvents } = useAnimals();
   const { isOnline } = useOffline();
   const { healthEvents, vaccinations } = useHealth();
   const { events: reproductiveEvents } = useReproduction();
@@ -61,6 +64,7 @@ const ConsultarAnimal = () => {
   const [selectedAnimal, setSelectedAnimal] = useState<AnimalComplete | null>(null);
   const [filteredAnimals, setFilteredAnimals] = useState<AnimalComplete[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Use animals from the hook (which has offline support)
   const activeAnimals = animals.filter(a => a.status === 'activo') as unknown as AnimalComplete[];
@@ -286,9 +290,18 @@ const ConsultarAnimal = () => {
                 )}
               </div>
               
-              {/* Navegación */}
+              {/* Navegación y Edición */}
               {selectedAnimal && (
                 <div className="flex gap-1">
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    onClick={() => setEditDialogOpen(true)}
+                    className="gap-1"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Editar
+                  </Button>
                   <Button variant="outline" size="icon" onClick={() => navigateAnimal('prev')}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -487,6 +500,23 @@ const ConsultarAnimal = () => {
           </div>
         )}
       </div>
+
+      {/* Dialog de Edición Completa */}
+      <AnimalEditDetailDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        animal={selectedAnimal as unknown as Animal | null}
+        animals={animals as unknown as Animal[]}
+        getEvents={getAnimalEvents}
+        onSave={async (id, updates) => {
+          await updateAnimal(id, updates);
+          // Actualizar el animal seleccionado con los nuevos datos
+          const updatedAnimal = animals.find(a => a.id === id);
+          if (updatedAnimal) {
+            setSelectedAnimal(updatedAnimal as unknown as AnimalComplete);
+          }
+        }}
+      />
     </DashboardLayout>
   );
 };

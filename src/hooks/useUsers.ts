@@ -69,7 +69,7 @@ export function useUsers() {
 
   const checkAuthStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { canManage: false, orgId: null };
+    if (!user) return { canManage: false, orgId: null, isAdmin: false };
 
     // Obtener organization_id del usuario actual
     const { data: profile } = await supabase
@@ -78,9 +78,20 @@ export function useUsers() {
       .eq('user_id', user.id)
       .maybeSingle();
 
+    // Verificar si el usuario es administrador
+    const { data: adminRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    const isAdmin = !!adminRole;
+
     return { 
-      canManage: !!user, 
-      orgId: profile?.organization_id || null 
+      canManage: isAdmin, // Solo admin puede gestionar usuarios
+      orgId: profile?.organization_id || null,
+      isAdmin 
     };
   };
 

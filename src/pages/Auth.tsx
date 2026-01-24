@@ -12,6 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Leaf, Eye, EyeOff, Loader2, Shield, ArrowLeft, Mail, Lock } from 'lucide-react';
 
+// Visible version stamp to verify the published build updated correctly.
+// (Helps diagnose PWA/cache issues where users keep seeing an old UI.)
+const AUTH_UI_VERSION = 'auth-ui-2026-01-24-1';
+
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
@@ -593,13 +597,15 @@ const Auth = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="login-password">Contraseña</Label>
-                      <button
+                      <Button
                         type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-xs"
                         onClick={() => setIsPasswordReset(true)}
-                        className="text-xs text-primary hover:underline"
                       >
                         ¿Olvidaste tu contraseña?
-                      </button>
+                      </Button>
                     </div>
                     <div className="relative">
                       <Input
@@ -708,16 +714,22 @@ const Auth = () => {
 
         <div className="mt-6 space-y-3">
           <p className="text-center text-sm text-muted-foreground">
-            <button
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0 text-sm"
               onClick={() => setIsPasswordReset(true)}
-              className="text-primary hover:underline"
             >
               ¿Olvidaste tu contraseña?
-            </button>
+            </Button>
             {' · '}
             <a href="/" className="text-primary hover:underline">
               Volver al inicio
             </a>
+          </p>
+
+          <p className="text-center text-xs text-muted-foreground/60">
+            {AUTH_UI_VERSION}
           </p>
           
           <div className="flex justify-center">

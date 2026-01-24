@@ -86,9 +86,15 @@ export const RegisterEventDialog = ({
   const handleSubmit = () => {
     if (!animalId || !eventType || !eventDate) return;
 
-    // Validate birth fields
+    // Validate service fields - require bull
+    if (eventType === 'servicio' && !bullId) return;
+
+    // Validate insemination fields - require semen batch
+    if (eventType === 'inseminacion' && !semenBatch) return;
+
+    // Validate birth fields - require father
     if (eventType === 'parto') {
-      if (!birthType || !calfSex) return;
+      if (!birthType || !calfSex || !fatherId) return;
       if (createCalf && !calfTagId) return;
     }
 
@@ -199,10 +205,10 @@ export const RegisterEventDialog = ({
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
               <h4 className="font-medium">Datos del Servicio</h4>
               <div className="space-y-2">
-                <Label>Toro</Label>
+                <Label>Toro / Semental *</Label>
                 <Select value={bullId} onValueChange={setBullId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar toro" />
+                  <SelectTrigger className={!bullId ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Seleccionar toro (obligatorio)" />
                   </SelectTrigger>
                   <SelectContent>
                     {bulls.map((b) => (
@@ -212,6 +218,7 @@ export const RegisterEventDialog = ({
                     ))}
                   </SelectContent>
                 </Select>
+                {!bullId && <p className="text-xs text-destructive">Debes seleccionar el toro para trazabilidad genética</p>}
               </div>
             </div>
           )}
@@ -222,12 +229,14 @@ export const RegisterEventDialog = ({
               <h4 className="font-medium">Datos de Inseminación</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Lote de Semen</Label>
+                  <Label>Lote de Semen / Pajilla *</Label>
                   <Input
                     value={semenBatch}
                     onChange={(e) => setSemenBatch(e.target.value)}
                     placeholder="Ej: LOT-2024-001"
+                    className={!semenBatch ? 'border-destructive' : ''}
                   />
+                  {!semenBatch && <p className="text-xs text-destructive">Obligatorio para trazabilidad</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>Técnico Inseminador</Label>
@@ -296,13 +305,12 @@ export const RegisterEventDialog = ({
               
               {/* Padre */}
               <div className="space-y-2">
-                <Label>Padre *</Label>
+                <Label>Padre / Semental *</Label>
                 <Select value={fatherId} onValueChange={setFatherId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar padre" />
+                  <SelectTrigger className={!fatherId ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Seleccionar padre (obligatorio)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="unknown">Desconocido</SelectItem>
                     {bulls.map((b) => (
                       <SelectItem key={b.id} value={b.id}>
                         {b.tag_id} {b.name && `- ${b.name}`}
@@ -310,6 +318,7 @@ export const RegisterEventDialog = ({
                     ))}
                   </SelectContent>
                 </Select>
+                {!fatherId && <p className="text-xs text-destructive">El padre es obligatorio para trazabilidad genética</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -412,7 +421,9 @@ export const RegisterEventDialog = ({
             disabled={
               !animalId || 
               !eventType || 
-              (showBirthFields && (!birthType || !calfSex)) ||
+              (showServiceFields && !bullId) ||
+              (showInseminationFields && !semenBatch) ||
+              (showBirthFields && (!birthType || !calfSex || !fatherId)) ||
               (showBirthFields && createCalf && !calfTagId)
             }
           >

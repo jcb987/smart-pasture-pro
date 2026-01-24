@@ -279,6 +279,7 @@ const Animales = () => {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSubmit={createAnimal}
+        animals={animals}
       />
 
       <AnimalEditDetailDialog

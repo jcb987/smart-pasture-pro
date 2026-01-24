@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,12 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { type AnimalCategory, type AnimalSex, type Animal } from '@/hooks/useAnimals';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface CreateAnimalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (animal: Omit<Animal, 'id' | 'created_at' | 'updated_at' | 'organization_id'>) => Promise<unknown>;
+  animals?: Animal[]; // Lista de animales para seleccionar madre/padre
 }
 
 const categoryLabels: Record<AnimalCategory, string> = {
@@ -39,7 +45,7 @@ const categoryLabels: Record<AnimalCategory, string> = {
   bufalo: 'Búfalo',
 };
 
-export function CreateAnimalDialog({ open, onOpenChange, onSubmit }: CreateAnimalDialogProps) {
+export function CreateAnimalDialog({ open, onOpenChange, onSubmit, animals = [] }: CreateAnimalDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     tag_id: '',
@@ -54,7 +60,21 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit }: CreateAnima
     lot_name: '',
     current_weight: '',
     notes: '',
+    mother_id: '',
+    father_id: '',
   });
+  const [motherOpen, setMotherOpen] = useState(false);
+  const [fatherOpen, setFatherOpen] = useState(false);
+
+  // Filtrar hembras para madres y machos para padres
+  const females = useMemo(() => 
+    animals.filter(a => a.sex === 'hembra' && a.status === 'activo'), 
+    [animals]
+  );
+  const males = useMemo(() => 
+    animals.filter(a => a.sex === 'macho' && a.status === 'activo'), 
+    [animals]
+  );
 
   const resetForm = () => {
     setFormData({
@@ -70,11 +90,21 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit }: CreateAnima
       lot_name: '',
       current_weight: '',
       notes: '',
+      mother_id: '',
+      father_id: '',
     });
   };
 
+  // Validar que madre y padre estén seleccionados
+  const isGeneticsValid = formData.mother_id && formData.father_id;
+  const canSubmit = formData.tag_id && isGeneticsValid;
+
+  const getAnimalLabel = (animal: Animal) => {
+    return `${animal.tag_id}${animal.name ? ` - ${animal.name}` : ''}`; 
+  };
+
   const handleSubmit = async () => {
-    if (!formData.tag_id) return;
+    if (!canSubmit) return;
 
     setLoading(true);
     const animal = {
@@ -96,8 +126,8 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit }: CreateAnima
       purchase_price: null,
       purchase_date: null,
       lot_name: formData.lot_name || null,
-      mother_id: null,
-      father_id: null,
+      mother_id: formData.mother_id || null,
+      father_id: formData.father_id || null,
       notes: formData.notes || null,
     };
 
@@ -124,9 +154,19 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit }: CreateAnima
         <DialogHeader>
           <DialogTitle>Registrar Nuevo Animal</DialogTitle>
           <DialogDescription>
-            Ingresa los datos del animal. El arete/identificación es obligatorio.
+            Ingresa los datos del animal. El arete, madre y padre son obligatorios para trazabilidad genética.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Alerta de genética obligatoria */}
+        {!isGeneticsValid && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Trazabilidad genética obligatoria:</strong> Debes seleccionar la madre y el padre del animal para poder registrarlo.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -240,6 +280,117 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit }: CreateAnima
             />
           </div>
 
+          {/* SECCIÓN DE GENÉTICA OBLIGATORIA */}
+          <div className="col-span-2 border-t pt-4 mt-2">
+            <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+              🧬 Genética (Obligatorio)
+            </h4>
+          </div>
+
+          {/* Madre */}
+          <div className="space-y-2">
+            <Label>Madre *</Label>
+            <Popover open={motherOpen} onOpenChange={setMotherOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={motherOpen}
+                  className={cn(
+                    "w-full justify-between",
+                    !formData.mother_id && "text-muted-foreground"
+                  )}
+                >
+                  {formData.mother_id
+                    ? getAnimalLabel(females.find(f => f.id === formData.mother_id)!)
+                    : "Seleccionar madre..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Buscar madre..." />
+                  <CommandList>
+                    <CommandEmpty>No se encontraron hembras.</CommandEmpty>
+                    <CommandGroup>
+                      {females.map((animal) => (
+                        <CommandItem
+                          key={animal.id}
+                          value={animal.tag_id}
+                          onSelect={() => {
+                            setFormData(prev => ({ ...prev, mother_id: animal.id }));
+                            setMotherOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.mother_id === animal.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {getAnimalLabel(animal)}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Padre */}
+          <div className="space-y-2">
+            <Label>Padre / Semental *</Label>
+            <Popover open={fatherOpen} onOpenChange={setFatherOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={fatherOpen}
+                  className={cn(
+                    "w-full justify-between",
+                    !formData.father_id && "text-muted-foreground"
+                  )}
+                >
+                  {formData.father_id
+                    ? getAnimalLabel(males.find(m => m.id === formData.father_id)!)
+                    : "Seleccionar padre..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Buscar padre..." />
+                  <CommandList>
+                    <CommandEmpty>No se encontraron machos.</CommandEmpty>
+                    <CommandGroup>
+                      {males.map((animal) => (
+                        <CommandItem
+                          key={animal.id}
+                          value={animal.tag_id}
+                          onSelect={() => {
+                            setFormData(prev => ({ ...prev, father_id: animal.id }));
+                            setFatherOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.father_id === animal.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {getAnimalLabel(animal)}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="col-span-2 border-t pt-4 mt-2" />
+
           <div className="space-y-2 col-span-2">
             <Label htmlFor="origin">Origen</Label>
             <Input
@@ -266,7 +417,7 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit }: CreateAnima
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !formData.tag_id}>
+          <Button onClick={handleSubmit} disabled={loading || !canSubmit}>
             {loading ? 'Guardando...' : 'Registrar Animal'}
           </Button>
         </DialogFooter>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFounderAuth } from '@/hooks/useFounderAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,21 +10,32 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Leaf, Eye, EyeOff, Loader2, Shield, ArrowLeft, Mail } from 'lucide-react';
+import { Leaf, Eye, EyeOff, Loader2, Shield, ArrowLeft, Mail, Lock } from 'lucide-react';
 
 const Auth = () => {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFounderLogin, setIsFounderLogin] = useState(false);
   const [isPasswordReset, setIsPasswordReset] = useState(false);
+  const [isSettingNewPassword, setIsSettingNewPassword] = useState(false);
   const { signIn, signUp, user, loading, hasOfflineSession } = useAuth();
   const { isOnline } = useOffline();
   const { signInAsFounder, isLoading: founderLoading } = useFounderAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Detectar si el usuario viene de un enlace de reset de contraseña
+  useEffect(() => {
+    const isReset = searchParams.get('reset') === 'true';
+    if (isReset) {
+      setIsSettingNewPassword(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     // Si está offline y tiene sesión offline válida, ir directo al dashboard
@@ -211,6 +222,60 @@ const Auth = () => {
     setIsLoading(false);
   };
 
+  const handleSetNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isOnline) {
+      toast({
+        variant: 'destructive',
+        title: 'Sin conexión',
+        description: 'Para cambiar tu contraseña necesitas internet.',
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Contraseña muy corta',
+        description: 'La contraseña debe tener al menos 6 caracteres.',
+      });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Las contraseñas no coinciden',
+        description: 'Por favor asegúrate de que ambas contraseñas sean iguales.',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al cambiar contraseña',
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: '¡Contraseña actualizada!',
+        description: 'Tu contraseña ha sido cambiada exitosamente.',
+      });
+      setIsSettingNewPassword(false);
+      setPassword('');
+      setConfirmPassword('');
+      navigate('/dashboard');
+    }
+
+    setIsLoading(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -219,7 +284,102 @@ const Auth = () => {
     );
   }
 
-  // Password Reset View
+  // Set New Password View (after clicking reset link)
+  if (isSettingNewPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <div className="p-2 bg-primary rounded-xl">
+              <Leaf className="h-8 w-8 text-primary-foreground" />
+            </div>
+            <span className="text-2xl font-bold text-foreground">Agro Data</span>
+          </div>
+
+          <Card className="border-border/50 shadow-lg">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Nueva Contraseña</CardTitle>
+              <CardDescription>
+                Ingresa tu nueva contraseña para acceder a tu cuenta
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSetNewPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Nueva contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Mínimo 6 caracteres
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirmar contraseña</Label>
+                  <Input
+                    id="confirm-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="mr-2 h-4 w-4" />
+                      Guardar nueva contraseña
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            <button 
+              onClick={() => {
+                setIsSettingNewPassword(false);
+                navigate('/auth');
+              }}
+              className="text-primary hover:underline flex items-center justify-center gap-1 mx-auto"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Volver al inicio de sesión
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Password Reset View (request email)
   if (isPasswordReset) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">

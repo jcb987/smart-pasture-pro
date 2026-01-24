@@ -531,7 +531,13 @@ const Auth = () => {
 
         <div className="mt-6 space-y-3">
           <p className="text-center text-sm text-muted-foreground">
-            ¿Necesitas ayuda?{' '}
+            <button
+              onClick={() => setIsPasswordReset(true)}
+              className="text-primary hover:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+            {' · '}
             <a href="/" className="text-primary hover:underline">
               Volver al inicio
             </a>

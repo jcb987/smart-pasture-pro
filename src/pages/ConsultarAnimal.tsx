@@ -5,6 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   Search, 
   ChevronLeft, 
@@ -17,16 +26,22 @@ import {
   AlertTriangle,
   Activity,
   WifiOff,
-  Edit
+  Plus,
+  Edit2,
+  Save,
+  X,
+  Loader2
 } from 'lucide-react';
-import { AnimalEditDetailDialog } from '@/components/animales/AnimalEditDetailDialog';
-import { type Animal, type AnimalEvent } from '@/hooks/useAnimals';
+import { AnimalQuickEventDialog } from '@/components/animales/AnimalQuickEventDialog';
+import { IdentificationEditConfirmDialog } from '@/components/animales/IdentificationEditConfirmDialog';
+import { type Animal, type AnimalEvent, type AnimalCategory, type AnimalStatus } from '@/hooks/useAnimals';
 import { useHealth } from '@/hooks/useHealth';
 import { useReproduction } from '@/hooks/useReproduction';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { useWeightRecords } from '@/hooks/useWeightRecords';
 import { useAnimals } from '@/hooks/useAnimals';
 import { useOffline } from '@/contexts/OfflineContext';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -52,24 +67,50 @@ interface AnimalComplete {
   expected_calving_date: string | null;
 }
 
+const categoryLabels: Record<AnimalCategory, string> = {
+  vaca: 'Vaca',
+  toro: 'Toro',
+  novilla: 'Novilla',
+  novillo: 'Novillo',
+  ternera: 'Ternera',
+  ternero: 'Ternero',
+  becerra: 'Becerra',
+  becerro: 'Becerro',
+  bufala: 'Búfala',
+  bufalo: 'Búfalo',
+};
+
+const statusLabels: Record<AnimalStatus, string> = {
+  activo: 'Activo',
+  vendido: 'Vendido',
+  muerto: 'Muerto',
+  descartado: 'Descartado',
+  trasladado: 'Trasladado',
+};
+
 const ConsultarAnimal = () => {
-  const { animals, loading: animalsLoading, updateAnimal, getAnimalEvents } = useAnimals();
+  const { animals, loading: animalsLoading, updateAnimal, getAnimalEvents, addAnimalEvent } = useAnimals();
   const { isOnline } = useOffline();
-  const { healthEvents, vaccinations } = useHealth();
-  const { events: reproductiveEvents } = useReproduction();
+  const { healthEvents, vaccinations, addHealthEvent, addVaccination } = useHealth();
+  const { events: reproductiveEvents, addEvent: addReproEvent } = useReproduction();
   const { records: milkRecords } = useMilkProduction();
-  const { records: weightRecords } = useWeightRecords();
+  const { records: weightRecords, addRecord: addWeightRecord } = useWeightRecords();
+  const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAnimal, setSelectedAnimal] = useState<AnimalComplete | null>(null);
   const [filteredAnimals, setFilteredAnimals] = useState<AnimalComplete[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  
+  // Edit states
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [showIdentificationConfirm, setShowIdentificationConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editData, setEditData] = useState<Partial<Animal>>({});
 
-  // Use animals from the hook (which has offline support)
   const activeAnimals = animals.filter(a => a.status === 'activo') as unknown as AnimalComplete[];
 
-  // Secciones colapsables
   const [openSections, setOpenSections] = useState({
     identificacion: true,
     produccion: true,
@@ -78,7 +119,6 @@ const ConsultarAnimal = () => {
     ubicacion: true,
   });
 
-  // Búsqueda con autocompletado - now uses cached animals
   useEffect(() => {
     if (searchTerm.length >= 2) {
       const filtered = activeAnimals.filter(a => 
@@ -93,14 +133,14 @@ const ConsultarAnimal = () => {
     }
   }, [searchTerm, activeAnimals]);
 
-  // Seleccionar animal
   const selectAnimal = useCallback((animal: AnimalComplete) => {
     setSelectedAnimal(animal);
     setSearchTerm(animal.tag_id);
     setShowSuggestions(false);
+    setEditingSection(null);
+    setEditData({});
   }, []);
 
-  // Navegación entre animales
   const navigateAnimal = useCallback((direction: 'prev' | 'next') => {
     if (!selectedAnimal) return;
     const currentIndex = activeAnimals.findIndex(a => a.id === selectedAnimal.id);
@@ -113,20 +153,56 @@ const ConsultarAnimal = () => {
     selectAnimal(activeAnimals[newIndex]);
   }, [selectedAnimal, activeAnimals, selectAnimal]);
 
-  // Toggle sección
   const toggleSection = useCallback((section: keyof typeof openSections) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   }, []);
 
-  // Obtener datos específicos del animal seleccionado
+  const startEditing = (section: string) => {
+    if (section === 'identificacion') {
+      setShowIdentificationConfirm(true);
+    } else {
+      setEditingSection(section);
+      setEditData(selectedAnimal as unknown as Partial<Animal>);
+    }
+  };
+
+  const confirmIdentificationEdit = () => {
+    setShowIdentificationConfirm(false);
+    setEditingSection('identificacion');
+    setEditData(selectedAnimal as unknown as Partial<Animal>);
+  };
+
+  const cancelEditing = () => {
+    setEditingSection(null);
+    setEditData({});
+  };
+
+  const saveSection = async () => {
+    if (!selectedAnimal) return;
+    setSaving(true);
+    try {
+      await updateAnimal(selectedAnimal.id, editData);
+      const updatedAnimal = animals.find(a => a.id === selectedAnimal.id);
+      if (updatedAnimal) {
+        setSelectedAnimal(updatedAnimal as unknown as AnimalComplete);
+      }
+      setEditingSection(null);
+      setEditData({});
+      toast({
+        title: 'Guardado',
+        description: 'Los cambios se han guardado correctamente',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getAnimalData = useCallback(() => {
     if (!selectedAnimal) return null;
 
-    // Eventos de salud del animal
     const animalHealthEvents = healthEvents.filter(e => e.animal_id === selectedAnimal.id);
     const animalVaccinations = vaccinations.filter(v => v.animal_id === selectedAnimal.id);
     
-    // Último tratamiento y vacuna
     const lastTreatment = animalHealthEvents
       .filter(e => e.event_type === 'tratamiento')
       .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime())[0];
@@ -134,7 +210,6 @@ const ConsultarAnimal = () => {
       .filter(v => v.is_applied)
       .sort((a, b) => new Date(b.applied_date || '').getTime() - new Date(a.applied_date || '').getTime())[0];
 
-    // Eventos reproductivos
     const animalReproEvents = reproductiveEvents.filter(e => e.animal_id === selectedAnimal.id);
     const lastPalpation = animalReproEvents
       .filter(e => e.event_type === 'palpacion')
@@ -142,22 +217,16 @@ const ConsultarAnimal = () => {
     const lastHeat = animalReproEvents
       .filter(e => e.event_type === 'celo')
       .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime())[0];
-    const lastBirth = animalReproEvents
-      .filter(e => e.event_type === 'parto')
-      .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime())[0];
 
-    // Producción de leche
     const animalMilkRecords = milkRecords.filter(r => r.animal_id === selectedAnimal.id);
     const avgMilk = animalMilkRecords.length > 0
       ? animalMilkRecords.reduce((sum, r) => sum + (r.total_liters || 0), 0) / animalMilkRecords.length
       : null;
 
-    // Registros de peso
     const animalWeightRecords = weightRecords.filter(r => r.animal_id === selectedAnimal.id);
     const lastWeight = animalWeightRecords
       .sort((a, b) => new Date(b.weight_date).getTime() - new Date(a.weight_date).getTime())[0];
     
-    // Ganancia diaria promedio
     const avgDailyGain = animalWeightRecords.length > 1
       ? animalWeightRecords
           .filter(r => r.daily_gain)
@@ -169,11 +238,12 @@ const ConsultarAnimal = () => {
       lastVaccine,
       lastPalpation,
       lastHeat,
-      lastBirth,
       avgMilk,
       lastWeight,
       avgDailyGain,
       healthEventsCount: animalHealthEvents.length,
+      vaccineCount: animalVaccinations.filter(v => v.is_applied).length,
+      reproEventsCount: animalReproEvents.length,
     };
   }, [selectedAnimal, healthEvents, vaccinations, reproductiveEvents, milkRecords, weightRecords]);
 
@@ -211,25 +281,53 @@ const ConsultarAnimal = () => {
     icon: Icon, 
     title, 
     section, 
-    isOpen 
+    isOpen,
+    isEditing,
+    onEdit,
+    onSave,
+    onCancel,
+    showEditButton = true
   }: { 
     icon: typeof Tag, 
     title: string, 
     section: keyof typeof openSections,
-    isOpen: boolean 
+    isOpen: boolean,
+    isEditing: boolean,
+    onEdit?: () => void,
+    onSave?: () => void,
+    onCancel?: () => void,
+    showEditButton?: boolean
   }) => (
-    <CollapsibleTrigger asChild>
-      <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg p-3 transition-colors">
-        <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between p-3">
+      <CollapsibleTrigger asChild>
+        <div className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg flex-1 transition-colors">
           <Icon className="h-5 w-5 text-primary" />
           <h3 className="font-semibold">{title}</h3>
+          <ChevronDown className={cn(
+            "h-4 w-4 transition-transform duration-200 ml-auto",
+            isOpen && "rotate-180"
+          )} />
         </div>
-        <ChevronDown className={cn(
-          "h-4 w-4 transition-transform duration-200",
-          isOpen && "rotate-180"
-        )} />
-      </div>
-    </CollapsibleTrigger>
+      </CollapsibleTrigger>
+      {showEditButton && selectedAnimal && (
+        <div className="flex gap-1 ml-2">
+          {isEditing ? (
+            <>
+              <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+                <X className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onSave} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-green-600" />}
+              </Button>
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={onEdit}>
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
   );
 
   const InfoRow = ({ label, value, highlight = false }: { label: string, value: React.ReactNode, highlight?: boolean }) => (
@@ -238,6 +336,103 @@ const ConsultarAnimal = () => {
       <span className={cn("font-medium text-sm", highlight && "text-primary")}>{value || '-'}</span>
     </div>
   );
+
+  const EditableRow = ({ 
+    label, 
+    field, 
+    type = 'text',
+    options,
+  }: { 
+    label: string, 
+    field: keyof Animal,
+    type?: 'text' | 'date' | 'number' | 'select' | 'textarea',
+    options?: { value: string; label: string }[],
+  }) => {
+    const value = editData[field] as string | number | null | undefined;
+    
+    return (
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">{label}</Label>
+        {type === 'select' && options ? (
+          <Select
+            value={value?.toString() || ''}
+            onValueChange={(v) => setEditData(prev => ({ ...prev, [field]: v }))}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : type === 'textarea' ? (
+          <Textarea
+            value={value?.toString() || ''}
+            onChange={(e) => setEditData(prev => ({ ...prev, [field]: e.target.value }))}
+            className="resize-none"
+            rows={2}
+          />
+        ) : (
+          <Input
+            type={type}
+            value={value?.toString() || ''}
+            onChange={(e) => setEditData(prev => ({ 
+              ...prev, 
+              [field]: type === 'number' ? parseFloat(e.target.value) || null : e.target.value 
+            }))}
+            className="h-8"
+          />
+        )}
+      </div>
+    );
+  };
+
+  // Event handlers for quick event dialog
+  const handleWeightRecord = async (data: { weight: number; date: string; notes?: string }) => {
+    if (!selectedAnimal) return;
+    await addWeightRecord({
+      animal_id: selectedAnimal.id,
+      weight_date: data.date,
+      weight_kg: data.weight,
+      notes: data.notes,
+    });
+  };
+
+  const handleVaccination = async (data: { vaccine: string; date: string; nextDate?: string; notes?: string }) => {
+    if (!selectedAnimal) return;
+    await addVaccination({
+      animal_id: selectedAnimal.id,
+      vaccine_name: data.vaccine,
+      scheduled_date: data.date,
+      notes: data.notes,
+    });
+  };
+
+  const handleHealthEvent = async (data: { type: string; diagnosis?: string; treatment?: string; date: string; notes?: string }) => {
+    if (!selectedAnimal) return;
+    const eventType = data.type as 'diagnostico' | 'tratamiento' | 'vacuna';
+    await addHealthEvent({
+      animal_id: selectedAnimal.id,
+      event_type: eventType,
+      event_date: data.date,
+      diagnosis: data.diagnosis,
+      treatment: data.treatment,
+      notes: data.notes,
+    });
+  };
+
+  const handleReproductiveEvent = async (data: { type: string; result?: string; date: string; notes?: string }) => {
+    if (!selectedAnimal) return;
+    const eventType = data.type as 'aborto' | 'celo' | 'inseminacion' | 'palpacion' | 'parto' | 'secado' | 'servicio';
+    await addReproEvent({
+      animal_id: selectedAnimal.id,
+      event_type: eventType,
+      event_date: data.date,
+      notes: data.notes ? `${data.result ? `Resultado: ${data.result}. ` : ''}${data.notes}` : (data.result || undefined),
+    });
+  };
 
   return (
     <DashboardLayout>
@@ -273,7 +468,6 @@ const ConsultarAnimal = () => {
                   className="pl-10"
                 />
                 
-                {/* Autocompletado */}
                 {showSuggestions && filteredAnimals.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
                     {filteredAnimals.map((animal) => (
@@ -290,17 +484,16 @@ const ConsultarAnimal = () => {
                 )}
               </div>
               
-              {/* Navegación y Edición */}
               {selectedAnimal && (
                 <div className="flex gap-1">
                   <Button 
                     variant="default" 
                     size="sm" 
-                    onClick={() => setEditDialogOpen(true)}
+                    onClick={() => setEventDialogOpen(true)}
                     className="gap-1"
                   >
-                    <Edit className="h-4 w-4" />
-                    Editar
+                    <Plus className="h-4 w-4" />
+                    Evento
                   </Button>
                   <Button variant="outline" size="icon" onClick={() => navigateAnimal('prev')}>
                     <ChevronLeft className="h-4 w-4" />
@@ -342,65 +535,136 @@ const ConsultarAnimal = () => {
         {/* Información del animal */}
         {selectedAnimal && animalData && (
           <div className="space-y-4">
-            {/* Identificación */}
+            {/* Identificación - Con confirmación */}
             <Collapsible open={openSections.identificacion} onOpenChange={() => toggleSection('identificacion')}>
               <Card>
-                <SectionHeader icon={Tag} title="Identificación" section="identificacion" isOpen={openSections.identificacion} />
+                <SectionHeader 
+                  icon={Tag} 
+                  title="Identificación" 
+                  section="identificacion" 
+                  isOpen={openSections.identificacion}
+                  isEditing={editingSection === 'identificacion'}
+                  onEdit={() => startEditing('identificacion')}
+                  onSave={saveSection}
+                  onCancel={cancelEditing}
+                />
                 <CollapsibleContent>
                   <CardContent className="pt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                      <InfoRow label="Arete / ID" value={<span className="font-bold text-lg">{selectedAnimal.tag_id}</span>} highlight />
-                      <InfoRow label="Nombre" value={selectedAnimal.name} />
-                      <InfoRow label="Sexo" value={selectedAnimal.sex === 'hembra' ? 'Hembra' : 'Macho'} />
-                      <InfoRow label="Raza" value={selectedAnimal.breed} />
-                      <InfoRow label="Categoría" value={<span className="capitalize">{selectedAnimal.category}</span>} />
-                      <InfoRow label="Estado" value={getStatusBadge(selectedAnimal.status)} />
-                      <InfoRow label="Fecha de nacimiento" value={formatDate(selectedAnimal.birth_date)} />
-                      <InfoRow label="Color" value={selectedAnimal.color} />
-                    </div>
+                    {editingSection === 'identificacion' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <EditableRow label="Nombre" field="name" />
+                        <EditableRow 
+                          label="Categoría" 
+                          field="category" 
+                          type="select"
+                          options={Object.entries(categoryLabels).map(([v, l]) => ({ value: v, label: l }))}
+                        />
+                        <EditableRow label="Raza" field="breed" />
+                        <EditableRow label="Color" field="color" />
+                        <EditableRow label="Fecha de nacimiento" field="birth_date" type="date" />
+                        <EditableRow 
+                          label="Estado" 
+                          field="status" 
+                          type="select"
+                          options={Object.entries(statusLabels).map(([v, l]) => ({ value: v, label: l }))}
+                        />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                        <InfoRow label="Arete / ID" value={<span className="font-bold text-lg">{selectedAnimal.tag_id}</span>} highlight />
+                        <InfoRow label="Nombre" value={selectedAnimal.name} />
+                        <InfoRow label="Sexo" value={selectedAnimal.sex === 'hembra' ? 'Hembra' : 'Macho'} />
+                        <InfoRow label="Raza" value={selectedAnimal.breed} />
+                        <InfoRow label="Categoría" value={<span className="capitalize">{selectedAnimal.category}</span>} />
+                        <InfoRow label="Estado" value={getStatusBadge(selectedAnimal.status)} />
+                        <InfoRow label="Fecha de nacimiento" value={formatDate(selectedAnimal.birth_date)} />
+                        <InfoRow label="Color" value={selectedAnimal.color} />
+                      </div>
+                    )}
                   </CardContent>
                 </CollapsibleContent>
               </Card>
             </Collapsible>
 
-            {/* Producción */}
+            {/* Producción - Edición directa */}
             <Collapsible open={openSections.produccion} onOpenChange={() => toggleSection('produccion')}>
               <Card>
-                <SectionHeader icon={Activity} title="Producción" section="produccion" isOpen={openSections.produccion} />
+                <SectionHeader 
+                  icon={Activity} 
+                  title="Producción" 
+                  section="produccion" 
+                  isOpen={openSections.produccion}
+                  isEditing={editingSection === 'produccion'}
+                  onEdit={() => startEditing('produccion')}
+                  onSave={saveSection}
+                  onCancel={cancelEditing}
+                />
                 <CollapsibleContent>
                   <CardContent className="pt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                      <InfoRow 
-                        label="Peso actual" 
-                        value={selectedAnimal.current_weight ? `${selectedAnimal.current_weight} kg` : null} 
-                      />
-                      <InfoRow 
-                        label="Último pesaje" 
-                        value={animalData.lastWeight ? formatDate(animalData.lastWeight.weight_date) : null} 
-                      />
-                      <InfoRow 
-                        label="Ganancia diaria" 
-                        value={animalData.avgDailyGain ? `${animalData.avgDailyGain.toFixed(2)} kg/día` : null}
-                        highlight={!!animalData.avgDailyGain}
-                      />
-                      {selectedAnimal.sex === 'hembra' && (
+                    {editingSection === 'produccion' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <EditableRow label="Peso actual (kg)" field="current_weight" type="number" />
+                        <EditableRow label="Fecha ingreso" field="entry_date" type="date" />
+                        <EditableRow label="Origen" field="origin" />
+                        <div className="col-span-full">
+                          <EditableRow label="Notas" field="notes" type="textarea" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                         <InfoRow 
-                          label="Promedio leche" 
-                          value={animalData.avgMilk ? `${animalData.avgMilk.toFixed(1)} L/día` : null}
-                          highlight={!!animalData.avgMilk}
+                          label="Peso actual" 
+                          value={selectedAnimal.current_weight ? `${selectedAnimal.current_weight} kg` : null} 
                         />
-                      )}
-                    </div>
+                        <InfoRow 
+                          label="Último pesaje" 
+                          value={animalData.lastWeight ? formatDate(animalData.lastWeight.weight_date) : null} 
+                        />
+                        <InfoRow 
+                          label="Ganancia diaria" 
+                          value={animalData.avgDailyGain ? `${animalData.avgDailyGain.toFixed(2)} kg/día` : null}
+                          highlight={!!animalData.avgDailyGain}
+                        />
+                        {selectedAnimal.sex === 'hembra' && (
+                          <InfoRow 
+                            label="Promedio leche" 
+                            value={animalData.avgMilk ? `${animalData.avgMilk.toFixed(1)} L/día` : null}
+                            highlight={!!animalData.avgMilk}
+                          />
+                        )}
+                      </div>
+                    )}
+                    
+                    {!editingSection && (
+                      <div className="mt-4 pt-4 border-t">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setEventDialogOpen(true)}
+                          className="gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Registrar pesaje
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </CollapsibleContent>
               </Card>
             </Collapsible>
 
-            {/* Reproducción (solo hembras) */}
+            {/* Reproducción - Edición directa (solo hembras) */}
             {selectedAnimal.sex === 'hembra' && (
               <Collapsible open={openSections.reproduccion} onOpenChange={() => toggleSection('reproduccion')}>
                 <Card>
-                  <SectionHeader icon={Heart} title="Reproducción" section="reproduccion" isOpen={openSections.reproduccion} />
+                  <SectionHeader 
+                    icon={Heart} 
+                    title="Reproducción" 
+                    section="reproduccion" 
+                    isOpen={openSections.reproduccion}
+                    isEditing={false}
+                    showEditButton={false}
+                  />
                   <CollapsibleContent>
                     <CardContent className="pt-0">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
@@ -429,6 +693,22 @@ const ConsultarAnimal = () => {
                           value={formatDate(selectedAnimal.expected_calving_date)}
                           highlight={!!selectedAnimal.expected_calving_date}
                         />
+                        <InfoRow 
+                          label="Eventos reproductivos" 
+                          value={animalData.reproEventsCount} 
+                        />
+                      </div>
+                      
+                      <div className="mt-4 pt-4 border-t">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setEventDialogOpen(true)}
+                          className="gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Registrar evento reproductivo
+                        </Button>
                       </div>
                     </CardContent>
                   </CollapsibleContent>
@@ -436,16 +716,27 @@ const ConsultarAnimal = () => {
               </Collapsible>
             )}
 
-            {/* Salud */}
+            {/* Salud - Edición directa */}
             <Collapsible open={openSections.salud} onOpenChange={() => toggleSection('salud')}>
               <Card>
-                <SectionHeader icon={Stethoscope} title="Salud" section="salud" isOpen={openSections.salud} />
+                <SectionHeader 
+                  icon={Stethoscope} 
+                  title="Salud" 
+                  section="salud" 
+                  isOpen={openSections.salud}
+                  isEditing={false}
+                  showEditButton={false}
+                />
                 <CollapsibleContent>
                   <CardContent className="pt-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                       <InfoRow 
                         label="Total eventos de salud" 
                         value={animalData.healthEventsCount} 
+                      />
+                      <InfoRow 
+                        label="Vacunas aplicadas" 
+                        value={animalData.vaccineCount} 
                       />
                       <InfoRow 
                         label="Último tratamiento" 
@@ -462,22 +753,60 @@ const ConsultarAnimal = () => {
                         />
                       )}
                     </div>
+                    
+                    <div className="mt-4 pt-4 border-t flex gap-2 flex-wrap">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setEventDialogOpen(true)}
+                        className="gap-2"
+                      >
+                        <Stethoscope className="h-4 w-4" />
+                        Registrar tratamiento
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setEventDialogOpen(true)}
+                        className="gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Registrar vacuna
+                      </Button>
+                    </div>
                   </CardContent>
                 </CollapsibleContent>
               </Card>
             </Collapsible>
 
-            {/* Ubicación */}
+            {/* Ubicación - Edición directa */}
             <Collapsible open={openSections.ubicacion} onOpenChange={() => toggleSection('ubicacion')}>
               <Card>
-                <SectionHeader icon={MapPin} title="Ubicación" section="ubicacion" isOpen={openSections.ubicacion} />
+                <SectionHeader 
+                  icon={MapPin} 
+                  title="Ubicación" 
+                  section="ubicacion" 
+                  isOpen={openSections.ubicacion}
+                  isEditing={editingSection === 'ubicacion'}
+                  onEdit={() => startEditing('ubicacion')}
+                  onSave={saveSection}
+                  onCancel={cancelEditing}
+                />
                 <CollapsibleContent>
                   <CardContent className="pt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                      <InfoRow label="Lote actual" value={selectedAnimal.lot_name} />
-                      <InfoRow label="Origen" value={selectedAnimal.origin} />
-                      <InfoRow label="Fecha de ingreso" value={formatDate(selectedAnimal.entry_date)} />
-                    </div>
+                    {editingSection === 'ubicacion' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <EditableRow label="Lote / Potrero" field="lot_name" />
+                        <EditableRow label="Origen" field="origin" />
+                        <EditableRow label="Fecha de ingreso" field="entry_date" type="date" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                        <InfoRow label="Lote actual" value={selectedAnimal.lot_name} />
+                        <InfoRow label="Origen" value={selectedAnimal.origin} />
+                        <InfoRow label="Fecha de ingreso" value={formatDate(selectedAnimal.entry_date)} />
+                      </div>
+                    )}
                   </CardContent>
                 </CollapsibleContent>
               </Card>
@@ -501,21 +830,26 @@ const ConsultarAnimal = () => {
         )}
       </div>
 
-      {/* Dialog de Edición Completa */}
-      <AnimalEditDetailDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        animal={selectedAnimal as unknown as Animal | null}
-        animals={animals as unknown as Animal[]}
-        getEvents={getAnimalEvents}
-        onSave={async (id, updates) => {
-          await updateAnimal(id, updates);
-          // Actualizar el animal seleccionado con los nuevos datos
-          const updatedAnimal = animals.find(a => a.id === id);
-          if (updatedAnimal) {
-            setSelectedAnimal(updatedAnimal as unknown as AnimalComplete);
-          }
-        }}
+      {/* Quick Event Dialog */}
+      {selectedAnimal && (
+        <AnimalQuickEventDialog
+          open={eventDialogOpen}
+          onOpenChange={setEventDialogOpen}
+          animalId={selectedAnimal.id}
+          animalTagId={selectedAnimal.tag_id}
+          animalName={selectedAnimal.name}
+          onWeightRecord={handleWeightRecord}
+          onVaccination={handleVaccination}
+          onHealthEvent={handleHealthEvent}
+          onReproductiveEvent={handleReproductiveEvent}
+        />
+      )}
+
+      {/* Identification Edit Confirm Dialog */}
+      <IdentificationEditConfirmDialog
+        open={showIdentificationConfirm}
+        onOpenChange={setShowIdentificationConfirm}
+        onConfirm={confirmIdentificationEdit}
       />
     </DashboardLayout>
   );

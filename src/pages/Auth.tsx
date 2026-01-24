@@ -31,11 +31,23 @@ const Auth = () => {
 
   // Detectar si el usuario viene de un enlace de reset de contraseña
   useEffect(() => {
-    const isReset = searchParams.get('reset') === 'true';
-    if (isReset) {
+    // Escuchar el evento PASSWORD_RECOVERY de Supabase (el token viene en el hash de la URL)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsSettingNewPassword(true);
+      }
+    });
+
+    // También verificar si hay un hash con access_token (por si ya se procesó)
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
       setIsSettingNewPassword(true);
     }
-  }, [searchParams]);
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     // Si está offline y tiene sesión offline válida, ir directo al dashboard

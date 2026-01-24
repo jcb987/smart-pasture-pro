@@ -213,8 +213,13 @@ const Auth = () => {
 
     setIsLoading(true);
 
+    // Use the published app URL for password reset redirects
+    const appUrl = import.meta.env.PROD 
+      ? 'https://smart-pasture-pro.lovable.app' 
+      : window.location.origin;
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth?reset=true`,
+      redirectTo: `${appUrl}/auth`,
     });
 
     if (error) {

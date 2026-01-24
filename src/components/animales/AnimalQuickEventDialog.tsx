@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,9 +25,18 @@ import {
   Stethoscope,
   Save,
   Loader2,
-  Check
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface Bull {
+  id: string;
+  tag_id: string;
+  name: string | null;
+}
 
 interface AnimalQuickEventDialogProps {
   open: boolean;
@@ -38,7 +47,7 @@ interface AnimalQuickEventDialogProps {
   onWeightRecord: (data: { weight: number; date: string; notes?: string }) => Promise<void>;
   onVaccination: (data: { vaccine: string; date: string; nextDate?: string; notes?: string }) => Promise<void>;
   onHealthEvent: (data: { type: string; diagnosis?: string; treatment?: string; date: string; notes?: string }) => Promise<void>;
-  onReproductiveEvent: (data: { type: string; result?: string; date: string; notes?: string }) => Promise<void>;
+  onReproductiveEvent: (data: { type: string; result?: string; date: string; notes?: string; bullId?: string; semenBatch?: string }) => Promise<void>;
 }
 
 const COMMON_VACCINES = [
@@ -85,9 +94,49 @@ export function AnimalQuickEventDialog({
   onReproductiveEvent,
 }: AnimalQuickEventDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('peso');
   const [saving, setSaving] = useState(false);
   const [savedTab, setSavedTab] = useState<string | null>(null);
+  const [bulls, setBulls] = useState<Bull[]>([]);
+  const [loadingBulls, setLoadingBulls] = useState(false);
+  
+  // Fetch bulls when dialog opens
+  useEffect(() => {
+    const fetchBulls = async () => {
+      if (!open || !user) return;
+      
+      setLoadingBulls(true);
+      try {
+        // First get user's organization
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (!profileData?.organization_id) return;
+        
+        const { data, error } = await supabase
+          .from('animals')
+          .select('id, tag_id, name')
+          .eq('organization_id', profileData.organization_id)
+          .eq('sex', 'macho')
+          .eq('status', 'activo')
+          .in('category', ['toro', 'bufalo'])
+          .order('tag_id');
+        
+        if (error) throw error;
+        setBulls(data || []);
+      } catch (error) {
+        console.error('Error fetching bulls:', error);
+      } finally {
+        setLoadingBulls(false);
+      }
+    };
+    
+    fetchBulls();
+  }, [open, user]);
   
   // Form states
   const [weightForm, setWeightForm] = useState({
@@ -116,6 +165,8 @@ export function AnimalQuickEventDialog({
     result: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
+    bullId: '',
+    semenBatch: '',
   });
 
   const handleSaveWeight = async () => {
@@ -186,6 +237,19 @@ export function AnimalQuickEventDialog({
       toast({ title: 'Error', description: 'Selecciona el tipo de evento', variant: 'destructive' });
       return;
     }
+    
+    // Validate bull for service
+    if (reproForm.type === 'servicio' && !reproForm.bullId) {
+      toast({ title: 'Error', description: 'Debes seleccionar el toro/semental', variant: 'destructive' });
+      return;
+    }
+    
+    // Validate semen batch for insemination
+    if (reproForm.type === 'inseminacion' && !reproForm.semenBatch) {
+      toast({ title: 'Error', description: 'Debes ingresar el lote de semen/pajilla', variant: 'destructive' });
+      return;
+    }
+    
     setSaving(true);
     try {
       await onReproductiveEvent({
@@ -193,9 +257,18 @@ export function AnimalQuickEventDialog({
         result: reproForm.result || undefined,
         date: reproForm.date,
         notes: reproForm.notes || undefined,
+        bullId: reproForm.bullId || undefined,
+        semenBatch: reproForm.semenBatch || undefined,
       });
       setSavedTab('reproduccion');
-      setReproForm({ type: 'palpacion', result: '', date: new Date().toISOString().split('T')[0], notes: '' });
+      setReproForm({ 
+        type: 'palpacion', 
+        result: '', 
+        date: new Date().toISOString().split('T')[0], 
+        notes: '',
+        bullId: '',
+        semenBatch: '',
+      });
       setTimeout(() => setSavedTab(null), 2000);
     } finally {
       setSaving(false);
@@ -427,6 +500,7 @@ export function AnimalQuickEventDialog({
                 />
               </div>
             </div>
+            {/* Campos para palpación */}
             {reproForm.type === 'palpacion' && (
               <div className="space-y-2">
                 <Label>Resultado</Label>
@@ -445,6 +519,84 @@ export function AnimalQuickEventDialog({
                 </Select>
               </div>
             )}
+            
+            {/* Campos para servicio/monta - Toro obligatorio */}
+            {reproForm.type === 'servicio' && (
+              <div className="space-y-2 p-3 bg-muted/50 rounded-lg border">
+                <Label className="flex items-center gap-2">
+                  Toro / Semental *
+                  {!reproForm.bullId && (
+                    <span className="text-xs text-destructive flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Obligatorio
+                    </span>
+                  )}
+                </Label>
+                <Select
+                  value={reproForm.bullId}
+                  onValueChange={(value) => setReproForm(prev => ({ ...prev, bullId: value }))}
+                >
+                  <SelectTrigger className={!reproForm.bullId ? 'border-destructive' : ''}>
+                    <SelectValue placeholder={loadingBulls ? "Cargando toros..." : "Seleccionar toro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bulls.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        No hay toros registrados
+                      </div>
+                    ) : (
+                      bulls.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.tag_id} {b.name && `- ${b.name}`}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {/* Campos para inseminación - Lote de semen obligatorio */}
+            {reproForm.type === 'inseminacion' && (
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Lote de Semen / Pajilla *
+                    {!reproForm.semenBatch && (
+                      <span className="text-xs text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Obligatorio
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    value={reproForm.semenBatch}
+                    onChange={(e) => setReproForm(prev => ({ ...prev, semenBatch: e.target.value }))}
+                    placeholder="Ej: LOT-2024-001"
+                    className={!reproForm.semenBatch ? 'border-destructive' : ''}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Toro donador (opcional)</Label>
+                  <Select
+                    value={reproForm.bullId}
+                    onValueChange={(value) => setReproForm(prev => ({ ...prev, bullId: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingBulls ? "Cargando..." : "Seleccionar toro (si aplica)"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bulls.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.tag_id} {b.name && `- ${b.name}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label>Notas</Label>
               <Textarea

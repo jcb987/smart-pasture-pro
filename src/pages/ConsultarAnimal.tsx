@@ -423,13 +423,22 @@ const ConsultarAnimal = () => {
     });
   };
 
-  const handleReproductiveEvent = async (data: { type: string; result?: string; date: string; notes?: string }) => {
+  const handleReproductiveEvent = async (data: { 
+    type: string; 
+    result?: string; 
+    date: string; 
+    notes?: string;
+    bullId?: string;
+    semenBatch?: string;
+  }) => {
     if (!selectedAnimal) return;
     const eventType = data.type as 'aborto' | 'celo' | 'inseminacion' | 'palpacion' | 'parto' | 'secado' | 'servicio';
     await addReproEvent({
       animal_id: selectedAnimal.id,
       event_type: eventType,
       event_date: data.date,
+      bull_id: data.bullId,
+      semen_batch: data.semenBatch,
       notes: data.notes ? `${data.result ? `Resultado: ${data.result}. ` : ''}${data.notes}` : (data.result || undefined),
     });
   };

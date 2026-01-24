@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import DOMPurify from "dompurify";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -154,9 +155,11 @@ export const SalesChatWidget = () => {
     // Convert markdown italic *text* to HTML (but not already processed bold)
     text = text.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, '<em>$1</em>');
     
-    // Convert emoji checkmarks ✅ and similar for better display
-    // Keep line breaks
-    return text;
+    // Sanitize the HTML to prevent XSS attacks
+    return DOMPurify.sanitize(text, { 
+      ALLOWED_TAGS: ['strong', 'em', 'br', 'p'],
+      ALLOWED_ATTR: [] 
+    });
   };
 
   const renderFormattedMessage = (content: string) => {

@@ -5,6 +5,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Simple in-memory rate limiter (per IP, resets on function cold start)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_MAX = 20; // Max requests per window
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute window
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  
+  record.count++;
+  if (record.count > RATE_LIMIT_MAX) {
+    return true;
+  }
+  
+  return false;
+}
+
 interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
@@ -275,6 +297,18 @@ serve(async (req) => {
   }
 
   try {
+    // IP-based rate limiting
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    if (isRateLimited(clientIP)) {
+      return new Response(
+        JSON.stringify({ error: "Demasiadas solicitudes. Por favor espera un momento." }), 
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Validate content length to prevent resource exhaustion
     const contentLength = req.headers.get('content-length');
     if (contentLength && parseInt(contentLength) > 100000) {

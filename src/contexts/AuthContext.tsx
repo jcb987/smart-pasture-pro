@@ -177,6 +177,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       password,
     });
     
+    // Check if user is blocked before allowing login
+    if (!error && data.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_blocked')
+        .eq('user_id', data.user.id)
+        .single();
+
+      if (profile?.is_blocked) {
+        // Sign out the blocked user immediately
+        await supabase.auth.signOut();
+        return { error: new Error('Tu cuenta ha sido bloqueada. Contacta al administrador.') };
+      }
+    }
+    
     // Save session for offline use if successful
     if (!error && data.session && data.user) {
       saveOfflineSession(data.session, data.user);

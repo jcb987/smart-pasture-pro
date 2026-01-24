@@ -32,12 +32,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       }
 
       try {
-        // Get user's organization
+        // Get user's organization and blocked status
         const { data: profile } = await supabase
           .from('profiles')
-          .select('organization_id')
+          .select('organization_id, is_blocked')
           .eq('user_id', user.id)
           .single();
+
+        // Check if user is blocked
+        if (profile?.is_blocked) {
+          console.log('[ProtectedRoute] User is blocked, signing out');
+          await supabase.auth.signOut();
+          window.location.href = '/auth?blocked=true';
+          return;
+        }
 
         setOrganizationId(profile?.organization_id || null);
 

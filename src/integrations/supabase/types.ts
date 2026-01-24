@@ -559,6 +559,83 @@ export type Database = {
           },
         ]
       }
+      employees: {
+        Row: {
+          address: string | null
+          bank_account: string | null
+          bank_name: string | null
+          base_salary: number
+          created_at: string | null
+          department: string | null
+          document_id: string | null
+          emergency_contact: string | null
+          emergency_phone: string | null
+          full_name: string
+          hire_date: string
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          organization_id: string
+          payment_frequency: string | null
+          phone: string | null
+          position: string
+          termination_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          base_salary?: number
+          created_at?: string | null
+          department?: string | null
+          document_id?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          full_name: string
+          hire_date: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          organization_id: string
+          payment_frequency?: string | null
+          phone?: string | null
+          position: string
+          termination_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          base_salary?: number
+          created_at?: string | null
+          department?: string | null
+          document_id?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          full_name?: string
+          hire_date?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          organization_id?: string
+          payment_frequency?: string | null
+          phone?: string | null
+          position?: string
+          termination_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_consumption: {
         Row: {
           animal_id: string | null
@@ -1140,6 +1217,7 @@ export type Database = {
       health_events: {
         Row: {
           animal_id: string
+          cause_of_death: string | null
           cost: number | null
           created_at: string
           created_by: string | null
@@ -1150,10 +1228,12 @@ export type Database = {
           event_type: string
           id: string
           medication: string | null
+          necropsy_findings: string | null
           next_dose_date: string | null
           notes: string | null
           organization_id: string
           outcome: string | null
+          photo_urls: string[] | null
           status: string | null
           treatment: string | null
           veterinarian: string | null
@@ -1162,6 +1242,7 @@ export type Database = {
         }
         Insert: {
           animal_id: string
+          cause_of_death?: string | null
           cost?: number | null
           created_at?: string
           created_by?: string | null
@@ -1172,10 +1253,12 @@ export type Database = {
           event_type: string
           id?: string
           medication?: string | null
+          necropsy_findings?: string | null
           next_dose_date?: string | null
           notes?: string | null
           organization_id: string
           outcome?: string | null
+          photo_urls?: string[] | null
           status?: string | null
           treatment?: string | null
           veterinarian?: string | null
@@ -1184,6 +1267,7 @@ export type Database = {
         }
         Update: {
           animal_id?: string
+          cause_of_death?: string | null
           cost?: number | null
           created_at?: string
           created_by?: string | null
@@ -1194,10 +1278,12 @@ export type Database = {
           event_type?: string
           id?: string
           medication?: string | null
+          necropsy_findings?: string | null
           next_dose_date?: string | null
           notes?: string | null
           organization_id?: string
           outcome?: string | null
+          photo_urls?: string[] | null
           status?: string | null
           treatment?: string | null
           veterinarian?: string | null
@@ -1430,6 +1516,125 @@ export type Database = {
           },
           {
             foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_thresholds: {
+        Row: {
+          comparison_operator: string | null
+          created_at: string | null
+          critical_threshold: number | null
+          id: string
+          is_active: boolean | null
+          kpi_category: string
+          kpi_name: string
+          notification_channels: string[] | null
+          organization_id: string
+          updated_at: string | null
+          warning_threshold: number | null
+        }
+        Insert: {
+          comparison_operator?: string | null
+          created_at?: string | null
+          critical_threshold?: number | null
+          id?: string
+          is_active?: boolean | null
+          kpi_category: string
+          kpi_name: string
+          notification_channels?: string[] | null
+          organization_id: string
+          updated_at?: string | null
+          warning_threshold?: number | null
+        }
+        Update: {
+          comparison_operator?: string | null
+          created_at?: string | null
+          critical_threshold?: number | null
+          id?: string
+          is_active?: boolean | null
+          kpi_category?: string
+          kpi_name?: string
+          notification_channels?: string[] | null
+          organization_id?: string
+          updated_at?: string | null
+          warning_threshold?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_thresholds_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medication_audit_reports: {
+        Row: {
+          animals_in_withdrawal: number | null
+          certification_standard: string | null
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          organization_id: string
+          report_data: Json | null
+          report_name: string
+          report_period_end: string
+          report_period_start: string
+          status: string | null
+          total_animals_treated: number | null
+          total_medications_used: number | null
+          total_treatments: number | null
+          withdrawal_violations: number | null
+        }
+        Insert: {
+          animals_in_withdrawal?: number | null
+          certification_standard?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          organization_id: string
+          report_data?: Json | null
+          report_name: string
+          report_period_end: string
+          report_period_start: string
+          status?: string | null
+          total_animals_treated?: number | null
+          total_medications_used?: number | null
+          total_treatments?: number | null
+          withdrawal_violations?: number | null
+        }
+        Update: {
+          animals_in_withdrawal?: number | null
+          certification_standard?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          organization_id?: string
+          report_data?: Json | null
+          report_name?: string
+          report_period_end?: string
+          report_period_start?: string
+          status?: string | null
+          total_animals_treated?: number | null
+          total_medications_used?: number | null
+          total_treatments?: number | null
+          withdrawal_violations?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_audit_reports_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "medication_audit_reports_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1774,6 +1979,214 @@ export type Database = {
           },
         ]
       }
+      payroll_records: {
+        Row: {
+          base_salary: number
+          bonus_description: string | null
+          bonuses: number | null
+          created_at: string | null
+          created_by: string | null
+          deduction_description: string | null
+          deductions: number | null
+          employee_id: string
+          gross_pay: number | null
+          health_insurance: number | null
+          id: string
+          net_pay: number | null
+          notes: string | null
+          organization_id: string
+          other_deductions: number | null
+          overtime_hours: number | null
+          overtime_pay: number | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          pension_contribution: number | null
+          period_end: string
+          period_start: string
+          status: string | null
+          tax_withholding: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_salary?: number
+          bonus_description?: string | null
+          bonuses?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          deduction_description?: string | null
+          deductions?: number | null
+          employee_id: string
+          gross_pay?: number | null
+          health_insurance?: number | null
+          id?: string
+          net_pay?: number | null
+          notes?: string | null
+          organization_id: string
+          other_deductions?: number | null
+          overtime_hours?: number | null
+          overtime_pay?: number | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          pension_contribution?: number | null
+          period_end: string
+          period_start: string
+          status?: string | null
+          tax_withholding?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_salary?: number
+          bonus_description?: string | null
+          bonuses?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          deduction_description?: string | null
+          deductions?: number | null
+          employee_id?: string
+          gross_pay?: number | null
+          health_insurance?: number | null
+          id?: string
+          net_pay?: number | null
+          notes?: string | null
+          organization_id?: string
+          other_deductions?: number | null
+          overtime_hours?: number | null
+          overtime_pay?: number | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          pension_contribution?: number | null
+          period_end?: string
+          period_start?: string
+          status?: string | null
+          tax_withholding?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_records_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payroll_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_cost_analysis: {
+        Row: {
+          ai_insights: string | null
+          analysis_period_end: string
+          analysis_period_start: string
+          analysis_type: string
+          cost_per_kg: number | null
+          cost_per_liter: number | null
+          created_at: string | null
+          created_by: string | null
+          depreciation_costs: number | null
+          efficiency_score: number | null
+          feed_costs: number | null
+          health_costs: number | null
+          id: string
+          industry_benchmark_cost: number | null
+          labor_costs: number | null
+          maintenance_costs: number | null
+          organization_id: string
+          other_indirect_costs: number | null
+          total_absorbed_cost: number | null
+          total_direct_costs: number | null
+          total_indirect_costs: number | null
+          total_kg_produced: number | null
+          total_liters_produced: number | null
+          updated_at: string | null
+          utilities_costs: number | null
+        }
+        Insert: {
+          ai_insights?: string | null
+          analysis_period_end: string
+          analysis_period_start: string
+          analysis_type: string
+          cost_per_kg?: number | null
+          cost_per_liter?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          depreciation_costs?: number | null
+          efficiency_score?: number | null
+          feed_costs?: number | null
+          health_costs?: number | null
+          id?: string
+          industry_benchmark_cost?: number | null
+          labor_costs?: number | null
+          maintenance_costs?: number | null
+          organization_id: string
+          other_indirect_costs?: number | null
+          total_absorbed_cost?: number | null
+          total_direct_costs?: number | null
+          total_indirect_costs?: number | null
+          total_kg_produced?: number | null
+          total_liters_produced?: number | null
+          updated_at?: string | null
+          utilities_costs?: number | null
+        }
+        Update: {
+          ai_insights?: string | null
+          analysis_period_end?: string
+          analysis_period_start?: string
+          analysis_type?: string
+          cost_per_kg?: number | null
+          cost_per_liter?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          depreciation_costs?: number | null
+          efficiency_score?: number | null
+          feed_costs?: number | null
+          health_costs?: number | null
+          id?: string
+          industry_benchmark_cost?: number | null
+          labor_costs?: number | null
+          maintenance_costs?: number | null
+          organization_id?: string
+          other_indirect_costs?: number | null
+          total_absorbed_cost?: number | null
+          total_direct_costs?: number | null
+          total_indirect_costs?: number | null
+          total_kg_produced?: number | null
+          total_liters_produced?: number | null
+          updated_at?: string | null
+          utilities_costs?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_cost_analysis_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "production_cost_analysis_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           blocked_at: string | null
@@ -1826,6 +2239,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      regional_benchmarks: {
+        Row: {
+          country: string
+          data_period: string | null
+          id: string
+          metric_category: string
+          metric_name: string
+          metric_unit: string | null
+          metric_value: number
+          region: string
+          sample_size: number | null
+          source: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          country: string
+          data_period?: string | null
+          id?: string
+          metric_category: string
+          metric_name: string
+          metric_unit?: string | null
+          metric_value: number
+          region: string
+          sample_size?: number | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          country?: string
+          data_period?: string | null
+          id?: string
+          metric_category?: string
+          metric_name?: string
+          metric_unit?: string | null
+          metric_value?: number
+          region?: string
+          sample_size?: number | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       reproductive_events: {
         Row: {
@@ -2026,6 +2481,140 @@ export type Database = {
           },
           {
             foreignKeyName: "rfid_readings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_simulations: {
+        Row: {
+          ai_recommendations: string | null
+          animal_ids: string[] | null
+          created_at: string | null
+          created_by: string | null
+          current_avg_weight: number | null
+          id: string
+          lot_name: string | null
+          market_price_per_kg: number | null
+          optimal_sale_date: string | null
+          optimal_sale_reason: string | null
+          organization_id: string
+          profit_margin_percentage: number | null
+          projected_costs: number | null
+          projected_profit: number | null
+          projected_revenue: number | null
+          projected_sale_date: string | null
+          simulation_date: string | null
+          simulation_name: string
+          target_weight: number | null
+          total_animals: number | null
+        }
+        Insert: {
+          ai_recommendations?: string | null
+          animal_ids?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          current_avg_weight?: number | null
+          id?: string
+          lot_name?: string | null
+          market_price_per_kg?: number | null
+          optimal_sale_date?: string | null
+          optimal_sale_reason?: string | null
+          organization_id: string
+          profit_margin_percentage?: number | null
+          projected_costs?: number | null
+          projected_profit?: number | null
+          projected_revenue?: number | null
+          projected_sale_date?: string | null
+          simulation_date?: string | null
+          simulation_name: string
+          target_weight?: number | null
+          total_animals?: number | null
+        }
+        Update: {
+          ai_recommendations?: string | null
+          animal_ids?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          current_avg_weight?: number | null
+          id?: string
+          lot_name?: string | null
+          market_price_per_kg?: number | null
+          optimal_sale_date?: string | null
+          optimal_sale_reason?: string | null
+          organization_id?: string
+          profit_margin_percentage?: number | null
+          projected_costs?: number | null
+          projected_profit?: number | null
+          projected_revenue?: number | null
+          projected_sale_date?: string | null
+          simulation_date?: string | null
+          simulation_name?: string
+          target_weight?: number | null
+          total_animals?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_simulations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "sale_simulations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scale_integrations: {
+        Row: {
+          calibration_date: string | null
+          connection_type: string | null
+          created_at: string | null
+          device_id: string | null
+          id: string
+          is_active: boolean | null
+          last_connected_at: string | null
+          organization_id: string
+          scale_brand: string
+          scale_model: string | null
+          settings: Json | null
+        }
+        Insert: {
+          calibration_date?: string | null
+          connection_type?: string | null
+          created_at?: string | null
+          device_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_connected_at?: string | null
+          organization_id: string
+          scale_brand: string
+          scale_model?: string | null
+          settings?: Json | null
+        }
+        Update: {
+          calibration_date?: string | null
+          connection_type?: string | null
+          created_at?: string | null
+          device_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_connected_at?: string | null
+          organization_id?: string
+          scale_brand?: string
+          scale_model?: string | null
+          settings?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scale_integrations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

@@ -847,6 +847,7 @@ const ConsultarAnimal = () => {
           animalId={selectedAnimal.id}
           animalTagId={selectedAnimal.tag_id}
           animalName={selectedAnimal.name}
+          animalSex={selectedAnimal.sex}
           onWeightRecord={handleWeightRecord}
           onVaccination={handleVaccination}
           onHealthEvent={handleHealthEvent}

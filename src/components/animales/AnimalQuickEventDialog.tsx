@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -30,11 +30,16 @@ import {
   Loader2,
   Check,
   AlertCircle,
-  Lightbulb
+  Lightbulb,
+  Sparkles,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { EventAISuggestionsPanel } from './EventAISuggestionsPanel';
+import { AIEventContext } from '@/hooks/useEventAISuggestions';
 
 interface Bull {
   id: string;
@@ -48,6 +53,7 @@ interface AnimalQuickEventDialogProps {
   animalId: string;
   animalTagId: string;
   animalName?: string | null;
+  animalSex?: string;
   onWeightRecord: (data: { weight: number; date: string; notes?: string }) => Promise<void>;
   onVaccination: (data: { vaccine: string; date: string; nextDate?: string; notes?: string }) => Promise<void>;
   onHealthEvent: (data: { type: string; diagnosis?: string; treatment?: string; date: string; notes?: string }) => Promise<void>;
@@ -150,8 +156,10 @@ const getSuggestion = (ovaryFindings: string[], uterusFindings: string[]): { tex
 export function AnimalQuickEventDialog({
   open,
   onOpenChange,
+  animalId,
   animalTagId,
   animalName,
+  animalSex,
   onWeightRecord,
   onVaccination,
   onHealthEvent,
@@ -159,11 +167,12 @@ export function AnimalQuickEventDialog({
 }: AnimalQuickEventDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('peso');
+  const [activeTab, setActiveTab] = useState<'peso' | 'vacuna' | 'salud' | 'reproduccion'>('peso');
   const [saving, setSaving] = useState(false);
   const [savedTab, setSavedTab] = useState<string | null>(null);
   const [bulls, setBulls] = useState<Bull[]>([]);
   const [loadingBulls, setLoadingBulls] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(true);
   
   // Fetch bulls when dialog opens
   useEffect(() => {
@@ -270,6 +279,74 @@ export function AnimalQuickEventDialog({
   
   // Get AI suggestion based on findings
   const palpationSuggestion = getSuggestion(palpationFindings.ovaryFindings, palpationFindings.uterusFindings);
+
+  // Build AI event context based on active tab and form data
+  const aiEventContext = useMemo((): AIEventContext => {
+    const baseContext: AIEventContext = {
+      eventType: activeTab,
+      eventDate: activeTab === 'peso' ? weightForm.date 
+        : activeTab === 'vacuna' ? vaccineForm.date
+        : activeTab === 'salud' ? healthForm.date
+        : reproForm.date,
+    };
+
+    switch (activeTab) {
+      case 'peso':
+        if (weightForm.weight) {
+          baseContext.weight = parseFloat(weightForm.weight);
+        }
+        baseContext.notes = weightForm.notes;
+        break;
+      case 'vacuna':
+        baseContext.vaccine = vaccineForm.vaccine;
+        baseContext.notes = vaccineForm.notes;
+        break;
+      case 'salud':
+        baseContext.diagnosis = healthForm.diagnosis;
+        baseContext.treatment = healthForm.treatment;
+        baseContext.productiveClassification = healthForm.productiveClassification;
+        baseContext.notes = healthForm.notes;
+        break;
+      case 'reproduccion':
+        baseContext.reproType = reproForm.type;
+        baseContext.reproResult = reproForm.result;
+        baseContext.notes = reproForm.notes;
+        break;
+    }
+
+    return baseContext;
+  }, [activeTab, weightForm, vaccineForm, healthForm, reproForm]);
+
+  // Handler to add AI suggestion to notes
+  const handleAddToNotes = useCallback((text: string) => {
+    switch (activeTab) {
+      case 'peso':
+        setWeightForm(prev => ({
+          ...prev,
+          notes: prev.notes ? `${prev.notes}\n${text}` : text
+        }));
+        break;
+      case 'vacuna':
+        setVaccineForm(prev => ({
+          ...prev,
+          notes: prev.notes ? `${prev.notes}\n${text}` : text
+        }));
+        break;
+      case 'salud':
+        setHealthForm(prev => ({
+          ...prev,
+          notes: prev.notes ? `${prev.notes}\n${text}` : text
+        }));
+        break;
+      case 'reproduccion':
+        setReproForm(prev => ({
+          ...prev,
+          notes: prev.notes ? `${prev.notes}\n${text}` : text
+        }));
+        break;
+    }
+    toast({ title: 'Nota agregada', description: 'Sugerencia añadida al campo de notas' });
+  }, [activeTab, toast]);
 
   const handleSaveWeight = async () => {
     if (!weightForm.weight) {
@@ -481,18 +558,35 @@ export function AnimalQuickEventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className={showAIPanel ? "max-w-5xl" : "max-w-2xl"}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Registrar Evento - {animalTagId}
-            {animalName && <span className="text-muted-foreground font-normal">({animalName})</span>}
-          </DialogTitle>
-          <DialogDescription>
-            Registra múltiples eventos en el mismo día sin salir de esta ventana
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="flex items-center gap-2">
+                Registrar Evento - {animalTagId}
+                {animalName && <span className="text-muted-foreground font-normal">({animalName})</span>}
+              </DialogTitle>
+              <DialogDescription>
+                Registra múltiples eventos en el mismo día sin salir de esta ventana
+              </DialogDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAIPanel(!showAIPanel)}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">IA</span>
+              {showAIPanel ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </Button>
+          </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+        <div className={`flex gap-4 ${showAIPanel ? 'flex-row' : ''}`}>
+          {/* Main form area */}
+          <div className={showAIPanel ? 'flex-1 min-w-0' : 'w-full'}>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'peso' | 'vacuna' | 'salud' | 'reproduccion')} className="mt-4">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="peso" className="gap-2">
               <Scale className="h-4 w-4" />
@@ -940,7 +1034,23 @@ export function AnimalQuickEventDialog({
             </div>
             <SaveButton onClick={handleSaveRepro} tab="reproduccion" />
           </TabsContent>
-        </Tabs>
+            </Tabs>
+          </div>
+
+          {/* AI Suggestions Panel */}
+          {showAIPanel && (
+            <div className="w-80 shrink-0 border-l pl-4 hidden md:block">
+              <div className="h-[500px] rounded-lg border bg-muted/20">
+                <EventAISuggestionsPanel
+                  animalId={animalId}
+                  open={open}
+                  eventContext={aiEventContext}
+                  onAddToNotes={handleAddToNotes}
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="flex justify-end pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

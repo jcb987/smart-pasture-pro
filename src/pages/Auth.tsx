@@ -586,13 +586,15 @@ const Auth = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="login-password">Contraseña</Label>
-                      <button
+                      <Button
                         type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-xs"
                         onClick={() => setShowForgotPassword(true)}
-                        className="text-xs text-primary hover:underline"
                       >
                         ¿Olvidaste tu contraseña?
-                      </button>
+                      </Button>
                     </div>
                     <div className="relative">
                       <Input

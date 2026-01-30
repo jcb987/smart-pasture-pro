@@ -477,7 +477,7 @@ const ConsultarAnimal = () => {
                   className="pl-10"
                 />
                 
-                {showSuggestions && filteredAnimals.length > 0 && (
+                {showSuggestions && filteredAnimals.length > 0 && !selectedAnimal && (
                   <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
                     {filteredAnimals.map((animal) => (
                       <button

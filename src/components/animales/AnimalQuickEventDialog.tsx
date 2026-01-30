@@ -11,6 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -26,7 +29,8 @@ import {
   Save,
   Loader2,
   Check,
-  AlertCircle
+  AlertCircle,
+  Lightbulb
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,6 +86,54 @@ const PALPATION_RESULTS = [
   { value: 'preñada', label: 'Preñada' },
   { value: 'dudosa', label: 'Dudosa' },
 ];
+
+// Hallazgos de ovarios para palpación "Vacía"
+const OVARY_FINDINGS = [
+  { id: 'foliculo_izq', label: 'Folículo – ovario izquierdo' },
+  { id: 'foliculo_der', label: 'Folículo – ovario derecho' },
+  { id: 'cl_izq', label: 'Cuerpo lúteo (CL) – ovario izquierdo' },
+  { id: 'cl_der', label: 'Cuerpo lúteo (CL) – ovario derecho' },
+  { id: 'cl_foliculo', label: 'CL + folículo (actividad ovárica mixta)' },
+  { id: 'multiples_foliculos', label: 'Múltiples folículos (ovarios activos)' },
+  { id: 'ovarios_inactivos', label: 'Ovarios inactivos (seca / anestro / sin tejido)' },
+  { id: 'quiste_ovarico', label: 'Quiste ovárico' },
+  { id: 'quiste_folicular', label: 'Quiste folicular' },
+  { id: 'quiste_luteal', label: 'Quiste luteal' },
+  { id: 'ovario_unico', label: 'Ovario único palpable' },
+];
+
+// Hallazgos de útero para palpación "Vacía"
+const UTERUS_FINDINGS = [
+  { id: 'utero_normal', label: 'Útero normal' },
+  { id: 'utero_flacido', label: 'Útero flácido' },
+  { id: 'utero_tonico', label: 'Útero tónico (asociado a celo)' },
+  { id: 'contenido_uterino', label: 'Contenido uterino (líquido, sin preñez)' },
+  { id: 'piometra', label: 'Piómetra (útero con pus + CL persistente)' },
+];
+
+// Condición reproductiva general
+const REPRODUCTIVE_CONDITIONS = [
+  { id: 'vacia_ciclica', label: 'Vaca / búfala vacía cíclica' },
+  { id: 'vacia_anestro', label: 'Vaca / búfala vacía en anestro' },
+  { id: 'repetidora', label: 'Vaca / búfala repetidora (≥3 servicios sin preñez)' },
+];
+
+// Sugerencias basadas en hallazgos
+const getSuggestion = (ovaryFindings: string[], uterusFindings: string[]): { text: string; type: 'success' | 'warning' | 'info' } | null => {
+  if (ovaryFindings.includes('foliculo_izq') || ovaryFindings.includes('foliculo_der') || ovaryFindings.includes('multiples_foliculos')) {
+    return { text: 'Candidata a servicio / celo próximo', type: 'success' };
+  }
+  if (ovaryFindings.includes('cl_izq') || ovaryFindings.includes('cl_der')) {
+    return { text: 'No inseminar – esperar próximo celo', type: 'info' };
+  }
+  if (ovaryFindings.includes('ovarios_inactivos')) {
+    return { text: 'Evaluar nutrición / tratamiento hormonal', type: 'warning' };
+  }
+  if (ovaryFindings.includes('quiste_ovarico') || ovaryFindings.includes('quiste_folicular') || ovaryFindings.includes('quiste_luteal') || uterusFindings.includes('piometra')) {
+    return { text: 'Caso veterinario – requiere tratamiento', type: 'warning' };
+  }
+  return null;
+};
 
 export function AnimalQuickEventDialog({
   open,
@@ -168,6 +220,43 @@ export function AnimalQuickEventDialog({
     bullId: '',
     semenBatch: '',
   });
+  
+  // Palpation detailed findings
+  const [palpationFindings, setPalpationFindings] = useState({
+    ovaryFindings: [] as string[],
+    uterusFindings: [] as string[],
+    reproductiveCondition: [] as string[],
+  });
+  
+  const toggleOvaryFinding = (id: string) => {
+    setPalpationFindings(prev => ({
+      ...prev,
+      ovaryFindings: prev.ovaryFindings.includes(id)
+        ? prev.ovaryFindings.filter(f => f !== id)
+        : [...prev.ovaryFindings, id]
+    }));
+  };
+  
+  const toggleUterusFinding = (id: string) => {
+    setPalpationFindings(prev => ({
+      ...prev,
+      uterusFindings: prev.uterusFindings.includes(id)
+        ? prev.uterusFindings.filter(f => f !== id)
+        : [...prev.uterusFindings, id]
+    }));
+  };
+  
+  const toggleReproductiveCondition = (id: string) => {
+    setPalpationFindings(prev => ({
+      ...prev,
+      reproductiveCondition: prev.reproductiveCondition.includes(id)
+        ? prev.reproductiveCondition.filter(f => f !== id)
+        : [...prev.reproductiveCondition, id]
+    }));
+  };
+  
+  // Get AI suggestion based on findings
+  const palpationSuggestion = getSuggestion(palpationFindings.ovaryFindings, palpationFindings.uterusFindings);
 
   const handleSaveWeight = async () => {
     if (!weightForm.weight) {
@@ -252,11 +341,47 @@ export function AnimalQuickEventDialog({
     
     setSaving(true);
     try {
+      // Build detailed notes for palpation "Vacía"
+      let detailedNotes = reproForm.notes || '';
+      
+      if (reproForm.type === 'palpacion' && reproForm.result === 'vacia') {
+        const findingsNotes: string[] = [];
+        
+        if (palpationFindings.ovaryFindings.length > 0) {
+          const ovaryLabels = palpationFindings.ovaryFindings.map(id => 
+            OVARY_FINDINGS.find(f => f.id === id)?.label || id
+          );
+          findingsNotes.push(`Ovarios: ${ovaryLabels.join(', ')}`);
+        }
+        
+        if (palpationFindings.uterusFindings.length > 0) {
+          const uterusLabels = palpationFindings.uterusFindings.map(id => 
+            UTERUS_FINDINGS.find(f => f.id === id)?.label || id
+          );
+          findingsNotes.push(`Útero: ${uterusLabels.join(', ')}`);
+        }
+        
+        if (palpationFindings.reproductiveCondition.length > 0) {
+          const conditionLabels = palpationFindings.reproductiveCondition.map(id => 
+            REPRODUCTIVE_CONDITIONS.find(f => f.id === id)?.label || id
+          );
+          findingsNotes.push(`Condición: ${conditionLabels.join(', ')}`);
+        }
+        
+        if (palpationSuggestion) {
+          findingsNotes.push(`Sugerencia: ${palpationSuggestion.text}`);
+        }
+        
+        if (findingsNotes.length > 0) {
+          detailedNotes = findingsNotes.join(' | ') + (detailedNotes ? ` | Notas: ${detailedNotes}` : '');
+        }
+      }
+      
       await onReproductiveEvent({
         type: reproForm.type,
         result: reproForm.result || undefined,
         date: reproForm.date,
-        notes: reproForm.notes || undefined,
+        notes: detailedNotes || undefined,
         bullId: reproForm.bullId || undefined,
         semenBatch: reproForm.semenBatch || undefined,
       });
@@ -268,6 +393,11 @@ export function AnimalQuickEventDialog({
         notes: '',
         bullId: '',
         semenBatch: '',
+      });
+      setPalpationFindings({
+        ovaryFindings: [],
+        uterusFindings: [],
+        reproductiveCondition: [],
       });
       setTimeout(() => setSavedTab(null), 2000);
     } finally {
@@ -502,21 +632,133 @@ export function AnimalQuickEventDialog({
             </div>
             {/* Campos para palpación */}
             {reproForm.type === 'palpacion' && (
-              <div className="space-y-2">
-                <Label>Resultado</Label>
-                <Select
-                  value={reproForm.result}
-                  onValueChange={(value) => setReproForm(prev => ({ ...prev, result: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar resultado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PALPATION_RESULTS.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Resultado</Label>
+                  <Select
+                    value={reproForm.result}
+                    onValueChange={(value) => setReproForm(prev => ({ ...prev, result: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar resultado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PALPATION_RESULTS.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Formulario detallado para palpación "Vacía" */}
+                {reproForm.result === 'vacia' && (
+                  <ScrollArea className="h-[320px] pr-4">
+                    <div className="space-y-4">
+                      {/* Sugerencia AI */}
+                      {palpationSuggestion && (
+                        <div className={`flex items-start gap-2 p-3 rounded-lg border ${
+                          palpationSuggestion.type === 'success' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' :
+                          palpationSuggestion.type === 'warning' ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800' :
+                          'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                        }`}>
+                          <Lightbulb className={`h-4 w-4 mt-0.5 ${
+                            palpationSuggestion.type === 'success' ? 'text-green-600' :
+                            palpationSuggestion.type === 'warning' ? 'text-amber-600' :
+                            'text-blue-600'
+                          }`} />
+                          <span className="text-sm font-medium">{palpationSuggestion.text}</span>
+                        </div>
+                      )}
+                      
+                      {/* A. Hallazgos de Ovarios */}
+                      <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
+                        <Label className="text-sm font-semibold">A. Ovarios – Hallazgos</Label>
+                        <div className="grid grid-cols-1 gap-2 mt-2">
+                          {OVARY_FINDINGS.map((finding) => (
+                            <div key={finding.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={finding.id}
+                                checked={palpationFindings.ovaryFindings.includes(finding.id)}
+                                onCheckedChange={() => toggleOvaryFinding(finding.id)}
+                              />
+                              <label
+                                htmlFor={finding.id}
+                                className="text-sm cursor-pointer leading-tight"
+                              >
+                                {finding.label}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* B. Hallazgos de Útero */}
+                      <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
+                        <Label className="text-sm font-semibold">B. Útero – Hallazgos</Label>
+                        <div className="grid grid-cols-1 gap-2 mt-2">
+                          {UTERUS_FINDINGS.map((finding) => (
+                            <div key={finding.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={finding.id}
+                                checked={palpationFindings.uterusFindings.includes(finding.id)}
+                                onCheckedChange={() => toggleUterusFinding(finding.id)}
+                              />
+                              <label
+                                htmlFor={finding.id}
+                                className="text-sm cursor-pointer leading-tight"
+                              >
+                                {finding.label}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* C. Condición Reproductiva */}
+                      <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
+                        <Label className="text-sm font-semibold">C. Condición Reproductiva (Resumen)</Label>
+                        <div className="grid grid-cols-1 gap-2 mt-2">
+                          {REPRODUCTIVE_CONDITIONS.map((condition) => (
+                            <div key={condition.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={condition.id}
+                                checked={palpationFindings.reproductiveCondition.includes(condition.id)}
+                                onCheckedChange={() => toggleReproductiveCondition(condition.id)}
+                              />
+                              <label
+                                htmlFor={condition.id}
+                                className="text-sm cursor-pointer leading-tight"
+                              >
+                                {condition.label}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Resumen de selecciones */}
+                      {(palpationFindings.ovaryFindings.length > 0 || palpationFindings.uterusFindings.length > 0 || palpationFindings.reproductiveCondition.length > 0) && (
+                        <div className="flex flex-wrap gap-1">
+                          {palpationFindings.ovaryFindings.map(id => (
+                            <Badge key={id} variant="secondary" className="text-xs">
+                              {OVARY_FINDINGS.find(f => f.id === id)?.label.split(' – ')[0] || id}
+                            </Badge>
+                          ))}
+                          {palpationFindings.uterusFindings.map(id => (
+                            <Badge key={id} variant="outline" className="text-xs">
+                              {UTERUS_FINDINGS.find(f => f.id === id)?.label || id}
+                            </Badge>
+                          ))}
+                          {palpationFindings.reproductiveCondition.map(id => (
+                            <Badge key={id} className="text-xs bg-primary/10 text-primary">
+                              {REPRODUCTIVE_CONDITIONS.find(f => f.id === id)?.label.split(' / ')[0] || id}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                )}
               </div>
             )}
             

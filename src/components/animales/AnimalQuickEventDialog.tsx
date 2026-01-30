@@ -349,6 +349,7 @@ export function AnimalQuickEventDialog({
   }, [activeTab, toast]);
 
   const handleSaveWeight = async () => {
+    console.log('[QuickEvent] handleSaveWeight', { animalId, weightForm });
     if (!weightForm.weight) {
       toast({ title: 'Error', description: 'Ingresa el peso', variant: 'destructive' });
       return;
@@ -376,6 +377,7 @@ export function AnimalQuickEventDialog({
   };
 
   const handleSaveVaccine = async () => {
+    console.log('[QuickEvent] handleSaveVaccine', { animalId, vaccineForm });
     if (!vaccineForm.vaccine) {
       toast({ title: 'Error', description: 'Selecciona una vacuna', variant: 'destructive' });
       return;
@@ -404,6 +406,7 @@ export function AnimalQuickEventDialog({
   };
 
   const handleSaveHealth = async () => {
+    console.log('[QuickEvent] handleSaveHealth', { animalId, healthForm });
     if (!healthForm.type) {
       toast({ title: 'Error', description: 'Selecciona el tipo de evento', variant: 'destructive' });
       return;
@@ -440,6 +443,7 @@ export function AnimalQuickEventDialog({
   };
 
   const handleSaveRepro = async () => {
+    console.log('[QuickEvent] handleSaveRepro', { animalId, reproForm });
     if (!reproForm.type) {
       toast({ title: 'Error', description: 'Selecciona el tipo de evento', variant: 'destructive' });
       return;
@@ -531,8 +535,14 @@ export function AnimalQuickEventDialog({
   };
 
   const SaveButton = ({ onClick, tab }: { onClick: () => void; tab: string }) => (
-    <Button 
-      onClick={onClick} 
+    <Button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[QuickEvent] Save clicked', { tab, activeTab, saving });
+        onClick();
+      }}
       disabled={saving}
       className="w-full"
       variant={savedTab === tab ? 'outline' : 'default'}

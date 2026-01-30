@@ -273,6 +273,13 @@ export function AnimalQuickEventDialog({
       setSavedTab('peso');
       setWeightForm({ weight: '', date: new Date().toISOString().split('T')[0], notes: '' });
       setTimeout(() => setSavedTab(null), 2000);
+    } catch (error) {
+      console.error('Error saving weight:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'No se pudo guardar el peso. Intenta de nuevo.', 
+        variant: 'destructive' 
+      });
     } finally {
       setSaving(false);
     }
@@ -294,6 +301,13 @@ export function AnimalQuickEventDialog({
       setSavedTab('vacuna');
       setVaccineForm({ vaccine: '', date: new Date().toISOString().split('T')[0], nextDate: '', notes: '' });
       setTimeout(() => setSavedTab(null), 2000);
+    } catch (error) {
+      console.error('Error saving vaccine:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'No se pudo guardar la vacuna. Intenta de nuevo.', 
+        variant: 'destructive' 
+      });
     } finally {
       setSaving(false);
     }
@@ -316,6 +330,13 @@ export function AnimalQuickEventDialog({
       setSavedTab('salud');
       setHealthForm({ type: 'tratamiento', diagnosis: '', treatment: '', date: new Date().toISOString().split('T')[0], notes: '' });
       setTimeout(() => setSavedTab(null), 2000);
+    } catch (error) {
+      console.error('Error saving health event:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'No se pudo guardar el evento de salud. Intenta de nuevo.', 
+        variant: 'destructive' 
+      });
     } finally {
       setSaving(false);
     }
@@ -400,6 +421,13 @@ export function AnimalQuickEventDialog({
         reproductiveCondition: [],
       });
       setTimeout(() => setSavedTab(null), 2000);
+    } catch (error) {
+      console.error('Error saving reproductive event:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'No se pudo guardar el evento reproductivo. Intenta de nuevo.', 
+        variant: 'destructive' 
+      });
     } finally {
       setSaving(false);
     }

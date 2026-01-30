@@ -72,6 +72,18 @@ const HEALTH_EVENT_TYPES = [
   { value: 'revision', label: 'Revisión' },
 ];
 
+// Clasificación productiva / destino del animal
+const PRODUCTIVE_CLASSIFICATIONS = [
+  { value: '', label: 'Sin clasificación' },
+  { value: 'candidato_venta', label: 'Candidato para venta' },
+  { value: 'candidato_descarte', label: 'Candidato para descarte' },
+  { value: 'animal_reemplazo', label: 'Animal de reemplazo' },
+  { value: 'animal_elite', label: 'Animal élite / conservar' },
+  { value: 'enviar_ceba', label: 'Enviar a ceba / engorde' },
+  { value: 'enviar_sacrificio', label: 'Enviar a sacrificio' },
+  { value: 'en_observacion', label: 'En observación (definir más adelante)' },
+];
+
 const REPRODUCTIVE_EVENT_TYPES = [
   { value: 'celo', label: 'Celo detectado' },
   { value: 'palpacion', label: 'Palpación' },
@@ -210,6 +222,7 @@ export function AnimalQuickEventDialog({
     treatment: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
+    productiveClassification: '',
   });
   
   const [reproForm, setReproForm] = useState({
@@ -320,15 +333,22 @@ export function AnimalQuickEventDialog({
     }
     setSaving(true);
     try {
+      // Build notes with classification if selected
+      let fullNotes = healthForm.notes || '';
+      if (healthForm.productiveClassification) {
+        const classificationLabel = PRODUCTIVE_CLASSIFICATIONS.find(c => c.value === healthForm.productiveClassification)?.label || '';
+        fullNotes = `[Clasificación: ${classificationLabel}]${fullNotes ? ` ${fullNotes}` : ''}`;
+      }
+      
       await onHealthEvent({
         type: healthForm.type,
         diagnosis: healthForm.diagnosis || undefined,
         treatment: healthForm.treatment || undefined,
         date: healthForm.date,
-        notes: healthForm.notes || undefined,
+        notes: fullNotes || undefined,
       });
       setSavedTab('salud');
-      setHealthForm({ type: 'tratamiento', diagnosis: '', treatment: '', date: new Date().toISOString().split('T')[0], notes: '' });
+      setHealthForm({ type: 'tratamiento', diagnosis: '', treatment: '', date: new Date().toISOString().split('T')[0], notes: '', productiveClassification: '' });
       setTimeout(() => setSavedTab(null), 2000);
     } catch (error) {
       console.error('Error saving health event:', error);
@@ -619,10 +639,53 @@ export function AnimalQuickEventDialog({
                 onChange={(e) => setHealthForm(prev => ({ ...prev, treatment: e.target.value }))}
               />
             </div>
+            
+            {/* Clasificación productiva / destino del animal */}
+            <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-dashed">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                📊 Clasificación productiva / destino del animal
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Decisión comercial o productiva (no afecta diagnóstico médico)
+              </p>
+              <Select
+                value={healthForm.productiveClassification}
+                onValueChange={(value) => setHealthForm(prev => ({ ...prev, productiveClassification: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar clasificación (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRODUCTIVE_CLASSIFICATIONS.map((c) => (
+                    <SelectItem key={c.value || 'none'} value={c.value || 'none'}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {healthForm.productiveClassification && healthForm.productiveClassification !== 'none' && (
+                <div className="mt-2 text-xs">
+                  {(healthForm.productiveClassification === 'candidato_descarte' || 
+                    healthForm.productiveClassification === 'enviar_sacrificio') && (
+                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                      <AlertCircle className="h-3 w-3" />
+                      Esta clasificación afectará el estado del animal
+                    </div>
+                  )}
+                  {healthForm.productiveClassification === 'candidato_venta' && (
+                    <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                      <Check className="h-3 w-3" />
+                      El animal aparecerá en reportes de venta
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
             <div className="space-y-2">
               <Label>Notas</Label>
               <Textarea
-                placeholder="Observaciones adicionales..."
+                placeholder="Justificación de la decisión (ej: Baja producción, Edad avanzada)..."
                 value={healthForm.notes}
                 onChange={(e) => setHealthForm(prev => ({ ...prev, notes: e.target.value }))}
               />

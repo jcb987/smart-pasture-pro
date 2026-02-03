@@ -32,6 +32,13 @@ export interface Animal {
   mother_id: string | null;
   father_id: string | null;
   notes: string | null;
+  // Reproduction summary fields (used across dashboards and Consultar Animal)
+  reproductive_status?: string | null;
+  total_calvings?: number | null;
+  last_calving_date?: string | null;
+  first_calving_date?: string | null;
+  last_service_date?: string | null;
+  expected_calving_date?: string | null;
   created_at: string;
   updated_at: string;
 }

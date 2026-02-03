@@ -534,14 +534,16 @@ export function AnimalQuickEventDialog({
     }
   };
 
-  const SaveButton = ({ onClick, tab }: { onClick: () => void; tab: string }) => (
+  const renderSaveButton = (onClick: () => void, tab: string) => (
     <Button
       type="button"
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         console.log('[QuickEvent] Save clicked', { tab, activeTab, saving });
-        onClick();
+        if (!saving) {
+          onClick();
+        }
       }}
       disabled={saving}
       className="w-full"
@@ -649,7 +651,7 @@ export function AnimalQuickEventDialog({
                 onChange={(e) => setWeightForm(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
-            <SaveButton onClick={handleSaveWeight} tab="peso" />
+            {renderSaveButton(handleSaveWeight, 'peso')}
           </TabsContent>
 
           {/* Tab Vacuna */}
@@ -696,7 +698,7 @@ export function AnimalQuickEventDialog({
                 onChange={(e) => setVaccineForm(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
-            <SaveButton onClick={handleSaveVaccine} tab="vacuna" />
+            {renderSaveButton(handleSaveVaccine, 'vacuna')}
           </TabsContent>
 
           {/* Tab Salud */}
@@ -794,7 +796,7 @@ export function AnimalQuickEventDialog({
                 onChange={(e) => setHealthForm(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
-            <SaveButton onClick={handleSaveHealth} tab="salud" />
+            {renderSaveButton(handleSaveHealth, 'salud')}
           </TabsContent>
 
           {/* Tab Reproducción */}
@@ -1042,7 +1044,7 @@ export function AnimalQuickEventDialog({
                 onChange={(e) => setReproForm(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
-            <SaveButton onClick={handleSaveRepro} tab="reproduccion" />
+            {renderSaveButton(handleSaveRepro, 'reproduccion')}
           </TabsContent>
             </Tabs>
           </div>

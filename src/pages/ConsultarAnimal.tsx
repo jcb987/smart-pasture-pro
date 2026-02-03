@@ -121,6 +121,12 @@ const ConsultarAnimal = () => {
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
+      // Don't show suggestions if we already have a selected animal with this tag
+      if (selectedAnimal && selectedAnimal.tag_id === searchTerm) {
+        setFilteredAnimals([]);
+        setShowSuggestions(false);
+        return;
+      }
       const filtered = activeAnimals.filter(a => 
         a.tag_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (a.name && a.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -131,7 +137,7 @@ const ConsultarAnimal = () => {
       setFilteredAnimals([]);
       setShowSuggestions(false);
     }
-  }, [searchTerm, activeAnimals]);
+  }, [searchTerm, activeAnimals, selectedAnimal]);
 
   const selectAnimal = useCallback((animal: AnimalComplete) => {
     setSelectedAnimal(animal);

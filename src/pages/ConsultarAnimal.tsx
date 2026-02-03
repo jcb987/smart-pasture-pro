@@ -89,7 +89,7 @@ const statusLabels: Record<AnimalStatus, string> = {
 };
 
 const ConsultarAnimal = () => {
-  const { animals, loading: animalsLoading, updateAnimal, getAnimalEvents, addAnimalEvent } = useAnimals();
+  const { animals, loading: animalsLoading, fetchAnimals, updateAnimal, getAnimalEvents, addAnimalEvent } = useAnimals();
   const { isOnline } = useOffline();
   const { healthEvents, vaccinations, addHealthEvent, addVaccination } = useHealth();
   const { events: reproductiveEvents, addEvent: addReproEvent } = useReproduction();
@@ -110,6 +110,15 @@ const ConsultarAnimal = () => {
   const [editData, setEditData] = useState<Partial<Animal>>({});
 
   const activeAnimals = animals.filter(a => a.status === 'activo') as unknown as AnimalComplete[];
+
+  // Keep selectedAnimal in sync when the animals list updates (e.g. after saving events that update animals table)
+  useEffect(() => {
+    if (!selectedAnimal) return;
+    const updated = animals.find(a => a.id === selectedAnimal.id);
+    if (updated) {
+      setSelectedAnimal(updated as unknown as AnimalComplete);
+    }
+  }, [animals, selectedAnimal?.id]);
 
   const [openSections, setOpenSections] = useState({
     identificacion: true,
@@ -404,6 +413,9 @@ const ConsultarAnimal = () => {
       weight_kg: data.weight,
       notes: data.notes,
     });
+
+    // weight_records updates animals table via offline sync, but this page needs a refresh of animals state
+    await fetchAnimals();
   };
 
   const handleVaccination = async (data: { vaccine: string; date: string; nextDate?: string; notes?: string }) => {
@@ -447,6 +459,39 @@ const ConsultarAnimal = () => {
       semen_batch: data.semenBatch,
       notes: data.notes ? `${data.result ? `Resultado: ${data.result}. ` : ''}${data.notes}` : (data.result || undefined),
     });
+
+    // Ensure the animal card reflects reproductive status changes immediately
+    const normalize = (v?: string | null) => (v || '').toLowerCase();
+    let reproductive_status: string | undefined;
+    switch (eventType) {
+      case 'celo':
+        reproductive_status = 'vacia';
+        break;
+      case 'servicio':
+      case 'inseminacion':
+        reproductive_status = 'servida';
+        break;
+      case 'palpacion':
+        if (normalize(data.result) === 'preñada' || normalize(data.result) === 'positiva' || normalize(data.result) === 'positivo') {
+          reproductive_status = 'preñada';
+        } else if (normalize(data.result) === 'vacia' || normalize(data.result) === 'negativa' || normalize(data.result) === 'negativo') {
+          reproductive_status = 'vacia';
+        }
+        break;
+      case 'parto':
+        reproductive_status = 'lactando';
+        break;
+      case 'aborto':
+        reproductive_status = 'vacia';
+        break;
+      case 'secado':
+        reproductive_status = 'seca';
+        break;
+    }
+
+    if (reproductive_status) {
+      await updateAnimal(selectedAnimal.id, { reproductive_status });
+    }
   };
 
   return (

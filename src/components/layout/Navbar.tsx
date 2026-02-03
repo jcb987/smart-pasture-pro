@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import logoImage from "@/assets/logo.png";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -35,9 +36,11 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <a href="#" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">A</span>
-            </div>
+            <img 
+              src={logoImage} 
+              alt="Agro Data Logo" 
+              className="w-10 h-10 rounded-xl"
+            />
             <span className={`font-bold text-xl transition-colors ${isScrolled ? 'text-foreground' : 'text-primary-foreground'}`}>
               Agro Data
             </span>

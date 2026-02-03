@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Version logging for deployment verification
+const VERSION = "v1.0.1";
+const DEPLOYED_AT = "2026-02-03T01:50:00Z";
+console.log(`[${VERSION}] public-api function loaded at ${DEPLOYED_AT}`);
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",

@@ -7,8 +7,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { 
   Sprout, Plus, MapPin, Sun, Ruler, Trees, 
-  RotateCcw, CheckCircle, Clock, Sparkles
+  RotateCcw, CheckCircle, Clock, Sparkles, Map
 } from 'lucide-react';
+import { lazy, Suspense } from 'react';
+
+const FarmMapView = lazy(() => import('@/components/praderas/FarmMapView'));
 import { usePaddocks } from '@/hooks/usePaddocks';
 import { AddPaddockDialog } from '@/components/praderas/AddPaddockDialog';
 import { StartRotationDialog } from '@/components/praderas/StartRotationDialog';
@@ -205,6 +208,10 @@ const Praderas = () => {
         <Tabs defaultValue="paddocks" className="space-y-4">
           <TabsList>
             <TabsTrigger value="paddocks">Potreros</TabsTrigger>
+            <TabsTrigger value="mapa" className="flex items-center gap-1">
+              <Map className="h-4 w-4" />
+              Mapa de Finca
+            </TabsTrigger>
             <TabsTrigger value="history">Historial Rotaciones</TabsTrigger>
             <TabsTrigger value="measurements">Aforos</TabsTrigger>
           </TabsList>
@@ -217,6 +224,16 @@ const Praderas = () => {
               onEndRotation={handleEndRotation}
               activeRotations={activeRotations}
             />
+          </TabsContent>
+
+          <TabsContent value="mapa" className="space-y-4">
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-[500px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              </div>
+            }>
+              <FarmMapView />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="history" className="space-y-4">

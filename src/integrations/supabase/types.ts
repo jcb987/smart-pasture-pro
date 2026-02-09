@@ -636,6 +636,56 @@ export type Database = {
           },
         ]
       }
+      farm_boundaries: {
+        Row: {
+          address: string | null
+          area_hectares: number | null
+          boundary_polygon: Json
+          center_lat: number | null
+          center_lng: number | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          area_hectares?: number | null
+          boundary_polygon: Json
+          center_lat?: number | null
+          center_lng?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          area_hectares?: number | null
+          boundary_polygon?: Json
+          center_lat?: number | null
+          center_lng?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_boundaries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_consumption: {
         Row: {
           animal_id: string | null
@@ -1834,14 +1884,20 @@ export type Database = {
       paddocks: {
         Row: {
           area_hectares: number | null
+          boundary_polygon: Json | null
+          center_lat: number | null
+          center_lng: number | null
           created_at: string
           current_animals: number | null
           current_status: string | null
+          farm_boundary_id: string | null
           grass_type: string | null
           id: string
           irrigation: boolean | null
           last_occupation_date: string | null
           last_rest_start: string | null
+          lot_color: string | null
+          lot_usage: string | null
           max_capacity: number | null
           name: string
           notes: string | null
@@ -1852,14 +1908,20 @@ export type Database = {
         }
         Insert: {
           area_hectares?: number | null
+          boundary_polygon?: Json | null
+          center_lat?: number | null
+          center_lng?: number | null
           created_at?: string
           current_animals?: number | null
           current_status?: string | null
+          farm_boundary_id?: string | null
           grass_type?: string | null
           id?: string
           irrigation?: boolean | null
           last_occupation_date?: string | null
           last_rest_start?: string | null
+          lot_color?: string | null
+          lot_usage?: string | null
           max_capacity?: number | null
           name: string
           notes?: string | null
@@ -1870,14 +1932,20 @@ export type Database = {
         }
         Update: {
           area_hectares?: number | null
+          boundary_polygon?: Json | null
+          center_lat?: number | null
+          center_lng?: number | null
           created_at?: string
           current_animals?: number | null
           current_status?: string | null
+          farm_boundary_id?: string | null
           grass_type?: string | null
           id?: string
           irrigation?: boolean | null
           last_occupation_date?: string | null
           last_rest_start?: string | null
+          lot_color?: string | null
+          lot_usage?: string | null
           max_capacity?: number | null
           name?: string
           notes?: string | null
@@ -1886,7 +1954,15 @@ export type Database = {
           soil_type?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "paddocks_farm_boundary_id_fkey"
+            columns: ["farm_boundary_id"]
+            isOneToOne: false
+            referencedRelation: "farm_boundaries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       palpation_records: {
         Row: {

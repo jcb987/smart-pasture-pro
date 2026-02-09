@@ -1,9 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Polygon, Popup, useMap, useMapEvents, FeatureGroup } from 'react-leaflet';
+import { useState, useEffect, useMemo } from 'react';
+import { MapContainer, TileLayer, Polygon, Popup, Marker, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw';
-import 'leaflet-draw/dist/leaflet.draw.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  MapPin, Pencil, Trash2, Save, Search, Layers, 
-  Plus, Wand2, Eye, X, Info
+import {
+  Pencil, Trash2, Save, Search, Layers,
+  Plus, Wand2, Eye, X, Info, MousePointer, CheckCircle
 } from 'lucide-react';
 import { useFarmMap, calculatePolygonAreaHectares, getPolygonCenter, type MapLot } from '@/hooks/useFarmMap';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,10 +26,10 @@ L.Icon.Default.mergeOptions({
 });
 
 const USAGE_OPTIONS = [
-  { value: 'pastoreo', label: 'Pastoreo', color: '#22C55E' },
-  { value: 'descanso', label: 'Descanso', color: '#F59E0B' },
-  { value: 'reserva', label: 'Reserva', color: '#3B82F6' },
-  { value: 'mixto', label: 'Mixto', color: '#8B5CF6' },
+  { value: 'pastoreo', label: 'Pastoreo' },
+  { value: 'descanso', label: 'Descanso' },
+  { value: 'reserva', label: 'Reserva' },
+  { value: 'mixto', label: 'Mixto' },
 ];
 
 const STATUS_LABELS: Record<string, string> = {
@@ -41,32 +39,35 @@ const STATUS_LABELS: Record<string, string> = {
   en_recuperacion: 'Recuperación',
 };
 
+// Small vertex icon
+const vertexIcon = new L.DivIcon({
+  className: '',
+  html: '<div style="width:12px;height:12px;background:white;border:2px solid #3B82F6;border-radius:50%;"></div>',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+
 // Search component
 const MapSearch = ({ onSearch }: { onSearch: (query: string) => void }) => {
   const [query, setQuery] = useState('');
-
-  const handleSearch = () => {
-    if (query.trim()) onSearch(query.trim());
-  };
-
   return (
     <div className="absolute top-3 left-3 z-[1000] flex gap-2 max-w-xs w-full">
       <Input
         placeholder="Buscar lugar..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+        onKeyDown={(e) => e.key === 'Enter' && query.trim() && onSearch(query.trim())}
         className="bg-background/95 backdrop-blur-sm shadow-lg text-sm h-9"
       />
-      <Button size="sm" onClick={handleSearch} className="h-9 w-9 p-0 shrink-0">
+      <Button size="sm" onClick={() => query.trim() && onSearch(query.trim())} className="h-9 w-9 p-0 shrink-0">
         <Search className="h-4 w-4" />
       </Button>
     </div>
   );
 };
 
-// Fly to search result
-const FlyToLocation = ({ location }: { location: { lat: number; lng: number } | null }) => {
+// Fly to location
+const FlyTo = ({ location }: { location: { lat: number; lng: number } | null }) => {
   const map = useMap();
   useEffect(() => {
     if (location) map.flyTo([location.lat, location.lng], 15, { duration: 1.5 });
@@ -74,78 +75,23 @@ const FlyToLocation = ({ location }: { location: { lat: number; lng: number } | 
   return null;
 };
 
-// Drawing control manager
-const DrawControl = ({
-  mode,
-  onPolygonCreated,
-  drawColor,
+// Click handler for drawing
+const ClickHandler = ({
+  active,
+  onPoint,
 }: {
-  mode: 'farm' | 'lot' | null;
-  onPolygonCreated: (latlngs: L.LatLng[]) => void;
-  drawColor: string;
+  active: boolean;
+  onPoint: (latlng: L.LatLng) => void;
 }) => {
-  const map = useMap();
-  const drawControlRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (!mode) {
-      if (drawControlRef.current) {
-        map.removeControl(drawControlRef.current);
-        drawControlRef.current = null;
-      }
-      return;
-    }
-
-    const drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
-
-    const drawControl = new (L.Control as any).Draw({
-      position: 'topright',
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          showArea: true,
-          shapeOptions: {
-            color: drawColor,
-            weight: 3,
-            fillOpacity: 0.2,
-          },
-        },
-        polyline: false,
-        circle: false,
-        rectangle: false,
-        marker: false,
-        circlemarker: false,
-      },
-      edit: { featureGroup: drawnItems },
-    });
-
-    map.addControl(drawControl);
-    drawControlRef.current = drawControl;
-
-    const onCreate = (e: any) => {
-      const layer = e.layer;
-      const latlngs = layer.getLatLngs()[0];
-      onPolygonCreated(latlngs);
-      map.removeLayer(layer);
-    };
-
-    map.on(L.Draw.Event.CREATED, onCreate);
-
-    return () => {
-      map.off(L.Draw.Event.CREATED, onCreate);
-      if (drawControlRef.current) {
-        map.removeControl(drawControlRef.current);
-        drawControlRef.current = null;
-      }
-      map.removeLayer(drawnItems);
-    };
-  }, [mode, map, drawColor]);
-
+  useMapEvents({
+    click(e) {
+      if (active) onPoint(e.latlng);
+    },
+  });
   return null;
 };
 
-// Lot info popup content
+// Lot popup
 const LotPopupContent = ({ lot, onDelete }: { lot: MapLot; onDelete: () => void }) => (
   <div className="min-w-[200px] space-y-2 p-1">
     <div className="flex items-center gap-2">
@@ -185,29 +131,27 @@ const FarmMapView = () => {
     loading,
     saveFarmBoundary,
     saveLot,
-    updateLotPolygon,
     deleteLotPolygon,
     LOT_COLORS,
   } = useFarmMap();
 
   const [drawMode, setDrawMode] = useState<'farm' | 'lot' | null>(null);
-  const [pendingPolygon, setPendingPolygon] = useState<L.LatLng[] | null>(null);
+  const [drawingPoints, setDrawingPoints] = useState<L.LatLng[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [searchLocation, setSearchLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [satelliteView, setSatelliteView] = useState(true);
   const [showAISuggestions, setShowAISuggestions] = useState(false);
 
-  // Form state for saving
+  // Form state
   const [formName, setFormName] = useState('');
   const [formUsage, setFormUsage] = useState('pastoreo');
   const [formCapacity, setFormCapacity] = useState('');
   const [formGrassType, setFormGrassType] = useState('');
   const [formColor, setFormColor] = useState('#22C55E');
 
-  // Determine map center
   const defaultCenter: [number, number] = farmBoundary
     ? [Number(farmBoundary.center_lat) || 4.6, Number(farmBoundary.center_lng) || -74.08]
-    : [4.6, -74.08]; // Colombia default
+    : [4.6, -74.08];
 
   const defaultZoom = farmBoundary ? 15 : 6;
 
@@ -220,14 +164,15 @@ const FarmMapView = () => {
       if (results.length > 0) {
         setSearchLocation({ lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) });
       }
-    } catch {
-      // Silently fail
-    }
+    } catch { /* silent */ }
   };
 
-  const handlePolygonCreated = (latlngs: L.LatLng[]) => {
-    setPendingPolygon(latlngs);
-    const area = calculatePolygonAreaHectares(latlngs.map(ll => ({ lat: ll.lat, lng: ll.lng })));
+  const handleAddPoint = (latlng: L.LatLng) => {
+    setDrawingPoints((prev) => [...prev, latlng]);
+  };
+
+  const handleFinishDrawing = () => {
+    if (drawingPoints.length < 3) return;
     if (drawMode === 'farm') {
       setFormName(farmBoundary?.name || 'Mi Finca');
     } else {
@@ -237,13 +182,22 @@ const FarmMapView = () => {
     setShowSaveDialog(true);
   };
 
-  const handleSave = async () => {
-    if (!pendingPolygon) return;
+  const handleUndoPoint = () => {
+    setDrawingPoints((prev) => prev.slice(0, -1));
+  };
 
-    const coords = pendingPolygon.map(ll => ({ lat: ll.lat, lng: ll.lng }));
+  const handleCancelDrawing = () => {
+    setDrawMode(null);
+    setDrawingPoints([]);
+  };
+
+  const handleSave = async () => {
+    if (drawingPoints.length < 3) return;
+
+    const coords = drawingPoints.map((ll) => ({ lat: ll.lat, lng: ll.lng }));
     const area = calculatePolygonAreaHectares(coords);
     const center = getPolygonCenter(coords);
-    const polygon = { type: 'Polygon', coordinates: [coords.map(c => [c.lng, c.lat])] };
+    const polygon = { type: 'Polygon', coordinates: [coords.map((c) => [c.lng, c.lat])] };
 
     if (drawMode === 'farm') {
       await saveFarmBoundary({
@@ -267,7 +221,7 @@ const FarmMapView = () => {
       });
     }
 
-    setPendingPolygon(null);
+    setDrawingPoints([]);
     setShowSaveDialog(false);
     setDrawMode(null);
     setFormName('');
@@ -275,11 +229,14 @@ const FarmMapView = () => {
     setFormGrassType('');
   };
 
-  const pendingArea = pendingPolygon
-    ? calculatePolygonAreaHectares(pendingPolygon.map(ll => ({ lat: ll.lat, lng: ll.lng })))
-    : 0;
+  const pendingArea = useMemo(
+    () =>
+      drawingPoints.length >= 3
+        ? calculatePolygonAreaHectares(drawingPoints.map((ll) => ({ lat: ll.lat, lng: ll.lng })))
+        : 0,
+    [drawingPoints]
+  );
 
-  // Get farm polygon positions
   const farmPositions = farmBoundary?.boundary_polygon?.coordinates?.[0]?.map(
     (c: number[]) => [c[1], c[0]] as [number, number]
   ) || [];
@@ -298,57 +255,68 @@ const FarmMapView = () => {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap gap-2 items-center">
-        <Button
-          variant={drawMode === 'farm' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setDrawMode(drawMode === 'farm' ? null : 'farm')}
-        >
-          <Pencil className="h-4 w-4 mr-1" />
-          {farmBoundary ? 'Redibujar Finca' : 'Dibujar Finca'}
-        </Button>
-        <Button
-          variant={drawMode === 'lot' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setDrawMode(drawMode === 'lot' ? null : 'lot')}
-          disabled={!farmBoundary}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Nuevo Lote
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setSatelliteView(!satelliteView)}
-        >
-          <Layers className="h-4 w-4 mr-1" />
-          {satelliteView ? 'Mapa' : 'Satélite'}
-        </Button>
-        {farmBoundary && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAISuggestions(true)}
-          >
-            <Wand2 className="h-4 w-4 mr-1" />
-            Sugerir Lotes (IA)
-          </Button>
-        )}
-        {drawMode && (
-          <Button variant="ghost" size="sm" onClick={() => setDrawMode(null)}>
-            <X className="h-4 w-4 mr-1" />
-            Cancelar
-          </Button>
+        {!drawMode ? (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setDrawMode('farm'); setDrawingPoints([]); }}
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              {farmBoundary ? 'Redibujar Finca' : 'Dibujar Finca'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setDrawMode('lot'); setDrawingPoints([]); }}
+              disabled={!farmBoundary}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Nuevo Lote
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setSatelliteView(!satelliteView)}>
+              <Layers className="h-4 w-4 mr-1" />
+              {satelliteView ? 'Mapa' : 'Satélite'}
+            </Button>
+            {farmBoundary && (
+              <Button variant="outline" size="sm" onClick={() => setShowAISuggestions(true)}>
+                <Wand2 className="h-4 w-4 mr-1" />
+                Sugerir Lotes (IA)
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+            <Button
+              size="sm"
+              onClick={handleFinishDrawing}
+              disabled={drawingPoints.length < 3}
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Finalizar ({drawingPoints.length} puntos)
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleUndoPoint} disabled={drawingPoints.length === 0}>
+              Deshacer punto
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleCancelDrawing}>
+              <X className="h-4 w-4 mr-1" />
+              Cancelar
+            </Button>
+            <span className="text-xs text-muted-foreground ml-2">
+              {pendingArea > 0 && `≈ ${pendingArea.toFixed(2)} ha`}
+            </span>
+          </>
         )}
       </div>
 
       {/* Draw mode instructions */}
       {drawMode && (
         <Alert className="border-primary/30 bg-primary/5">
-          <Info className="h-4 w-4" />
+          <MousePointer className="h-4 w-4" />
           <AlertDescription>
             {drawMode === 'farm'
-              ? 'Haz clic en el mapa para dibujar los límites de tu finca. Cierra el polígono haciendo clic en el primer punto.'
-              : 'Dibuja un polígono dentro de tu finca para crear un nuevo lote. Cierra el polígono haciendo clic en el primer punto.'}
+              ? 'Toca/haz clic en el mapa para marcar los puntos del contorno de tu finca. Mínimo 3 puntos. Cuando termines, presiona "Finalizar".'
+              : 'Toca/haz clic dentro de tu finca para crear un lote. Mínimo 3 puntos. Cuando termines, presiona "Finalizar".'}
           </AlertDescription>
         </Alert>
       )}
@@ -361,17 +329,13 @@ const FarmMapView = () => {
               center={defaultCenter}
               zoom={defaultZoom}
               className="h-full w-full z-0"
-              scrollWheelZoom={true}
-              touchZoom={true}
-              dragging={true}
+              scrollWheelZoom
+              touchZoom
+              dragging
             >
               <MapSearch onSearch={handleSearch} />
-              <FlyToLocation location={searchLocation} />
-              <DrawControl
-                mode={drawMode}
-                onPolygonCreated={handlePolygonCreated}
-                drawColor={drawMode === 'farm' ? '#EF4444' : '#3B82F6'}
-              />
+              <FlyTo location={searchLocation} />
+              <ClickHandler active={!!drawMode} onPoint={handleAddPoint} />
 
               {satelliteView ? (
                 <TileLayer
@@ -391,19 +355,12 @@ const FarmMapView = () => {
               {farmPositions.length > 0 && (
                 <Polygon
                   positions={farmPositions}
-                  pathOptions={{
-                    color: '#EF4444',
-                    weight: 3,
-                    fillOpacity: 0.05,
-                    dashArray: '10 5',
-                  }}
+                  pathOptions={{ color: '#EF4444', weight: 3, fillOpacity: 0.05, dashArray: '10 5' }}
                 >
                   <Popup>
                     <div className="p-1">
                       <p className="font-bold">{farmBoundary?.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Área total: {farmBoundary?.area_hectares?.toFixed(2)} ha
-                      </p>
+                      <p className="text-xs">Área total: {farmBoundary?.area_hectares?.toFixed(2)} ha</p>
                     </div>
                   </Popup>
                 </Polygon>
@@ -411,21 +368,16 @@ const FarmMapView = () => {
 
               {/* Lots */}
               {lots.map((lot) => {
-                const positions = lot.boundary_polygon?.coordinates?.[0]?.map(
-                  (c: number[]) => [c[1], c[0]] as [number, number]
-                ) || [];
+                const positions =
+                  lot.boundary_polygon?.coordinates?.[0]?.map(
+                    (c: number[]) => [c[1], c[0]] as [number, number]
+                  ) || [];
                 if (positions.length === 0) return null;
-
                 return (
                   <Polygon
                     key={lot.id}
                     positions={positions}
-                    pathOptions={{
-                      color: lot.lot_color || '#3B82F6',
-                      weight: 2,
-                      fillOpacity: 0.3,
-                      fillColor: lot.lot_color || '#3B82F6',
-                    }}
+                    pathOptions={{ color: lot.lot_color || '#3B82F6', weight: 2, fillOpacity: 0.3, fillColor: lot.lot_color || '#3B82F6' }}
                   >
                     <Popup>
                       <LotPopupContent lot={lot} onDelete={() => deleteLotPolygon(lot.id)} />
@@ -434,46 +386,52 @@ const FarmMapView = () => {
                 );
               })}
 
-              {/* Pending polygon preview */}
-              {pendingPolygon && (
+              {/* Drawing preview */}
+              {drawingPoints.length >= 2 && (
+                <Polyline
+                  positions={drawingPoints.map((p) => [p.lat, p.lng] as [number, number])}
+                  pathOptions={{ color: drawMode === 'farm' ? '#EF4444' : formColor, weight: 3, dashArray: '6 4' }}
+                />
+              )}
+              {drawingPoints.length >= 3 && (
                 <Polygon
-                  positions={pendingPolygon.map(ll => [ll.lat, ll.lng] as [number, number])}
+                  positions={drawingPoints.map((p) => [p.lat, p.lng] as [number, number])}
                   pathOptions={{
                     color: drawMode === 'farm' ? '#EF4444' : formColor,
-                    weight: 3,
-                    fillOpacity: 0.2,
-                    dashArray: '5 5',
+                    weight: 2,
+                    fillOpacity: 0.15,
+                    dashArray: '4 4',
                   }}
                 />
               )}
+              {drawingPoints.map((p, i) => (
+                <Marker key={i} position={[p.lat, p.lng]} icon={vertexIcon} />
+              ))}
             </MapContainer>
           </div>
         </CardContent>
       </Card>
 
       {/* Legend */}
-      {lots.length > 0 && (
+      {(lots.length > 0 || farmBoundary) && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Eye className="h-4 w-4" />
-              Leyenda de Lotes
+              Leyenda
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-3">
               {farmBoundary && (
                 <div className="flex items-center gap-2 text-xs">
-                  <div className="w-4 h-1 border border-dashed border-red-500" />
-                  <span>Límite finca ({farmBoundary.area_hectares?.toFixed(1)} ha)</span>
+                  <div className="w-4 h-0.5 border border-dashed border-destructive" />
+                  <span>Finca ({farmBoundary.area_hectares?.toFixed(1)} ha)</span>
                 </div>
               )}
               {lots.map((lot) => (
                 <div key={lot.id} className="flex items-center gap-2 text-xs">
-                  <div
-                    className="w-3 h-3 rounded-sm"
-                    style={{ backgroundColor: lot.lot_color }}
-                  />
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: lot.lot_color }} />
                   <span>{lot.name} ({lot.area_hectares?.toFixed(1)} ha)</span>
                   <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
                     {lot.current_animals} 🐄
@@ -496,56 +454,35 @@ const FarmMapView = () => {
           <div className="space-y-4">
             <div>
               <Label>Nombre</Label>
-              <Input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder={drawMode === 'farm' ? 'Nombre de la finca' : 'Nombre del lote'}
-              />
+              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={drawMode === 'farm' ? 'Nombre de la finca' : 'Nombre del lote'} />
             </div>
-
             <div className="p-3 bg-muted rounded-lg text-sm">
               <span className="text-muted-foreground">Área calculada: </span>
               <span className="font-bold text-lg">{pendingArea.toFixed(2)} ha</span>
             </div>
-
             {drawMode === 'lot' && (
               <>
                 <div>
                   <Label>Tipo de uso</Label>
                   <Select value={formUsage} onValueChange={setFormUsage}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {USAGE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
+                      {USAGE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Capacidad máx.</Label>
-                    <Input
-                      type="number"
-                      value={formCapacity}
-                      onChange={(e) => setFormCapacity(e.target.value)}
-                      placeholder="Animales"
-                    />
+                    <Input type="number" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)} placeholder="Animales" />
                   </div>
                   <div>
                     <Label>Tipo de pasto</Label>
-                    <Input
-                      value={formGrassType}
-                      onChange={(e) => setFormGrassType(e.target.value)}
-                      placeholder="Ej: Brachiaria"
-                    />
+                    <Input value={formGrassType} onChange={(e) => setFormGrassType(e.target.value)} placeholder="Ej: Brachiaria" />
                   </div>
                 </div>
-
                 <div>
                   <Label>Color del lote</Label>
                   <div className="flex gap-2 mt-1">
@@ -563,9 +500,7 @@ const FarmMapView = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowSaveDialog(false); setPendingPolygon(null); }}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => { setShowSaveDialog(false); setDrawingPoints([]); }}>Cancelar</Button>
             <Button onClick={handleSave} disabled={!formName.trim()}>
               <Save className="h-4 w-4 mr-1" />
               Guardar
@@ -574,39 +509,25 @@ const FarmMapView = () => {
         </DialogContent>
       </Dialog>
 
-      {/* AI Suggestions Dialog */}
+      {/* AI Suggestions */}
       <AILotSuggestionsDialog
         open={showAISuggestions}
         onClose={() => setShowAISuggestions(false)}
         farmArea={Number(farmBoundary?.area_hectares) || 0}
-        existingLots={lots.length}
       />
     </div>
   );
 };
 
-// AI Suggestions Dialog (simple rule-based)
-const AILotSuggestionsDialog = ({
-  open,
-  onClose,
-  farmArea,
-  existingLots,
-}: {
-  open: boolean;
-  onClose: () => void;
-  farmArea: number;
-  existingLots: number;
-}) => {
+const AILotSuggestionsDialog = ({ open, onClose, farmArea }: { open: boolean; onClose: () => void; farmArea: number }) => {
   const [animalCount, setAnimalCount] = useState('50');
   const [productionType, setProductionType] = useState('carne');
 
   const animals = parseInt(animalCount) || 50;
-  
-  // Simple rule-based suggestions
-  const cargaIdeal = productionType === 'leche' ? 2.5 : 1.8; // animals/ha
+  const cargaIdeal = productionType === 'leche' ? 2.5 : 1.8;
   const lotesOptimos = Math.max(4, Math.min(12, Math.ceil(farmArea / (animals / cargaIdeal / 4))));
   const areaPerLot = farmArea / lotesOptimos;
-  const animalsPerLot = Math.ceil(animals / Math.ceil(lotesOptimos * 0.6)); // 60% in use
+  const animalsPerLot = Math.ceil(animals / Math.ceil(lotesOptimos * 0.6));
   const restDays = productionType === 'leche' ? 35 : 45;
 
   return (
@@ -622,18 +543,12 @@ const AILotSuggestionsDialog = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Número de animales</Label>
-              <Input
-                type="number"
-                value={animalCount}
-                onChange={(e) => setAnimalCount(e.target.value)}
-              />
+              <Input type="number" value={animalCount} onChange={(e) => setAnimalCount(e.target.value)} />
             </div>
             <div>
               <Label>Tipo de producción</Label>
               <Select value={productionType} onValueChange={setProductionType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="carne">Carne</SelectItem>
                   <SelectItem value="leche">Leche</SelectItem>
@@ -642,7 +557,6 @@ const AILotSuggestionsDialog = ({
               </Select>
             </div>
           </div>
-
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="pt-4 space-y-3">
               <h4 className="font-semibold text-sm">📊 Recomendación para {farmArea.toFixed(1)} ha</h4>
@@ -666,15 +580,11 @@ const AILotSuggestionsDialog = ({
               </div>
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>• Carga animal ideal: {cargaIdeal} cab/ha para {productionType}</p>
-                <p>• Se sugiere tener ~60% de lotes ocupados y 40% en descanso</p>
-                <p>• Dibuja manualmente los lotes sobre el mapa según la topografía</p>
+                <p>• Se sugiere ~60% de lotes ocupados y 40% en descanso</p>
+                <p>• Dibuja manualmente los lotes según la topografía</p>
               </div>
             </CardContent>
           </Card>
-
-          <p className="text-xs text-muted-foreground">
-            💡 Estas son recomendaciones basadas en reglas agronómicas. Siempre puedes editar los lotes manualmente.
-          </p>
         </div>
         <DialogFooter>
           <Button onClick={onClose}>Entendido</Button>

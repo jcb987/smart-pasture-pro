@@ -5,6 +5,7 @@ import { useOffline } from '@/contexts/OfflineContext';
 import { Loader2, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { OnboardingSurvey } from '@/components/onboarding/OnboardingSurvey';
+import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,14 +15,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading, hasOfflineSession } = useAuth();
   const { isOnline } = useOffline();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
-      // If offline with a valid session, skip onboarding checks
       if (!isOnline && (user || hasOfflineSession)) {
         setShowOnboarding(false);
+        setShowWelcome(false);
         setCheckingOnboarding(false);
         return;
       }
@@ -32,14 +36,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       }
 
       try {
-        // Get user's organization and blocked status
         const { data: profile } = await supabase
           .from('profiles')
-          .select('organization_id, is_blocked')
+          .select('organization_id, is_blocked, is_team_member')
           .eq('user_id', user.id)
           .single();
 
-        // Check if user is blocked
         if (profile?.is_blocked) {
           console.log('[ProtectedRoute] User is blocked, signing out');
           await supabase.auth.signOut();
@@ -48,8 +50,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         }
 
         setOrganizationId(profile?.organization_id || null);
+        const isTeamMember = (profile as any)?.is_team_member === true;
 
-        // Check if onboarding is completed
         const { data: onboarding } = await supabase
           .from('user_onboarding')
           .select('id')
@@ -57,13 +59,32 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           .maybeSingle();
 
         if (!onboarding) {
-          setShowOnboarding(true);
+          if (isTeamMember) {
+            // Fetch org name and role for welcome dialog
+            if (profile?.organization_id) {
+              const { data: org } = await supabase
+                .from('organizations')
+                .select('name')
+                .eq('id', profile.organization_id)
+                .single();
+              setOrganizationName(org?.name || null);
+            }
+            const { data: roleData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            setUserRole(roleData?.role || null);
+            setShowWelcome(true);
+          } else {
+            setShowOnboarding(true);
+          }
         }
       } catch (error) {
         console.error('Error checking onboarding:', error);
-        // If offline and we got an error, just let them through
         if (!isOnline) {
           setShowOnboarding(false);
+          setShowWelcome(false);
         }
       } finally {
         setCheckingOnboarding(false);
@@ -93,21 +114,29 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // Allow access if user is logged in OR if offline with saved session
   if (!user && !(!isOnline && hasOfflineSession)) {
     return <Navigate to="/auth" replace />;
   }
 
   return (
     <>
-      {/* Only show onboarding when online */}
       {isOnline && (
-        <OnboardingSurvey
-          open={showOnboarding}
-          onComplete={() => setShowOnboarding(false)}
-          userId={user?.id || ''}
-          organizationId={organizationId}
-        />
+        <>
+          <OnboardingSurvey
+            open={showOnboarding}
+            onComplete={() => setShowOnboarding(false)}
+            userId={user?.id || ''}
+            organizationId={organizationId}
+          />
+          <WelcomeDialog
+            open={showWelcome}
+            onComplete={() => setShowWelcome(false)}
+            userId={user?.id || ''}
+            organizationId={organizationId}
+            organizationName={organizationName}
+            userRole={userRole}
+          />
+        </>
       )}
       {children}
     </>

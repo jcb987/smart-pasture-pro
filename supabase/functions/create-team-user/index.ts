@@ -147,13 +147,14 @@ Deno.serve(async (req) => {
 
     const userId = newUser.user.id
 
-    // Update profile with organization
+    // Update profile with organization and mark as team member
     await adminClient
       .from('profiles')
       .update({
         organization_id,
         full_name: full_name.trim(),
         phone: phone || null,
+        is_team_member: true,
       })
       .eq('user_id', userId)
 
@@ -185,17 +186,6 @@ Deno.serve(async (req) => {
     if (permInserts.length > 0) {
       await adminClient.from('user_permissions').insert(permInserts)
     }
-
-    // Auto-complete onboarding for team users (survey is only for self-registered owners)
-    await adminClient.from('user_onboarding').insert({
-      user_id: userId,
-      organization_id,
-      primary_role: role,
-      production_type: 'na',
-      species: [],
-      herd_size: 'na',
-      main_challenge: 'na',
-    })
 
     return new Response(
       JSON.stringify({

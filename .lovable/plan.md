@@ -1,38 +1,58 @@
 
-## Plan: Corregir la creacion de usuarios (Edge Function)
 
-### Problemas detectados
+## Plan: Reemplazar encuesta por mensaje de bienvenida para usuarios agregados
 
-1. **Falta configuracion en `config.toml`**: La funcion `create-team-user` no tiene `verify_jwt = false` en el archivo de configuracion. El sistema de signing-keys requiere que `verify_jwt` sea `false` y que la validacion del JWT se haga manualmente en el codigo (que ya se hace). Sin esta configuracion, la funcion rechaza la peticion ANTES de que el codigo se ejecute, devolviendo un error generico "non-2xx status code".
+### Problema raiz
 
-2. **CORS headers incompletos**: Los headers CORS de la funcion solo incluyen `authorization, x-client-info, apikey, content-type`, pero faltan los headers adicionales que el cliente envia automaticamente (`x-supabase-client-platform`, etc.). Esto puede causar que el navegador bloquee la peticion preflight.
+La Edge Function `create-team-user` intenta insertar un registro en `user_onboarding` con valores como `'na'` para saltar la encuesta, pero la tabla tiene restricciones CHECK que solo permiten valores especificos (ej: `production_type` solo acepta `'carne'`, `'leche'`, `'doble_proposito'`). Por eso el insert falla silenciosamente y la encuesta sigue apareciendo.
 
-### Solucion
+### Estrategia
 
-#### 1. Agregar configuracion en `supabase/config.toml`
+En lugar de forzar datos falsos en la encuesta, vamos a:
 
-Agregar la entrada para `create-team-user` con `verify_jwt = false`:
+1. Marcar al usuario como "agregado por admin" para que el sistema sepa que NO debe mostrar la encuesta
+2. Mostrar un mensaje de bienvenida amigable en vez de la encuesta cuando el usuario es agregado
 
-```toml
-[functions.create-team-user]
-verify_jwt = false
+### Cambios a realizar
+
+#### 1. Agregar columna `is_team_member` a la tabla `profiles`
+
+Una columna booleana que indica si el usuario fue creado por un administrador (vs. auto-registrado). Valor por defecto: `false`.
+
+```sql
+ALTER TABLE profiles ADD COLUMN is_team_member boolean DEFAULT false;
 ```
 
-#### 2. Actualizar CORS headers en la Edge Function
+#### 2. Actualizar Edge Function `create-team-user`
 
-Cambiar los headers CORS en `supabase/functions/create-team-user/index.ts` para incluir todos los headers requeridos:
+- Remover el insert fallido a `user_onboarding`
+- En su lugar, marcar `is_team_member = true` en el perfil del usuario (ya se hace un `update` al perfil, solo se agrega este campo)
 
-```
-authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version
-```
+#### 3. Modificar `ProtectedRoute.tsx`
+
+Cambiar la logica de verificacion de onboarding:
+- Si el usuario tiene `is_team_member = true` en su perfil Y no tiene registro en `user_onboarding`: mostrar **dialogo de bienvenida** (no la encuesta)
+- Si el usuario NO tiene `is_team_member` (es dueno) Y no tiene registro en `user_onboarding`: mostrar la **encuesta normal**
+- Si ya tiene registro en `user_onboarding`: no mostrar nada
+
+#### 4. Crear componente `WelcomeDialog.tsx`
+
+Un dialogo sencillo y amigable que:
+- Muestra un mensaje de bienvenida al sistema
+- Indica el nombre del hato/organizacion al que fue agregado
+- Tiene un unico boton "Comenzar" que cierra el dialogo
+- Al cerrarse, inserta un registro minimo en `user_onboarding` (con valores validos) para que no vuelva a aparecer
 
 ### Archivos a modificar
 
-1. **`supabase/config.toml`** - Agregar seccion `[functions.create-team-user]` con `verify_jwt = false`
-2. **`supabase/functions/create-team-user/index.ts`** - Actualizar la constante `corsHeaders` con los headers completos
+1. **Migracion SQL** - Agregar columna `is_team_member` a `profiles`
+2. **`supabase/functions/create-team-user/index.ts`** - Marcar `is_team_member = true` y remover insert fallido a `user_onboarding`
+3. **`src/components/ProtectedRoute.tsx`** - Agregar logica para diferenciar usuario agregado vs. auto-registrado
+4. **`src/components/onboarding/WelcomeDialog.tsx`** (nuevo) - Componente de bienvenida para usuarios agregados
 
-### Resultado esperado
+### Flujo resultante
 
-- La funcion dejara de rechazar las peticiones antes de ejecutarse
-- El formulario de "Crear Nuevo Usuario" funcionara correctamente
-- Los usuarios creados tendran sus roles y permisos asignados automaticamente
+- **Dueno se registra por primera vez**: Ve la encuesta de 5 pasos (sin cambios)
+- **Usuario agregado por admin inicia sesion por primera vez**: Ve un mensaje de bienvenida sencillo con un boton "Comenzar"
+- **Cualquier usuario que ya completo onboarding**: No ve nada (sin cambios)
+

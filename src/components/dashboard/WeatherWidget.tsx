@@ -122,34 +122,22 @@ export const WeatherWidget = ({ className }: { className?: string }) => {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Current weather */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <WeatherIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xl sm:text-2xl font-bold">{weather.temperature}°C</div>
-                <div className="text-xs sm:text-sm text-muted-foreground truncate">{getConditionText(weather.condition)}</div>
-              </div>
+        <CardContent>
+          {/* Current weather - temperature only */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <WeatherIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
-            <div className="text-right text-xs sm:text-sm text-muted-foreground space-y-1 flex-shrink-0">
-              <div className="flex items-center gap-1 justify-end">
-                <Droplets className="h-3 w-3" />
-                {weather.humidity}%
-              </div>
-              <div className="flex items-center gap-1 justify-end">
-                <Wind className="h-3 w-3" />
-                {weather.windSpeed} km/h
-              </div>
+            <div className="min-w-0">
+              <div className="text-xl sm:text-2xl font-bold">{weather.temperature}°C</div>
+              <div className="text-xs sm:text-sm text-muted-foreground truncate">{getConditionText(weather.condition)}</div>
             </div>
           </div>
 
           {/* Alert */}
           {weather.alert && (
             <div className={cn(
-              "p-2 rounded-lg flex items-start gap-2 text-xs",
+              "p-2 rounded-lg flex items-start gap-2 text-xs mt-3",
               weather.alert.severity === 'high' ? 'bg-destructive/10 text-destructive' :
               weather.alert.severity === 'medium' ? 'bg-amber-500/10 text-amber-700' :
               'bg-blue-500/10 text-blue-700'
@@ -158,18 +146,6 @@ export const WeatherWidget = ({ className }: { className?: string }) => {
               <span className="line-clamp-2">{weather.alert.message}</span>
             </div>
           )}
-
-          {/* Forecast - scrollable on mobile */}
-          <div className="flex gap-2 overflow-x-auto pt-2 border-t scrollbar-hide">
-            {weather.forecast.map((day) => (
-              <div key={day.day} className="flex-shrink-0 text-center p-1.5 sm:p-2 rounded-lg bg-muted/50 min-w-[45px] sm:min-w-[50px]">
-                <div className="text-xs font-medium">{day.day}</div>
-                <div className="text-[10px] sm:text-xs text-muted-foreground">
-                  {day.tempMax}° / {day.tempMin}°
-                </div>
-              </div>
-            ))}
-          </div>
         </CardContent>
       </Card>
       <LocationConfigDialog 

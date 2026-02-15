@@ -1,64 +1,50 @@
 
 
-## Plan: Corregir registro de produccion de leche y sincronizacion
+## Plan: Corregir el registro de produccion de leche
 
-### Problemas detectados
+### Problema real detectado
 
-1. **Dialogo sin feedback de errores**: Cuando se abre el formulario "Registrar Produccion", se buscan animales hembra activas. Si la consulta falla, no se muestra ningun error y el selector queda vacio e inutilizable.
+Al analizar las peticiones de red, el error NO es sobre fechas pasadas. El problema es que **ningún registro se esta guardando** (ni de hoy ni de fechas anteriores). El error es:
 
-2. **Sincronizacion atascada**: Hay un registro pendiente en la cola de sincronizacion que no se puede sincronizar. La funcion `syncNow` falla silenciosamente sin informar al usuario del error especifico.
+```
+"cannot insert a non-DEFAULT value into column 'total_liters'"
+```
 
-3. **Datos extras en el INSERT**: La funcion `addRecord` envia el objeto completo al sistema offline, que luego lo inserta en la base de datos. Si el objeto contiene campos que no son columnas de la tabla (como `animal`), el INSERT falla.
+La columna `total_liters` es una **columna generada automaticamente** en la base de datos que calcula:
+```
+morning_liters + afternoon_liters + evening_liters
+```
 
-### Solucion propuesta
+Pero el codigo esta enviando un valor calculado manualmente para `total_liters`, lo cual la base de datos rechaza con error 400. Esto causa que todos los registros queden "pendientes" en la cola de sincronizacion sin poder guardarse.
 
-#### 1. Mejorar el dialogo AddMilkRecordDialog
+### Solucion
 
-- Agregar manejo de errores al cargar animales
-- Mostrar mensaje cuando no hay animales disponibles
-- Mostrar un indicador de carga mientras se buscan animales
-- Agregar soporte offline: si no hay conexion, cargar animales desde IndexedDB
+#### 1. Excluir `total_liters` del INSERT (archivo: `useMilkProduction.ts`)
 
-#### 2. Limpiar datos antes del INSERT
+Remover `total_liters` del objeto `dbRecord` que se envia a la base de datos, ya que la base de datos lo calcula automaticamente. Mantenerlo en el estado local para mostrar en la UI.
 
-En `useMilkProduction.ts`, asegurar que solo se envien las columnas validas de la tabla `milk_production` al llamar `saveOffline`, excluyendo campos como `animal` u otros que no son columnas.
+#### 2. Excluir `total_liters` en la importacion masiva (archivo: `useImportMilk.ts`)
 
-#### 3. Mejorar feedback de sincronizacion
+Mismo problema: al importar datos de Excel, tambien se envia `total_liters`. Hay que removerlo del objeto de insercion.
 
-En `OfflineContext.tsx`:
-- Mostrar errores especificos cuando la sincronizacion falla
-- Agregar opcion para limpiar items atascados de la cola
-- Mejorar los mensajes toast con detalles del error
+#### 3. Limpiar la cola de sincronizacion atascada
 
-#### 4. Agregar boton para limpiar cola de sincronizacion
-
-Permitir que el usuario pueda descartar cambios pendientes que estan atascados y no se pueden sincronizar.
+Los registros que intentaste guardar antes estan atascados en la cola porque contienen `total_liters`. Necesitas descartarlos usando el boton "Descartar cambios pendientes" que ya existe.
 
 ### Detalles tecnicos
 
 **Archivos a modificar:**
 
-1. `src/components/produccion/AddMilkRecordDialog.tsx`
-   - Agregar estados de loading y error para la carga de animales
-   - Mostrar mensaje "No hay animales hembra activos" si la lista esta vacia
-   - Agregar try/catch con toast de error
+1. **`src/hooks/useMilkProduction.ts`** (linea ~180-195)
+   - Eliminar la linea `total_liters: newRecord.total_liters` del objeto `dbRecord`
+   - El campo seguira existiendo en `newRecord` para mostrar en la UI local
 
-2. `src/hooks/useMilkProduction.ts`
-   - En `addRecord`, filtrar el objeto para enviar SOLO columnas validas: id, animal_id, organization_id, production_date, morning_liters, afternoon_liters, evening_liters, total_liters, fat_percentage, protein_percentage, somatic_cell_count, notes, created_at, created_by
-   - Agregar mejor manejo de errores con mensajes descriptivos
-
-3. `src/contexts/OfflineContext.tsx`
-   - En `syncNow`, mostrar el error especifico de cada item que falla
-   - Agregar funcion `clearSyncQueue` para limpiar items atascados
-   - Exponer `clearSyncQueue` en el contexto
-
-4. `src/components/layout/SyncStatusBadge.tsx` (verificar)
-   - Agregar boton para limpiar cola si hay items con muchos reintentos
+2. **`src/hooks/useImportMilk.ts`** (linea ~40-50)
+   - Eliminar `total_liters: row.total_liters` del objeto que se inserta en `recordsToInsert`
 
 ### Resultado esperado
 
-- El formulario de registro mostrara feedback claro si no puede cargar animales
-- Los nuevos registros se insertaran correctamente en la base de datos
-- El cambio pendiente atascado podra ser descartado por el usuario
-- Mensajes de error claros cuando la sincronizacion falla
+- Los registros de produccion de leche se guardaran correctamente para CUALQUIER fecha (pasada, presente o futura)
+- La importacion masiva desde Excel tambien funcionara
+- La cola de sincronizacion dejara de atascarse
 

@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.create-team-user]
 verify_jwt = false
+
+[functions.manage-team-user]
+verify_jwt = false

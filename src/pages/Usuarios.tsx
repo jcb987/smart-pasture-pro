@@ -185,6 +185,7 @@ const Usuarios = () => {
                     onUpdateRole={updateUserRole}
                     onToggleBlock={toggleBlockUser}
                     onManagePermissions={handleManagePermissions}
+                    onUserDeleted={fetchUsers}
                   />
                 ))}
               </div>

@@ -176,8 +176,26 @@ export const useMilkProduction = () => {
       // Add to local state immediately
       setRecords(prev => [newRecord, ...prev]);
 
+      // Only send valid DB columns to the sync queue (exclude 'animal' relation)
+      const dbRecord: Record<string, unknown> = {
+        id: newRecord.id,
+        animal_id: newRecord.animal_id,
+        organization_id: newRecord.organization_id,
+        production_date: newRecord.production_date,
+        morning_liters: newRecord.morning_liters,
+        afternoon_liters: newRecord.afternoon_liters,
+        evening_liters: newRecord.evening_liters,
+        total_liters: newRecord.total_liters,
+        fat_percentage: newRecord.fat_percentage,
+        protein_percentage: newRecord.protein_percentage,
+        somatic_cell_count: newRecord.somatic_cell_count,
+        notes: newRecord.notes,
+        created_at: newRecord.created_at,
+        created_by: newRecord.created_by,
+      };
+
       // Save with offline support
-      await saveOffline('milk_production', 'milk_production', 'INSERT', newRecord as unknown as Record<string, unknown>);
+      await saveOffline('milk_production', 'milk_production', 'INSERT', dbRecord);
 
       toast({ 
         title: 'Éxito', 

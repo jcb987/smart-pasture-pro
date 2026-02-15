@@ -25,7 +25,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export const OfflineIndicator = () => {
-  const { isOnline, isSyncing, pendingChanges, lastSyncDate, syncNow } = useOffline();
+  const { isOnline, isSyncing, pendingChanges, lastSyncDate, syncNow, clearSyncQueue } = useOffline();
 
   const getStatusIcon = () => {
     if (isSyncing) {
@@ -131,6 +131,17 @@ export const OfflineIndicator = () => {
               </>
             )}
           </Button>
+
+          {pendingChanges > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-destructive hover:text-destructive"
+              onClick={clearSyncQueue}
+            >
+              Descartar cambios pendientes
+            </Button>
+          )}
 
           {!isOnline && (
             <p className="text-xs text-center text-muted-foreground">

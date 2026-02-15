@@ -68,18 +68,21 @@ export function useUserPermissions() {
   }, [user]);
 
   const hasModuleAccess = (moduleName: string): boolean => {
+    if (loading) return false; // Don't grant access while loading
     if (isAdmin) return true;
     if (!isTeamMember) return true; // Owner sees everything
     return permissions.some(p => p.module_name === moduleName && p.permission === 'read');
   };
 
   const hasWriteAccess = (moduleName: string): boolean => {
+    if (loading) return false;
     if (isAdmin) return true;
     if (!isTeamMember) return true;
     return permissions.some(p => p.module_name === moduleName && p.permission === 'write');
   };
 
   const hasDeleteAccess = (moduleName: string): boolean => {
+    if (loading) return false;
     if (isAdmin) return true;
     if (!isTeamMember) return true;
     return permissions.some(p => p.module_name === moduleName && p.permission === 'delete');

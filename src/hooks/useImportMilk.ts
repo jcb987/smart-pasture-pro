@@ -41,7 +41,7 @@ export function useImportMilk() {
         morning_liters: row.morning_liters,
         afternoon_liters: row.afternoon_liters,
         evening_liters: row.evening_liters,
-        total_liters: row.total_liters,
+        
         fat_percentage: row.fat_percentage,
         protein_percentage: row.protein_percentage,
         somatic_cell_count: row.somatic_cell_count,

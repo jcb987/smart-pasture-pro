@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 // @ts-ignore
-import logoImage from "@/assets/logo.png?v=3";
+import logoImage from "@/assets/logo.png?v=5";
 
 const Navbar = () => {
   const navigate = useNavigate();

@@ -185,7 +185,7 @@ export const useMilkProduction = () => {
         morning_liters: newRecord.morning_liters,
         afternoon_liters: newRecord.afternoon_liters,
         evening_liters: newRecord.evening_liters,
-        total_liters: newRecord.total_liters,
+        
         fat_percentage: newRecord.fat_percentage,
         protein_percentage: newRecord.protein_percentage,
         somatic_cell_count: newRecord.somatic_cell_count,

@@ -8,6 +8,7 @@ import { FounderProvider } from "@/contexts/FounderContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { FounderModeBanner } from "@/components/founder/FounderModeBanner";
+import PermissionGuard from "@/components/PermissionGuard";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 
 // Public pages
@@ -87,26 +88,26 @@ const App = () => (
                   <Route path="/founder" element={<ProtectedRoute><ErrorBoundary moduleName="Panel Founder"><FounderDashboard /></ErrorBoundary></ProtectedRoute>} />
 
                   {/* Protected routes with Error Boundaries */}
-                  <Route path="/dashboard" element={<ProtectedRoute><ErrorBoundary moduleName="Dashboard"><Dashboard /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/usuarios" element={<ProtectedRoute><ErrorBoundary moduleName="Usuarios"><Usuarios /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/consultar-animal" element={<ProtectedRoute><ErrorBoundary moduleName="Consultar Animal"><ConsultarAnimal /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/animales" element={<ProtectedRoute><ErrorBoundary moduleName="Animales"><Animales /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/reproduccion" element={<ProtectedRoute><ErrorBoundary moduleName="Reproducción"><Reproduccion /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/produccion-leche" element={<ProtectedRoute><ErrorBoundary moduleName="Producción de Leche"><ProduccionLeche /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/produccion-carne" element={<ProtectedRoute><ErrorBoundary moduleName="Producción de Carne"><ProduccionCarne /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/salud" element={<ProtectedRoute><ErrorBoundary moduleName="Salud"><Salud /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/alimentacion" element={<ProtectedRoute><ErrorBoundary moduleName="Alimentación"><Alimentacion /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/praderas" element={<ProtectedRoute><ErrorBoundary moduleName="Praderas"><Praderas /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/simulaciones" element={<ProtectedRoute><ErrorBoundary moduleName="Simulaciones"><Simulaciones /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/reportes" element={<ProtectedRoute><ErrorBoundary moduleName="Reportes"><Reportes /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/costos" element={<ProtectedRoute><ErrorBoundary moduleName="Costos"><Costos /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/insumos" element={<ProtectedRoute><ErrorBoundary moduleName="Insumos"><Insumos /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/genetica" element={<ProtectedRoute><ErrorBoundary moduleName="Genética"><Genetica /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/intercambio" element={<ProtectedRoute><ErrorBoundary moduleName="Intercambio"><Intercambio /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/app-movil" element={<ProtectedRoute><ErrorBoundary moduleName="App Móvil"><AppMovil /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/configuracion" element={<ProtectedRoute><ErrorBoundary moduleName="Configuración"><Configuracion /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/ayuda" element={<ProtectedRoute><ErrorBoundary moduleName="Ayuda"><Ayuda /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/herramientas" element={<ProtectedRoute><ErrorBoundary moduleName="Herramientas"><Herramientas /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/dashboard" element={<ProtectedRoute><PermissionGuard moduleName="dashboard"><ErrorBoundary moduleName="Dashboard"><Dashboard /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/usuarios" element={<ProtectedRoute><PermissionGuard moduleName="usuarios"><ErrorBoundary moduleName="Usuarios"><Usuarios /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/consultar-animal" element={<ProtectedRoute><PermissionGuard moduleName="animales"><ErrorBoundary moduleName="Consultar Animal"><ConsultarAnimal /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/animales" element={<ProtectedRoute><PermissionGuard moduleName="animales"><ErrorBoundary moduleName="Animales"><Animales /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/reproduccion" element={<ProtectedRoute><PermissionGuard moduleName="reproduccion"><ErrorBoundary moduleName="Reproducción"><Reproduccion /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/produccion-leche" element={<ProtectedRoute><PermissionGuard moduleName="produccion-leche"><ErrorBoundary moduleName="Producción de Leche"><ProduccionLeche /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/produccion-carne" element={<ProtectedRoute><PermissionGuard moduleName="produccion-carne"><ErrorBoundary moduleName="Producción de Carne"><ProduccionCarne /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/salud" element={<ProtectedRoute><PermissionGuard moduleName="salud"><ErrorBoundary moduleName="Salud"><Salud /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/alimentacion" element={<ProtectedRoute><PermissionGuard moduleName="alimentacion"><ErrorBoundary moduleName="Alimentación"><Alimentacion /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/praderas" element={<ProtectedRoute><PermissionGuard moduleName="praderas"><ErrorBoundary moduleName="Praderas"><Praderas /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/simulaciones" element={<ProtectedRoute><PermissionGuard moduleName="simulaciones"><ErrorBoundary moduleName="Simulaciones"><Simulaciones /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/reportes" element={<ProtectedRoute><PermissionGuard moduleName="reportes"><ErrorBoundary moduleName="Reportes"><Reportes /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/costos" element={<ProtectedRoute><PermissionGuard moduleName="costos"><ErrorBoundary moduleName="Costos"><Costos /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/insumos" element={<ProtectedRoute><PermissionGuard moduleName="insumos"><ErrorBoundary moduleName="Insumos"><Insumos /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/genetica" element={<ProtectedRoute><PermissionGuard moduleName="genetica"><ErrorBoundary moduleName="Genética"><Genetica /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/intercambio" element={<ProtectedRoute><PermissionGuard moduleName="intercambio"><ErrorBoundary moduleName="Intercambio"><Intercambio /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/app-movil" element={<ProtectedRoute><PermissionGuard moduleName="app-movil"><ErrorBoundary moduleName="App Móvil"><AppMovil /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/configuracion" element={<ProtectedRoute><PermissionGuard moduleName="configuracion"><ErrorBoundary moduleName="Configuración"><Configuracion /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/ayuda" element={<ProtectedRoute><PermissionGuard moduleName="ayuda"><ErrorBoundary moduleName="Ayuda"><Ayuda /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/herramientas" element={<ProtectedRoute><PermissionGuard moduleName="herramientas"><ErrorBoundary moduleName="Herramientas"><Herramientas /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
                   <Route path="/inteligencia" element={<ProtectedRoute><ErrorBoundary moduleName="Inteligencia"><Inteligencia /></ErrorBoundary></ProtectedRoute>} />
 
                   {/* Catch-all route */}

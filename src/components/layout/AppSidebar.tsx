@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useFounder } from '@/contexts/FounderContext';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import {
   Sidebar,
   SidebarContent,
@@ -60,6 +61,31 @@ import {
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+
+// Map sidebar URLs to permission module names
+const urlToModule: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/usuarios': 'usuarios',
+  '/consultar-animal': 'animales',
+  '/animales': 'animales',
+  '/reproduccion': 'reproduccion',
+  '/produccion-leche': 'produccion-leche',
+  '/produccion-carne': 'produccion-carne',
+  '/salud': 'salud',
+  '/alimentacion': 'alimentacion',
+  '/praderas': 'praderas',
+  '/simulaciones': 'simulaciones',
+  '/reportes': 'reportes',
+  '/costos': 'costos',
+  '/insumos': 'insumos',
+  '/genetica': 'genetica',
+  '/intercambio': 'intercambio',
+  '/inteligencia': 'inteligencia',
+  '/herramientas': 'herramientas',
+  '/app-movil': 'app-movil',
+  '/configuracion': 'configuracion',
+  '/ayuda': 'ayuda',
+};
 
 // Menú para usuarios normales
 const userMenuItems = [
@@ -149,9 +175,22 @@ export function AppSidebar({ activeSection, onSectionChange }: AppSidebarProps) 
   const { isFounder, isFounderMode } = useFounder();
   const collapsed = state === 'collapsed';
 
+  const { hasModuleAccess } = useUserPermissions();
+
   const showFounderMenu = isFounder && !isFounderMode;
   
-  const menuItems = showFounderMenu ? founderMenuItems : userMenuItems;
+  const allMenuItems = showFounderMenu ? founderMenuItems : userMenuItems;
+  
+  // Filter menu items based on user permissions (only for user menu)
+  const menuItems = showFounderMenu 
+    ? allMenuItems 
+    : allMenuItems.filter(item => {
+        if (!('url' in item)) return true;
+        const moduleName = urlToModule[item.url as string];
+        if (!moduleName) return true;
+        return hasModuleAccess(moduleName);
+      });
+  
   const groups = showFounderMenu ? founderGroups : userGroups;
 
   const isActive = (item: typeof menuItems[0]) => {

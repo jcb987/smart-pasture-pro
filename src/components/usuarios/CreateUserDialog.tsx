@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { type AppRole } from '@/hooks/useUsers';
 import { z } from 'zod';
-import { Mail, Info, Shield, CheckCircle } from 'lucide-react';
+import { Info, Shield, CheckCircle, UserPlus, Eye, EyeOff } from 'lucide-react';
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -31,35 +31,63 @@ interface CreateUserDialogProps {
   organizationId: string | null;
 }
 
-const inviteSchema = z.object({
+const ROLE_DESCRIPTIONS: Record<AppRole, { emoji: string; label: string; description: string }> = {
+  admin: {
+    emoji: '⚙️',
+    label: 'Administrador',
+    description: 'Acceso total: gestión de usuarios, configuración, costos, reportes y todos los módulos',
+  },
+  ganadero: {
+    emoji: '🐄',
+    label: 'Ganadero (Mayordomo)',
+    description: 'Registro de animales, producción, alimentación, praderas e insumos. Sin acceso a costos ni configuración',
+  },
+  veterinario: {
+    emoji: '🩺',
+    label: 'Veterinario',
+    description: 'Salud, reproducción, genética y animales. Sin acceso a costos, configuración ni usuarios',
+  },
+  tecnico: {
+    emoji: '🔧',
+    label: 'Técnico',
+    description: 'Registro de producción, alimentación, praderas e insumos. Sin acceso a salud, costos ni configuración',
+  },
+};
+
+const createUserSchema = z.object({
   email: z.string().trim().email({ message: 'Email inválido' }),
   fullName: z.string().trim().min(2, { message: 'El nombre debe tener al menos 2 caracteres' }),
+  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
   phone: z.string().optional(),
 });
 
 export function CreateUserDialog({ open, onOpenChange, onUserCreated, organizationId }: CreateUserDialogProps) {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<AppRole>('ganadero');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [inviteSent, setInviteSent] = useState(false);
+  const [created, setCreated] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const resetForm = () => {
     setEmail('');
     setFullName('');
+    setPassword('');
     setPhone('');
     setRole('ganadero');
     setErrors({});
-    setInviteSent(false);
+    setCreated(false);
+    setShowPassword(false);
   };
 
   const handleSubmit = async () => {
     try {
       setErrors({});
-      
+
       if (!organizationId) {
         toast({
           title: 'Error',
@@ -69,12 +97,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, organizati
         return;
       }
 
-      // Validate input
-      const validation = inviteSchema.safeParse({
-        email,
-        fullName,
-        phone,
-      });
+      const validation = createUserSchema.safeParse({ email, fullName, password, phone });
 
       if (!validation.success) {
         const fieldErrors: Record<string, string> = {};
@@ -89,36 +112,41 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, organizati
 
       setLoading(true);
 
-      // Usar Supabase Auth magic link para invitar al usuario
-      // El usuario recibirá un enlace para crear su cuenta
-      const { error: authError } = await supabase.auth.signInWithOtp({
-        email: email.toLowerCase().trim(),
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/auth`,
-          data: {
-            full_name: fullName.trim(),
-            phone: phone || null,
-            role: role,
-            organization_id: organizationId,
-            invited: true,
-          },
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: 'Error', description: 'Sesión expirada. Inicia sesión de nuevo.', variant: 'destructive' });
+        return;
+      }
+
+      const response = await supabase.functions.invoke('create-team-user', {
+        body: {
+          email: email.toLowerCase().trim(),
+          password,
+          full_name: fullName.trim(),
+          phone: phone || null,
+          role,
+          organization_id: organizationId,
         },
       });
 
-      if (authError) throw authError;
-      
-      setInviteSent(true);
-      toast({
-        title: '¡Invitación enviada!',
-        description: `Se ha enviado un enlace de acceso a ${email}. El usuario podrá crear su contraseña al ingresar.`,
-      });
+      if (response.error) {
+        throw new Error(response.error.message || 'Error al crear usuario');
+      }
 
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      setCreated(true);
+      toast({
+        title: '¡Usuario creado!',
+        description: `${fullName} fue creado como ${ROLE_DESCRIPTIONS[role].label}`,
+      });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         title: 'Error',
-        description: `No se pudo enviar la invitación: ${errorMessage}`,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -127,41 +155,44 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, organizati
   };
 
   const handleClose = () => {
-    if (inviteSent) {
+    if (created) {
       resetForm();
       onUserCreated();
     }
     onOpenChange(false);
   };
 
-  // Vista de invitación enviada
-  if (inviteSent) {
+  if (created) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
-              Invitación Enviada
+              Usuario Creado
             </DialogTitle>
           </DialogHeader>
 
           <div className="text-center py-6 space-y-4">
-            <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
-              <Mail className="h-8 w-8 text-green-500" />
+            <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto text-3xl">
+              {ROLE_DESCRIPTIONS[role].emoji}
             </div>
             <div>
               <h3 className="font-semibold text-lg">{fullName}</h3>
               <p className="text-muted-foreground">{email}</p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Hemos enviado un enlace de acceso al correo indicado. 
-              El usuario podrá crear su propia contraseña al ingresar por primera vez.
-            </p>
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                El usuario será asignado automáticamente como <strong className="capitalize">{role}</strong> en tu organización.
+                <strong>Credenciales de acceso:</strong>
+                <br />
+                Email: <code className="bg-muted px-1 rounded">{email}</code>
+                <br />
+                Contraseña: la que definiste
+                <br />
+                Rol: <strong className="capitalize">{ROLE_DESCRIPTIONS[role].label}</strong>
+                <br /><br />
+                Los permisos por módulo fueron asignados automáticamente según el rol.
               </AlertDescription>
             </Alert>
           </div>
@@ -178,24 +209,16 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, organizati
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            Invitar Nuevo Usuario
+            Crear Nuevo Usuario
           </DialogTitle>
           <DialogDescription>
-            Envía una invitación por correo electrónico. El usuario creará su propia contraseña.
+            Crea una cuenta con contraseña. Los permisos se asignan automáticamente según el rol.
           </DialogDescription>
         </DialogHeader>
-
-        <Alert className="bg-primary/5 border-primary/20">
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Flujo seguro:</strong> El administrador no crea contraseñas. 
-            El usuario recibirá un enlace para registrarse de forma segura.
-          </AlertDescription>
-        </Alert>
 
         <div className="space-y-4">
           <div className="space-y-2">
@@ -218,10 +241,30 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, organizati
               onChange={(e) => setEmail(e.target.value)}
               placeholder="correo@ejemplo.com"
             />
-            <p className="text-xs text-muted-foreground">
-              Se enviará un enlace de invitación a este correo
-            </p>
             {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Contraseña *</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
 
           <div className="space-y-2">
@@ -235,37 +278,26 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, organizati
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Rol en la finca</Label>
+            <Label htmlFor="role">Rol en la finca *</Label>
             <Select value={role} onValueChange={(value) => setRole(value as AppRole)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ganadero">
-                  <span className="flex items-center gap-2">
-                    🐄 Ganadero
-                  </span>
-                </SelectItem>
-                <SelectItem value="tecnico">
-                  <span className="flex items-center gap-2">
-                    🔧 Técnico
-                  </span>
-                </SelectItem>
-                <SelectItem value="veterinario">
-                  <span className="flex items-center gap-2">
-                    🩺 Veterinario
-                  </span>
-                </SelectItem>
-                <SelectItem value="admin">
-                  <span className="flex items-center gap-2">
-                    ⚙️ Administrador
-                  </span>
-                </SelectItem>
+                {(['ganadero', 'veterinario', 'tecnico', 'admin'] as AppRole[]).map((r) => (
+                  <SelectItem key={r} value={r}>
+                    <span className="flex items-center gap-2">
+                      {ROLE_DESCRIPTIONS[r].emoji} {ROLE_DESCRIPTIONS[r].label}
+                    </span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Define qué puede hacer este miembro en el sistema
-            </p>
+            {ROLE_DESCRIPTIONS[role] && (
+              <p className="text-xs text-muted-foreground p-2 bg-muted/50 rounded-md">
+                {ROLE_DESCRIPTIONS[role].description}
+              </p>
+            )}
           </div>
         </div>
 
@@ -275,11 +307,11 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, organizati
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
             {loading ? (
-              <>Enviando invitación...</>
+              'Creando usuario...'
             ) : (
               <>
-                <Mail className="mr-2 h-4 w-4" />
-                Enviar Invitación
+                <UserPlus className="mr-2 h-4 w-4" />
+                Crear Usuario
               </>
             )}
           </Button>

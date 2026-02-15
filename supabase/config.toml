@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.pdf-import-parser]
 verify_jwt = false
+
+[functions.create-team-user]
+verify_jwt = false

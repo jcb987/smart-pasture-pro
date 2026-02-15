@@ -1,50 +1,38 @@
 
+## Plan: Corregir la creacion de usuarios (Edge Function)
 
-## Plan: Corregir el registro de produccion de leche
+### Problemas detectados
 
-### Problema real detectado
+1. **Falta configuracion en `config.toml`**: La funcion `create-team-user` no tiene `verify_jwt = false` en el archivo de configuracion. El sistema de signing-keys requiere que `verify_jwt` sea `false` y que la validacion del JWT se haga manualmente en el codigo (que ya se hace). Sin esta configuracion, la funcion rechaza la peticion ANTES de que el codigo se ejecute, devolviendo un error generico "non-2xx status code".
 
-Al analizar las peticiones de red, el error NO es sobre fechas pasadas. El problema es que **ningún registro se esta guardando** (ni de hoy ni de fechas anteriores). El error es:
-
-```
-"cannot insert a non-DEFAULT value into column 'total_liters'"
-```
-
-La columna `total_liters` es una **columna generada automaticamente** en la base de datos que calcula:
-```
-morning_liters + afternoon_liters + evening_liters
-```
-
-Pero el codigo esta enviando un valor calculado manualmente para `total_liters`, lo cual la base de datos rechaza con error 400. Esto causa que todos los registros queden "pendientes" en la cola de sincronizacion sin poder guardarse.
+2. **CORS headers incompletos**: Los headers CORS de la funcion solo incluyen `authorization, x-client-info, apikey, content-type`, pero faltan los headers adicionales que el cliente envia automaticamente (`x-supabase-client-platform`, etc.). Esto puede causar que el navegador bloquee la peticion preflight.
 
 ### Solucion
 
-#### 1. Excluir `total_liters` del INSERT (archivo: `useMilkProduction.ts`)
+#### 1. Agregar configuracion en `supabase/config.toml`
 
-Remover `total_liters` del objeto `dbRecord` que se envia a la base de datos, ya que la base de datos lo calcula automaticamente. Mantenerlo en el estado local para mostrar en la UI.
+Agregar la entrada para `create-team-user` con `verify_jwt = false`:
 
-#### 2. Excluir `total_liters` en la importacion masiva (archivo: `useImportMilk.ts`)
+```toml
+[functions.create-team-user]
+verify_jwt = false
+```
 
-Mismo problema: al importar datos de Excel, tambien se envia `total_liters`. Hay que removerlo del objeto de insercion.
+#### 2. Actualizar CORS headers en la Edge Function
 
-#### 3. Limpiar la cola de sincronizacion atascada
+Cambiar los headers CORS en `supabase/functions/create-team-user/index.ts` para incluir todos los headers requeridos:
 
-Los registros que intentaste guardar antes estan atascados en la cola porque contienen `total_liters`. Necesitas descartarlos usando el boton "Descartar cambios pendientes" que ya existe.
+```
+authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version
+```
 
-### Detalles tecnicos
+### Archivos a modificar
 
-**Archivos a modificar:**
-
-1. **`src/hooks/useMilkProduction.ts`** (linea ~180-195)
-   - Eliminar la linea `total_liters: newRecord.total_liters` del objeto `dbRecord`
-   - El campo seguira existiendo en `newRecord` para mostrar en la UI local
-
-2. **`src/hooks/useImportMilk.ts`** (linea ~40-50)
-   - Eliminar `total_liters: row.total_liters` del objeto que se inserta en `recordsToInsert`
+1. **`supabase/config.toml`** - Agregar seccion `[functions.create-team-user]` con `verify_jwt = false`
+2. **`supabase/functions/create-team-user/index.ts`** - Actualizar la constante `corsHeaders` con los headers completos
 
 ### Resultado esperado
 
-- Los registros de produccion de leche se guardaran correctamente para CUALQUIER fecha (pasada, presente o futura)
-- La importacion masiva desde Excel tambien funcionara
-- La cola de sincronizacion dejara de atascarse
-
+- La funcion dejara de rechazar las peticiones antes de ejecutarse
+- El formulario de "Crear Nuevo Usuario" funcionara correctamente
+- Los usuarios creados tendran sus roles y permisos asignados automaticamente

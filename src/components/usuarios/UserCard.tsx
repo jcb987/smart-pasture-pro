@@ -21,8 +21,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MoreVertical, Shield, Lock, Unlock, Key, UserCog } from 'lucide-react';
+import { MoreVertical, Shield, Lock, Unlock, Key, UserCog, Trash2 } from 'lucide-react';
 import { type UserProfile, type AppRole } from '@/hooks/useUsers';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface UserCardProps {
   user: UserProfile;
@@ -30,6 +32,7 @@ interface UserCardProps {
   onUpdateRole: (userId: string, role: AppRole, action: 'add' | 'remove') => void;
   onToggleBlock: (userId: string, block: boolean, reason?: string) => void;
   onManagePermissions: (user: UserProfile) => void;
+  onUserDeleted?: () => void;
 }
 
 const roleLabels: Record<AppRole, string> = {
@@ -46,10 +49,15 @@ const roleColors: Record<AppRole, string> = {
   veterinario: 'bg-green-500 text-white',
 };
 
-export function UserCard({ user, canManageUsers, onUpdateRole, onToggleBlock, onManagePermissions }: UserCardProps) {
+export function UserCard({ user, canManageUsers, onUpdateRole, onToggleBlock, onManagePermissions, onUserDeleted }: UserCardProps) {
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [blockReason, setBlockReason] = useState('');
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const { toast } = useToast();
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -65,6 +73,63 @@ export function UserCard({ user, canManageUsers, onUpdateRole, onToggleBlock, on
     onToggleBlock(user.user_id, true, blockReason);
     setBlockDialogOpen(false);
     setBlockReason('');
+  };
+
+  const handleDeleteUser = async () => {
+    try {
+      setActionLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No autenticado');
+
+      const response = await supabase.functions.invoke('manage-team-user', {
+        body: { action: 'delete', target_user_id: user.user_id },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      const result = response.data;
+      if (!result.success) throw new Error(result.error || 'Error desconocido');
+
+      toast({ title: 'Éxito', description: 'Usuario eliminado correctamente' });
+      setDeleteDialogOpen(false);
+      onUserDeleted?.();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'No se pudo eliminar el usuario',
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast({ title: 'Error', description: 'La contraseña debe tener al menos 6 caracteres', variant: 'destructive' });
+      return;
+    }
+    try {
+      setActionLoading(true);
+      const response = await supabase.functions.invoke('manage-team-user', {
+        body: { action: 'reset_password', target_user_id: user.user_id, new_password: newPassword },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      const result = response.data;
+      if (!result.success) throw new Error(result.error || 'Error desconocido');
+
+      toast({ title: 'Éxito', description: 'Contraseña restablecida correctamente' });
+      setResetPasswordDialogOpen(false);
+      setNewPassword('');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'No se pudo restablecer la contraseña',
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const allRoles: AppRole[] = ['admin', 'ganadero', 'tecnico', 'veterinario'];
@@ -107,7 +172,7 @@ export function UserCard({ user, canManageUsers, onUpdateRole, onToggleBlock, on
                     <UserCog className="mr-2 h-4 w-4" />
                     Gestionar permisos
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setResetPasswordDialogOpen(true)}>
                     <Key className="mr-2 h-4 w-4" />
                     Restablecer contraseña
                   </DropdownMenuItem>
@@ -126,6 +191,14 @@ export function UserCard({ user, canManageUsers, onUpdateRole, onToggleBlock, on
                       Bloquear cuenta
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar usuario
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -233,6 +306,59 @@ export function UserCard({ user, canManageUsers, onUpdateRole, onToggleBlock, on
           <DialogFooter>
             <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>
               Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para eliminar usuario */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar usuario</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que quieres eliminar permanentemente a <strong>{user.full_name}</strong>? 
+              Esta acción no se puede deshacer. Se eliminarán todos los datos asociados a este usuario.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={actionLoading}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={actionLoading}>
+              {actionLoading ? 'Eliminando...' : 'Eliminar permanentemente'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para restablecer contraseña */}
+      <Dialog open={resetPasswordDialogOpen} onOpenChange={(open) => { setResetPasswordDialogOpen(open); if (!open) setNewPassword(''); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restablecer contraseña</DialogTitle>
+            <DialogDescription>
+              Establece una nueva contraseña para {user.full_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="new-password">Nueva contraseña</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResetPasswordDialogOpen(false); setNewPassword(''); }} disabled={actionLoading}>
+              Cancelar
+            </Button>
+            <Button onClick={handleResetPassword} disabled={actionLoading}>
+              {actionLoading ? 'Restableciendo...' : 'Restablecer contraseña'}
             </Button>
           </DialogFooter>
         </DialogContent>

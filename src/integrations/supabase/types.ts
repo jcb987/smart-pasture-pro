@@ -2272,6 +2272,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_blocked: boolean | null
+          is_team_member: boolean | null
           last_login: string | null
           organization_id: string | null
           phone: string | null
@@ -2286,6 +2287,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_blocked?: boolean | null
+          is_team_member?: boolean | null
           last_login?: string | null
           organization_id?: string | null
           phone?: string | null
@@ -2300,6 +2302,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_blocked?: boolean | null
+          is_team_member?: boolean | null
           last_login?: string | null
           organization_id?: string | null
           phone?: string | null

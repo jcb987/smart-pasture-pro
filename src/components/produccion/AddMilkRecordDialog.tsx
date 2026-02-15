@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 interface Animal {
   id: string;
@@ -32,6 +34,9 @@ interface AddMilkRecordDialogProps {
 export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRecordDialogProps) => {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingAnimals, setLoadingAnimals] = useState(false);
+  const [animalsError, setAnimalsError] = useState<string | null>(null);
+  const { toast } = useToast();
   const [form, setForm] = useState({
     animal_id: '',
     production_date: new Date().toISOString().split('T')[0],
@@ -46,16 +51,38 @@ export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRec
 
   useEffect(() => {
     const fetchAnimals = async () => {
-      const { data } = await supabase
-        .from('animals')
-        .select('id, tag_id, name')
-        .eq('sex', 'hembra')
-        .eq('status', 'activo')
-        .order('tag_id');
-      setAnimals(data || []);
+      setLoadingAnimals(true);
+      setAnimalsError(null);
+      try {
+        const { data, error } = await supabase
+          .from('animals')
+          .select('id, tag_id, name')
+          .eq('sex', 'hembra')
+          .eq('status', 'activo')
+          .order('tag_id');
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+          setAnimalsError('No hay animales hembra activos registrados. Primero registra animales en el módulo de Animales.');
+          setAnimals([]);
+        } else {
+          setAnimals(data);
+        }
+      } catch (error) {
+        console.error('Error fetching animals:', error);
+        setAnimalsError('No se pudieron cargar los animales. Verifica tu conexión.');
+        toast({
+          title: 'Error',
+          description: 'No se pudieron cargar los animales para el registro',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoadingAnimals(false);
+      }
     };
     if (open) fetchAnimals();
-  }, [open]);
+  }, [open, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,18 +127,30 @@ export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRec
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Animal *</Label>
-            <Select value={form.animal_id} onValueChange={(v) => setForm({ ...form, animal_id: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar animal" />
-              </SelectTrigger>
-              <SelectContent>
-                {animals.map((animal) => (
-                  <SelectItem key={animal.id} value={animal.id}>
-                    {animal.tag_id} {animal.name && `- ${animal.name}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {loadingAnimals ? (
+              <div className="flex items-center gap-2 p-3 border rounded-md text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Cargando animales...
+              </div>
+            ) : animalsError ? (
+              <div className="flex items-center gap-2 p-3 border border-destructive/50 rounded-md text-sm text-destructive bg-destructive/5">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {animalsError}
+              </div>
+            ) : (
+              <Select value={form.animal_id} onValueChange={(v) => setForm({ ...form, animal_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar animal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {animals.map((animal) => (
+                    <SelectItem key={animal.id} value={animal.id}>
+                      {animal.tag_id} {animal.name && `- ${animal.name}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -202,7 +241,7 @@ export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRec
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !form.animal_id}>
+            <Button type="submit" disabled={loading || !form.animal_id || loadingAnimals || !!animalsError}>
               {loading ? 'Guardando...' : 'Guardar'}
             </Button>
           </div>

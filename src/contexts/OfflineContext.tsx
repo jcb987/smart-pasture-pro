@@ -9,6 +9,7 @@ interface OfflineContextType {
   pendingChanges: number;
   lastSyncDate: string | null;
   syncNow: () => Promise<void>;
+  clearSyncQueue: () => Promise<void>;
   saveOffline: (
     store: StoreName,
     table: string,
@@ -154,6 +155,23 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [isOnline, isSyncing]);
 
+  // Clear stuck sync queue items
+  const clearSyncQueue = useCallback(async () => {
+    try {
+      const queue = await offlineDB.getSyncQueue();
+      for (const item of queue) {
+        await offlineDB.removeSyncQueueItem(item.id);
+      }
+      setPendingChanges(0);
+      toast.success('Cola de sincronización limpiada', {
+        description: 'Los cambios pendientes han sido descartados',
+      });
+    } catch (error) {
+      console.error('Error clearing sync queue:', error);
+      toast.error('No se pudo limpiar la cola');
+    }
+  }, []);
+
   // Save data with offline support
   const saveOffline = useCallback(async (
     store: StoreName,
@@ -219,6 +237,7 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
         pendingChanges,
         lastSyncDate,
         syncNow,
+        clearSyncQueue,
         saveOffline,
       }}
     >

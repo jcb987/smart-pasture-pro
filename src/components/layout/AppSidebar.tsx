@@ -175,7 +175,7 @@ export function AppSidebar({ activeSection, onSectionChange }: AppSidebarProps) 
   const { isFounder, isFounderMode } = useFounder();
   const collapsed = state === 'collapsed';
 
-  const { hasModuleAccess } = useUserPermissions();
+  const { hasModuleAccess, loading: permissionsLoading } = useUserPermissions();
 
   const showFounderMenu = isFounder && !isFounderMode;
   

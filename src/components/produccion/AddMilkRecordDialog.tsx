@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, ChevronsUpDown, Check, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Animal {
   id: string;
@@ -38,6 +40,7 @@ export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRec
   const [loading, setLoading] = useState(false);
   const [loadingAnimals, setLoadingAnimals] = useState(false);
   const [animalsError, setAnimalsError] = useState<string | null>(null);
+  const [animalPopoverOpen, setAnimalPopoverOpen] = useState(false);
   const { toast } = useToast();
   const [form, setForm] = useState({
     animal_id: '',
@@ -143,18 +146,39 @@ export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRec
                 {animalsError}
               </div>
             ) : (
-              <Select value={form.animal_id} onValueChange={(v) => setForm({ ...form, animal_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar animal" />
-                </SelectTrigger>
-                <SelectContent>
-                  {animals.map((animal) => (
-                    <SelectItem key={animal.id} value={animal.id}>
-                      {animal.tag_id} {animal.name && `- ${animal.name}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={animalPopoverOpen} onOpenChange={setAnimalPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={animalPopoverOpen} className="w-full justify-between font-normal">
+                    {form.animal_id
+                      ? (() => { const a = animals.find(a => a.id === form.animal_id); return a ? `${a.tag_id}${a.name ? ` - ${a.name}` : ''}` : 'Seleccionar animal'; })()
+                      : 'Seleccionar animal'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-50 bg-popover" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar animal..." />
+                    <CommandList>
+                      <CommandEmpty>No se encontró animal.</CommandEmpty>
+                      <CommandGroup>
+                        {animals.map((animal) => (
+                          <CommandItem
+                            key={animal.id}
+                            value={`${animal.tag_id} ${animal.name || ''}`}
+                            onSelect={() => {
+                              setForm({ ...form, animal_id: animal.id });
+                              setAnimalPopoverOpen(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", form.animal_id === animal.id ? "opacity-100" : "opacity-0")} />
+                            {animal.tag_id} {animal.name && `- ${animal.name}`}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
 

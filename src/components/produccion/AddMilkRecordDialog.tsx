@@ -28,6 +28,8 @@ interface AddMilkRecordDialogProps {
     protein_percentage?: number;
     somatic_cell_count?: number;
     notes?: string;
+    animal_tag_id?: string;
+    animal_name?: string | null;
   }) => Promise<any>;
 }
 
@@ -89,6 +91,7 @@ export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRec
     if (!form.animal_id) return;
 
     setLoading(true);
+    const selectedAnimal = animals.find(a => a.id === form.animal_id);
     const result = await onSubmit({
       animal_id: form.animal_id,
       production_date: form.production_date,
@@ -99,6 +102,8 @@ export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRec
       protein_percentage: form.protein_percentage ? parseFloat(form.protein_percentage) : undefined,
       somatic_cell_count: form.somatic_cell_count ? parseInt(form.somatic_cell_count) : undefined,
       notes: form.notes || undefined,
+      animal_tag_id: selectedAnimal?.tag_id,
+      animal_name: selectedAnimal?.name,
     });
 
     setLoading(false);

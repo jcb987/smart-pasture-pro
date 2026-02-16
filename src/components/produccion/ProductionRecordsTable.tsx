@@ -39,7 +39,8 @@ interface ProductionRecordsTableProps {
 
 export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRecordsTableProps) => {
   const formatDateStr = (dateStr: string) => {
-    return format(new Date(dateStr), 'dd MMM yyyy', { locale: es });
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return format(new Date(year, month - 1, day), 'dd MMM yyyy', { locale: es });
   };
 
   if (type === 'milk') {

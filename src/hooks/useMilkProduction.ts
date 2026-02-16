@@ -143,6 +143,8 @@ export const useMilkProduction = () => {
     protein_percentage?: number;
     somatic_cell_count?: number;
     notes?: string;
+    animal_tag_id?: string;
+    animal_name?: string | null;
   }) => {
     const orgId = organizationId || await getOrganizationId();
     if (!orgId) {
@@ -171,6 +173,11 @@ export const useMilkProduction = () => {
         notes: record.notes || null,
         created_at: new Date().toISOString(),
         created_by: user?.id,
+        animal: record.animal_tag_id ? {
+          id: record.animal_id,
+          tag_id: record.animal_tag_id,
+          name: record.animal_name || null,
+        } : undefined,
       };
 
       // Add to local state immediately

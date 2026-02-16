@@ -39,7 +39,7 @@ export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRec
   const { toast } = useToast();
   const [form, setForm] = useState({
     animal_id: '',
-    production_date: new Date().toISOString().split('T')[0],
+    production_date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })(),
     morning_liters: '',
     afternoon_liters: '',
     evening_liters: '',
@@ -105,7 +105,7 @@ export const AddMilkRecordDialog = ({ open, onOpenChange, onSubmit }: AddMilkRec
     if (result) {
       setForm({
         animal_id: '',
-        production_date: new Date().toISOString().split('T')[0],
+        production_date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })(),
         morning_liters: '',
         afternoon_liters: '',
         evening_liters: '',

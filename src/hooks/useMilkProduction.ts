@@ -236,9 +236,10 @@ export const useMilkProduction = () => {
   };
 
   const getStats = (): MilkStats => {
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const formatLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const today = formatLocal(new Date());
+    const weekAgo = formatLocal(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    const monthAgo = formatLocal(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
 
     const todayRecords = records.filter(r => r.production_date === today);
     const weekRecords = records.filter(r => r.production_date >= weekAgo);
@@ -267,7 +268,8 @@ export const useMilkProduction = () => {
 
   const getRankings = (period: 'week' | 'month' | 'year' = 'month'): AnimalRanking[] => {
     const periodDays = period === 'week' ? 7 : period === 'month' ? 30 : 365;
-    const startDate = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const sd = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);
+    const startDate = `${sd.getFullYear()}-${String(sd.getMonth()+1).padStart(2,'0')}-${String(sd.getDate()).padStart(2,'0')}`;
 
     const periodRecords = records.filter(r => r.production_date >= startDate);
 
@@ -304,7 +306,8 @@ export const useMilkProduction = () => {
     const last30Days: { date: string; total: number }[] = [];
     
     for (let i = 29; i >= 0; i--) {
-      const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const dd = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const date = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
       const dayRecords = records.filter(r => 
         r.production_date === date && 
         (!animalId || r.animal_id === animalId)

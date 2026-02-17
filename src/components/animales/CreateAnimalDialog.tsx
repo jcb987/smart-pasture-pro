@@ -95,9 +95,7 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit, animals = [] 
     });
   };
 
-  // Validar que madre y padre estén seleccionados
-  const isGeneticsValid = formData.mother_id && formData.father_id;
-  const canSubmit = formData.tag_id && isGeneticsValid;
+  const canSubmit = !!formData.tag_id;
 
   const getAnimalLabel = (animal: Animal) => {
     return `${animal.tag_id}${animal.name ? ` - ${animal.name}` : ''}`; 
@@ -154,19 +152,9 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit, animals = [] 
         <DialogHeader>
           <DialogTitle>Registrar Nuevo Animal</DialogTitle>
           <DialogDescription>
-            Ingresa los datos del animal. El arete, madre y padre son obligatorios para trazabilidad genética.
+            Ingresa los datos del animal. El arete es obligatorio.
           </DialogDescription>
         </DialogHeader>
-
-        {/* Alerta de genética obligatoria */}
-        {!isGeneticsValid && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Trazabilidad genética obligatoria:</strong> Debes seleccionar la madre y el padre del animal para poder registrarlo.
-            </AlertDescription>
-          </Alert>
-        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -283,13 +271,13 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit, animals = [] 
           {/* SECCIÓN DE GENÉTICA OBLIGATORIA */}
           <div className="col-span-2 border-t pt-4 mt-2">
             <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-              🧬 Genética (Obligatorio)
+              🧬 Genética (Opcional)
             </h4>
           </div>
 
           {/* Madre */}
           <div className="space-y-2">
-            <Label>Madre *</Label>
+            <Label>Madre</Label>
             <Popover open={motherOpen} onOpenChange={setMotherOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -340,7 +328,7 @@ export function CreateAnimalDialog({ open, onOpenChange, onSubmit, animals = [] 
 
           {/* Padre */}
           <div className="space-y-2">
-            <Label>Padre / Semental *</Label>
+            <Label>Padre / Semental</Label>
             <Popover open={fatherOpen} onOpenChange={setFatherOpen}>
               <PopoverTrigger asChild>
                 <Button

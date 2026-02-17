@@ -7,8 +7,16 @@ interface PermissionGuardProps {
   children: React.ReactNode;
 }
 
+// Modules that are always accessible to any authenticated user
+const ALWAYS_ACCESSIBLE_MODULES = ['dashboard', 'configuracion', 'ayuda'];
+
 const PermissionGuard: React.FC<PermissionGuardProps> = ({ moduleName, children }) => {
   const { hasModuleAccess, loading } = useUserPermissions();
+
+  // Always allow access to core modules to prevent redirect loops
+  if (ALWAYS_ACCESSIBLE_MODULES.includes(moduleName)) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (

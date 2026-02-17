@@ -245,7 +245,7 @@ export function useUsers() {
       if (action === 'add') {
         const { error } = await supabase
           .from('user_permissions')
-          .insert({ user_id: userId, module_name: moduleName, permission });
+          .insert({ user_id: userId, module_name: moduleName, permission, organization_id: organizationId });
 
         if (error) throw error;
       } else {

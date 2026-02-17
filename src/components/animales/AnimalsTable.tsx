@@ -23,9 +23,9 @@ import { PaginationControls } from '@/components/shared/PaginationControls';
 interface AnimalsTableProps {
   animals: Animal[];
   onView: (animal: Animal) => void;
-  onEdit: (animal: Animal) => void;
-  onAddWeight: (animal: Animal) => void;
-  onDelete: (animal: Animal) => void;
+  onEdit?: (animal: Animal) => void;
+  onAddWeight?: (animal: Animal) => void;
+  onDelete?: (animal: Animal) => void;
 }
 
 const categoryLabels: Record<AnimalCategory, string> = {
@@ -145,22 +145,30 @@ export function AnimalsTable({ animals, onView, onEdit, onAddWeight, onDelete }:
                         <Eye className="mr-2 h-4 w-4" />
                         Ver detalle
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(animal)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onAddWeight(animal)}>
-                        <Scale className="mr-2 h-4 w-4" />
-                        Registrar peso
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => onDelete(animal)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
+                      {onEdit && (
+                        <DropdownMenuItem onClick={() => onEdit(animal)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                      )}
+                      {onAddWeight && (
+                        <DropdownMenuItem onClick={() => onAddWeight(animal)}>
+                          <Scale className="mr-2 h-4 w-4" />
+                          Registrar peso
+                        </DropdownMenuItem>
+                      )}
+                      {onDelete && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => onDelete(animal)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

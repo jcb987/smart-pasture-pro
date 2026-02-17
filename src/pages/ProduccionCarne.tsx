@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Drumstick, Plus, Scale, TrendingUp, Target, Award, Upload, Download } from 'lucide-react';
@@ -14,6 +15,7 @@ import { useExportMeat } from '@/hooks/useExportMeat';
 import { useImportMeat } from '@/hooks/useImportMeat';
 
 const ProduccionCarne = () => {
+  const { canWrite, canDelete } = useModulePermissions('produccion-carne');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const { exportToExcel, exporting } = useExportMeat();
@@ -79,18 +81,22 @@ const ProduccionCarne = () => {
             <p className="text-muted-foreground">Seguimiento de crecimiento y engorde</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Importar
-            </Button>
+            {canWrite && (
+              <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Importar
+              </Button>
+            )}
             <Button variant="outline" onClick={exportToExcel} disabled={exporting}>
               <Download className="mr-2 h-4 w-4" />
               Exportar
             </Button>
-            <Button onClick={() => setShowAddDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Registrar Peso
-            </Button>
+            {canWrite && (
+              <Button onClick={() => setShowAddDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Registrar Peso
+              </Button>
+            )}
           </div>
         </div>
 
@@ -188,7 +194,7 @@ const ProduccionCarne = () => {
         <ProductionRecordsTable 
           type="weight" 
           records={records} 
-          onDelete={deleteRecord} 
+          onDelete={canDelete ? deleteRecord : undefined} 
         />
 
         {/* Info Card */}

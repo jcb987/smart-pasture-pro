@@ -34,7 +34,7 @@ interface WeightRecord {
 interface ProductionRecordsTableProps {
   type: 'milk' | 'weight';
   records: (MilkRecord | WeightRecord)[];
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRecordsTableProps) => {
@@ -79,11 +79,13 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
                   <TableCell className="text-right">
                     {record.fat_percentage ? `${record.fat_percentage}%` : '-'}
                   </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(record.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+                  {onDelete && (
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => onDelete(record.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
               {milkRecords.length === 0 && (
@@ -137,11 +139,13 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
                 <TableCell className="text-right">
                   {record.condition_score || '-'}
                 </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(record.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
+                {onDelete && (
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => onDelete(record.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
             {weightRecords.length === 0 && (

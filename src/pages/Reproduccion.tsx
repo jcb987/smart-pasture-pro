@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,6 +23,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const Reproduccion = () => {
+  const { canWrite, canDelete } = useModulePermissions('reproduccion');
   const { females, bulls, events, stats, isLoading, addEvent, deleteEvent } = useReproduction();
   const { animals } = useAnimals();
   const { getAllFertilityAnalysis, herdStats } = useFertilityAnalysis(females, events);
@@ -100,21 +102,27 @@ const Reproduccion = () => {
             <p className="text-muted-foreground">Gestión reproductiva y predicciones del hato</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Importar
-            </Button>
+            {canWrite && (
+              <>
+                <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Importar
+                </Button>
+              </>
+            )}
             <Button variant="outline" onClick={exportToExcel} disabled={exporting}>
               <Download className="mr-2 h-4 w-4" />
               Exportar
             </Button>
-            <Button onClick={() => {
-              setSelectedAnimalId(null);
-              setShowEventDialog(true);
-            }}>
-              <Plus className="mr-2 h-4 w-4" />
-              Registrar Evento
-            </Button>
+            {canWrite && (
+              <Button onClick={() => {
+                setSelectedAnimalId(null);
+                setShowEventDialog(true);
+              }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Registrar Evento
+              </Button>
+            )}
           </div>
         </div>
 

@@ -9,8 +9,8 @@ import { HealthEvent, VaccinationSchedule } from '@/hooks/useHealth';
 
 interface HealthEventsTableProps {
   events: HealthEvent[];
-  onDelete: (id: string) => void;
-  onComplete: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onComplete?: (id: string) => void;
 }
 
 export const HealthEventsTable = ({ events, onDelete, onComplete }: HealthEventsTableProps) => {
@@ -79,7 +79,7 @@ export const HealthEventsTable = ({ events, onDelete, onComplete }: HealthEvents
                 <TableCell>{getStatusBadge(event.status)}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    {event.status === 'activo' && (
+                    {onComplete && event.status === 'activo' && (
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -89,9 +89,11 @@ export const HealthEventsTable = ({ events, onDelete, onComplete }: HealthEvents
                         <Check className="h-4 w-4 text-green-600" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(event.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    {onDelete && (
+                      <Button variant="ghost" size="icon" onClick={() => onDelete(event.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -112,8 +114,8 @@ export const HealthEventsTable = ({ events, onDelete, onComplete }: HealthEvents
 
 interface VaccinationTableProps {
   vaccinations: VaccinationSchedule[];
-  onApply: (id: string) => void;
-  onDelete: (id: string) => void;
+  onApply?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const VaccinationTable = ({ vaccinations, onApply, onDelete }: VaccinationTableProps) => {
@@ -167,7 +169,7 @@ export const VaccinationTable = ({ vaccinations, onApply, onDelete }: Vaccinatio
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    {!vac.is_applied && (
+                    {onApply && !vac.is_applied && (
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -177,9 +179,11 @@ export const VaccinationTable = ({ vaccinations, onApply, onDelete }: Vaccinatio
                         <Check className="h-4 w-4 text-green-600" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(vac.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    {onDelete && (
+                      <Button variant="ghost" size="icon" onClick={() => onDelete(vac.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

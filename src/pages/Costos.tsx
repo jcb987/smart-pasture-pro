@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 
 const Costos = () => {
+  const { canWrite } = useModulePermissions('costos');
   const { summary, isLoading, transactions } = useCostos();
   const { forecast } = useCostPrediction(transactions || []);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -57,16 +59,18 @@ const Costos = () => {
             <h1 className="text-3xl font-bold text-foreground">Costos y Finanzas</h1>
             <p className="text-muted-foreground">Gestión económica y rentabilidad de la finca</p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleAddIncome} className="bg-green-600 hover:bg-green-700">
-              <TrendingUp className="mr-2 h-4 w-4" />
-              Registrar Ingreso
-            </Button>
-            <Button onClick={handleAddExpense} variant="destructive">
-              <TrendingDown className="mr-2 h-4 w-4" />
-              Registrar Egreso
-            </Button>
-          </div>
+          {canWrite && (
+            <div className="flex gap-2">
+              <Button onClick={handleAddIncome} className="bg-green-600 hover:bg-green-700">
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Registrar Ingreso
+              </Button>
+              <Button onClick={handleAddExpense} variant="destructive">
+                <TrendingDown className="mr-2 h-4 w-4" />
+                Registrar Egreso
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* KPI Cards */}

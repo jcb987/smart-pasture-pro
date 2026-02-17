@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +15,7 @@ import { GeneticIndicators } from '@/components/genetica/GeneticIndicators';
 import { InbreedingCalculator } from '@/components/genetica/InbreedingCalculator';
 
 const Genetica = () => {
+  const { canWrite } = useModulePermissions('genetica');
   const { evaluations, suggestions, loading, buildPedigree, getGeneticStats } = useGenetics();
   const { animals } = useAnimals();
   const [addEvalOpen, setAddEvalOpen] = useState(false);
@@ -41,10 +43,12 @@ const Genetica = () => {
             <h1 className="text-3xl font-bold text-foreground">Genética y Reproductores</h1>
             <p className="text-muted-foreground">Gestión de genética, pedigrí y selección</p>
           </div>
-          <Button onClick={() => setAddEvalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Evaluación
-          </Button>
+          {canWrite && (
+            <Button onClick={() => setAddEvalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nueva Evaluación
+            </Button>
+          )}
         </div>
 
         {/* KPIs */}

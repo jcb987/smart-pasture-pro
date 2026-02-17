@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,6 +29,7 @@ import {
 import { toast } from 'sonner';
 
 const Animales = () => {
+  const { canWrite, canDelete } = useModulePermissions('animales');
   const {
     animals,
     loading,
@@ -121,18 +123,24 @@ const Animales = () => {
             <p className="text-muted-foreground">Registro y control total del hato</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-              <Brain className="mr-2 h-4 w-4" />
-              Importar Inteligente
-            </Button>
+            {canWrite && (
+              <>
+                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                  <Brain className="mr-2 h-4 w-4" />
+                  Importar Inteligente
+                </Button>
+              </>
+            )}
             <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Exportar
             </Button>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Animal
-            </Button>
+            {canWrite && (
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nuevo Animal
+              </Button>
+            )}
           </div>
         </div>
 
@@ -259,9 +267,9 @@ const Animales = () => {
                   <AnimalsTable
                     animals={filteredAnimals}
                     onView={handleViewAnimal}
-                    onEdit={handleEditAnimal}
-                    onAddWeight={handleAddWeight}
-                    onDelete={handleDeleteAnimal}
+                    onEdit={canWrite ? handleEditAnimal : undefined}
+                    onAddWeight={canWrite ? handleAddWeight : undefined}
+                    onDelete={canDelete ? handleDeleteAnimal : undefined}
                   />
                 )}
               </CardContent>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +21,7 @@ import { PaddocksGrid, RotationHistoryTable, MeasurementsTable } from '@/compone
 import { PraderasAIAssistant } from '@/components/praderas/PraderasAIAssistant';
 
 const Praderas = () => {
+  const { canWrite } = useModulePermissions('praderas');
   const [showPaddockDialog, setShowPaddockDialog] = useState(false);
   const [showRotationDialog, setShowRotationDialog] = useState(false);
   const [showMeasurementDialog, setShowMeasurementDialog] = useState(false);
@@ -89,18 +91,22 @@ const Praderas = () => {
                 />
               </SheetContent>
             </Sheet>
-            <Button variant="outline" onClick={() => setShowMeasurementDialog(true)}>
-              <Ruler className="mr-2 h-4 w-4" />
-              Nuevo Aforo
-            </Button>
-            <Button variant="outline" onClick={() => setShowRotationDialog(true)}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Iniciar Rotación
-            </Button>
-            <Button onClick={() => setShowPaddockDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Agregar Potrero
-            </Button>
+            {canWrite && (
+              <>
+                <Button variant="outline" onClick={() => setShowMeasurementDialog(true)}>
+                  <Ruler className="mr-2 h-4 w-4" />
+                  Nuevo Aforo
+                </Button>
+                <Button variant="outline" onClick={() => setShowRotationDialog(true)}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Iniciar Rotación
+                </Button>
+                <Button onClick={() => setShowPaddockDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar Potrero
+                </Button>
+              </>
+            )}
           </div>
         </div>
 

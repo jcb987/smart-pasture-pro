@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +17,7 @@ import { FeedInventoryTable, ConsumptionTable } from '@/components/alimentacion/
 import { ProductionChart } from '@/components/produccion/ProductionChart';
 
 const Alimentacion = () => {
+  const { canWrite } = useModulePermissions('alimentacion');
   const [showFeedDialog, setShowFeedDialog] = useState(false);
   const [showConsumptionDialog, setShowConsumptionDialog] = useState(false);
   const [showDietDialog, setShowDietDialog] = useState(false);
@@ -59,18 +61,22 @@ const Alimentacion = () => {
             <p className="text-muted-foreground">Gestión de raciones, inventario y balance de dietas</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowDietDialog(true)}>
-              <Calculator className="mr-2 h-4 w-4" />
-              Nueva Dieta
-            </Button>
-            <Button variant="outline" onClick={() => setShowConsumptionDialog(true)}>
-              <Utensils className="mr-2 h-4 w-4" />
-              Registrar Consumo
-            </Button>
-            <Button onClick={() => setShowFeedDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Agregar Alimento
-            </Button>
+            {canWrite && (
+              <>
+                <Button variant="outline" onClick={() => setShowDietDialog(true)}>
+                  <Calculator className="mr-2 h-4 w-4" />
+                  Nueva Dieta
+                </Button>
+                <Button variant="outline" onClick={() => setShowConsumptionDialog(true)}>
+                  <Utensils className="mr-2 h-4 w-4" />
+                  Registrar Consumo
+                </Button>
+                <Button onClick={() => setShowFeedDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar Alimento
+                </Button>
+              </>
+            )}
           </div>
         </div>
 

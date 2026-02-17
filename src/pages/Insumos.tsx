@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 
 const Insumos = () => {
+  const { canWrite } = useModulePermissions('insumos');
   const { getStats, loading } = useSupplies();
   const stats = getStats();
   
@@ -49,18 +51,22 @@ const Insumos = () => {
             <p className="text-muted-foreground">Inventario completo con kardex, lotes y alertas</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => setShowAddSupply(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Insumo
-            </Button>
-            <Button variant="outline" onClick={() => setShowAddLot(true)}>
-              <Layers className="mr-2 h-4 w-4" />
-              Agregar Lote
-            </Button>
-            <Button variant="secondary" onClick={() => setShowAddMovement(true)}>
-              <ArrowDownCircle className="mr-2 h-4 w-4" />
-              Registrar Movimiento
-            </Button>
+            {canWrite && (
+              <>
+                <Button onClick={() => setShowAddSupply(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nuevo Insumo
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddLot(true)}>
+                  <Layers className="mr-2 h-4 w-4" />
+                  Agregar Lote
+                </Button>
+                <Button variant="secondary" onClick={() => setShowAddMovement(true)}>
+                  <ArrowDownCircle className="mr-2 h-4 w-4" />
+                  Registrar Movimiento
+                </Button>
+              </>
+            )}
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +21,7 @@ import { AIHealthPredictor } from '@/components/ai/AIHealthPredictor';
 import { toast } from 'sonner';
 
 const Salud = () => {
+  const { canWrite, canDelete } = useModulePermissions('salud');
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showVaccinationDialog, setShowVaccinationDialog] = useState(false);
   const [showPalpationDialog, setShowPalpationDialog] = useState(false);
@@ -104,18 +106,22 @@ const Salud = () => {
             <p className="text-muted-foreground">Registro de tratamientos, vacunas y diagnósticos</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowVaccinationDialog(true)}>
-              <Syringe className="mr-2 h-4 w-4" />
-              Programar Vacuna
-            </Button>
-            <Button variant="outline" onClick={() => setShowPalpationDialog(true)}>
-              <Baby className="mr-2 h-4 w-4" />
-              Palpación Reproductiva
-            </Button>
-            <Button onClick={() => setShowEventDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Registrar Evento
-            </Button>
+            {canWrite && (
+              <>
+                <Button variant="outline" onClick={() => setShowVaccinationDialog(true)}>
+                  <Syringe className="mr-2 h-4 w-4" />
+                  Programar Vacuna
+                </Button>
+                <Button variant="outline" onClick={() => setShowPalpationDialog(true)}>
+                  <Baby className="mr-2 h-4 w-4" />
+                  Palpación Reproductiva
+                </Button>
+                <Button onClick={() => setShowEventDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Registrar Evento
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -221,16 +227,16 @@ const Salud = () => {
           <TabsContent value="events" className="space-y-4">
             <HealthEventsTable 
               events={healthEvents} 
-              onDelete={deleteHealthEvent}
-              onComplete={handleCompleteEvent}
+              onDelete={canDelete ? deleteHealthEvent : undefined}
+              onComplete={canWrite ? handleCompleteEvent : undefined}
             />
           </TabsContent>
 
           <TabsContent value="vaccinations" className="space-y-4">
             <VaccinationTable 
               vaccinations={vaccinations}
-              onApply={handleApplyVaccination}
-              onDelete={deleteVaccination}
+              onApply={canWrite ? handleApplyVaccination : undefined}
+              onDelete={canDelete ? deleteVaccination : undefined}
             />
           </TabsContent>
 

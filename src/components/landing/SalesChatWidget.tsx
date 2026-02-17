@@ -142,7 +142,7 @@ export const SalesChatWidget = () => {
 
   const handleContactFounder = () => {
     // Open WhatsApp with founder
-    window.open("https://wa.me/573001234567?text=Hola,%20quiero%20suscribirme%20a%20SmartPasture%20Pro", "_blank");
+    window.open("https://wa.me/573001234567?text=Hola,%20quiero%20suscribirme%20a%20Agro%20Data", "_blank");
   };
 
   const formatMessage = (content: string) => {
@@ -209,7 +209,7 @@ export const SalesChatWidget = () => {
             <Bot className="h-5 w-5" />
           </div>
           <div>
-            <CardTitle className="text-sm font-semibold">Asesor SmartPasture</CardTitle>
+            <CardTitle className="text-sm font-semibold">Asesor Agro Data</CardTitle>
             <p className="text-xs opacity-80">En línea • Respuesta inmediata</p>
           </div>
         </div>
@@ -241,7 +241,7 @@ export const SalesChatWidget = () => {
               <div className="bg-muted rounded-lg p-3 text-sm">
                 <p className="font-medium mb-2">👋 ¡Hola! Soy tu asesor virtual.</p>
                 <p className="text-muted-foreground">
-                  Estoy aquí para ayudarte a conocer SmartPasture Pro y encontrar el plan perfecto para tu finca.
+                  Estoy aquí para ayudarte a conocer Agro Data y encontrar el plan perfecto para tu finca.
                 </p>
               </div>
               <div className="space-y-2">

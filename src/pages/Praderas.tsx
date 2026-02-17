@@ -93,10 +93,6 @@ const Praderas = () => {
             </Sheet>
             {canWrite && (
               <>
-                <Button variant="outline" onClick={() => setShowMeasurementDialog(true)}>
-                  <Ruler className="mr-2 h-4 w-4" />
-                  Nuevo Aforo
-                </Button>
                 <Button variant="outline" onClick={() => setShowRotationDialog(true)}>
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Iniciar Rotación

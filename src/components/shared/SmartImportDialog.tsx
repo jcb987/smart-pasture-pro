@@ -86,6 +86,7 @@ export function SmartImportDialog({
   const [importProgress, setImportProgress] = useState(0);
   const [importResults, setImportResults] = useState({ success: 0, errors: 0 });
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [globalDate, setGlobalDate] = useState<string | null>(null);
   const { toast } = useToast();
 
   const resetDialog = () => {
@@ -98,6 +99,7 @@ export function SmartImportDialog({
     setImportProgress(0);
     setImportResults({ success: 0, errors: 0 });
     setAiAnalysis(null);
+    setGlobalDate(null);
   };
 
   const handleClose = () => {
@@ -198,7 +200,7 @@ export function SmartImportDialog({
   };
 
   // Parse image (JPEG/PNG) with AI vision
-  const parseImageWithAI = async (file: File): Promise<{ headers: string[]; rows: unknown[][]; mappings: ColumnMapping[]; analysis: string } | null> => {
+  const parseImageWithAI = async (file: File): Promise<{ headers: string[]; rows: unknown[][]; mappings: ColumnMapping[]; analysis: string; globalDate?: string | null } | null> => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const base64 = btoa(
@@ -222,7 +224,7 @@ export function SmartImportDialog({
       });
 
       if (response.error) throw response.error;
-      return response.data as { headers: string[]; rows: unknown[][]; mappings: ColumnMapping[]; analysis: string };
+      return response.data as { headers: string[]; rows: unknown[][]; mappings: ColumnMapping[]; analysis: string; globalDate?: string | null };
     } catch (error) {
       console.error('Image parsing error:', error);
       return null;
@@ -294,13 +296,18 @@ export function SmartImportDialog({
         headers = imageResult.headers;
         dataRows = imageResult.rows;
 
+        // Capture global date detected by AI (e.g., date in document header)
+        if (imageResult.globalDate) {
+          setGlobalDate(imageResult.globalDate);
+        }
+
         setRawHeaders(headers);
         setRawData(dataRows);
 
         // Use mappings from image AI directly
         if (imageResult.mappings && imageResult.mappings.length > 0) {
           setColumnMappings(imageResult.mappings);
-          setAiAnalysis(imageResult.analysis);
+          setAiAnalysis(imageResult.analysis + (imageResult.globalDate ? ` | Fecha global detectada: ${imageResult.globalDate}` : ''));
         } else {
           setColumnMappings(fallbackMapping(headers));
           setAiAnalysis(imageResult.analysis);
@@ -386,6 +393,11 @@ export function SmartImportDialog({
       }
     });
 
+    // Identify all date-related columns to apply globalDate fallback
+    const dateColumns = Object.keys(colIndexMap).filter(col => 
+      col.includes('date') || col.includes('fecha')
+    );
+
     for (let i = 0; i < rawData.length; i++) {
       const row = rawData[i] as unknown[];
       if (!row || row.length === 0) continue;
@@ -401,6 +413,26 @@ export function SmartImportDialog({
         }
         
         rowData[dbCol] = value;
+      }
+
+      // Apply globalDate to any date column that is missing a value
+      if (globalDate) {
+        for (const dateCol of dateColumns) {
+          if (!rowData[dateCol]) {
+            rowData[dateCol] = globalDate;
+          }
+        }
+        // Also fill the most common date field names if none were mapped but globalDate exists
+        const commonDateFields = ['production_date', 'event_date', 'weight_date', 'date'];
+        for (const field of commonDateFields) {
+          if (!(field in rowData) && !colIndexMap[field]) {
+            // Check if this field is expected by the config
+            const isExpected = [...config.requiredColumns, ...(config.optionalColumns || [])].some(c => c.db === field);
+            if (isExpected) {
+              rowData[field] = globalDate;
+            }
+          }
+        }
       }
 
       const { errors, warnings } = config.validateRow(rowData, existingData);

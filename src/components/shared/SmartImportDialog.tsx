@@ -29,7 +29,8 @@ import {
   Loader2,
   Brain,
   Sparkles,
-  FileText
+  FileText,
+  Image
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
@@ -196,6 +197,38 @@ export function SmartImportDialog({
     return null;
   };
 
+  // Parse image (JPEG/PNG) with AI vision
+  const parseImageWithAI = async (file: File): Promise<{ headers: string[]; rows: unknown[][]; mappings: ColumnMapping[]; analysis: string } | null> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+
+      const mimeType = file.type || (file.name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+      const allExpected = [...config.requiredColumns, ...(config.optionalColumns || [])];
+
+      const response = await supabase.functions.invoke('image-import-parser', {
+        body: {
+          imageBase64: base64,
+          mimeType,
+          expectedColumns: allExpected.map(c => ({
+            db: c.db,
+            labels: c.labels,
+            required: config.requiredColumns.some(r => r.db === c.db)
+          })),
+          tableName: config.tableName,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data as { headers: string[]; rows: unknown[][]; mappings: ColumnMapping[]; analysis: string };
+    } catch (error) {
+      console.error('Image parsing error:', error);
+      return null;
+    }
+  };
+
   // Parse PDF content to extract tabular data using AI
   const parsePDFWithAI = async (file: File): Promise<{ headers: string[]; rows: unknown[][] } | null> => {
     try {
@@ -236,10 +269,46 @@ export function SmartImportDialog({
     setStep('analyzing');
 
     const isPDF = selectedFile.name.toLowerCase().endsWith('.pdf') || selectedFile.type === 'application/pdf';
+    const isImage = selectedFile.type === 'image/jpeg' || selectedFile.type === 'image/png' ||
+      selectedFile.name.toLowerCase().endsWith('.jpg') || selectedFile.name.toLowerCase().endsWith('.jpeg') ||
+      selectedFile.name.toLowerCase().endsWith('.png');
 
     try {
       let headers: string[];
       let dataRows: unknown[][];
+
+      if (isImage) {
+        // Parse image with AI vision
+        const imageResult = await parseImageWithAI(selectedFile);
+
+        if (!imageResult || imageResult.rows.length === 0) {
+          toast({
+            title: 'No se encontraron datos',
+            description: 'No se pudieron extraer datos tabulares de la imagen. Asegúrate de que la imagen contenga tablas o listas con datos de animales.',
+            variant: 'destructive',
+          });
+          setStep('upload');
+          return;
+        }
+
+        headers = imageResult.headers;
+        dataRows = imageResult.rows;
+
+        setRawHeaders(headers);
+        setRawData(dataRows);
+
+        // Use mappings from image AI directly
+        if (imageResult.mappings && imageResult.mappings.length > 0) {
+          setColumnMappings(imageResult.mappings);
+          setAiAnalysis(imageResult.analysis);
+        } else {
+          setColumnMappings(fallbackMapping(headers));
+          setAiAnalysis(imageResult.analysis);
+        }
+
+        setStep('mapping');
+        return;
+      }
 
       if (isPDF) {
         // Parse PDF with AI
@@ -298,7 +367,7 @@ export function SmartImportDialog({
       console.error('Parse error:', error);
       toast({
         title: 'Error al leer archivo',
-        description: isPDF ? 'No se pudo procesar el archivo PDF' : 'No se pudo procesar el archivo Excel',
+        description: isPDF ? 'No se pudo procesar el archivo PDF' : 'No se pudo procesar el archivo',
         variant: 'destructive',
       });
       setStep('upload');
@@ -421,10 +490,10 @@ export function SmartImportDialog({
               <div className="border-2 border-dashed rounded-lg p-8 text-center w-full">
                 <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                 <p className="text-base font-medium mb-1">Arrastra tu archivo aquí</p>
-                <p className="text-sm text-muted-foreground mb-3">Excel (.xlsx, .xls) o PDF</p>
+                <p className="text-sm text-muted-foreground mb-3">Excel, PDF, o imagen con tablas (JPG, PNG)</p>
                 <input
                   type="file"
-                  accept=".xlsx,.xls,.csv,.pdf"
+                  accept=".xlsx,.xls,.csv,.pdf,.jpg,.jpeg,.png"
                   onChange={handleFileChange}
                   className="hidden"
                   id="smart-import-upload"
@@ -441,12 +510,12 @@ export function SmartImportDialog({
                 <div className="text-sm">
                   <p className="font-medium">Análisis inteligente con IA</p>
                   <p className="text-muted-foreground">
-                    Detectamos automáticamente las columnas de Excel o extraemos tablas de PDFs
+                    Detectamos columnas en Excel, extraemos tablas de PDFs, y leemos datos en imágenes
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-2 text-xs text-muted-foreground">
+              <div className="flex gap-3 text-xs text-muted-foreground flex-wrap justify-center">
                 <div className="flex items-center gap-1">
                   <FileSpreadsheet className="h-3.5 w-3.5" />
                   Excel/CSV
@@ -454,6 +523,10 @@ export function SmartImportDialog({
                 <div className="flex items-center gap-1">
                   <FileText className="h-3.5 w-3.5" />
                   PDF con tablas
+                </div>
+                <div className="flex items-center gap-1">
+                  <Image className="h-3.5 w-3.5" />
+                  Imagen (JPG/PNG)
                 </div>
               </div>
 

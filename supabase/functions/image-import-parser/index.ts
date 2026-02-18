@@ -49,26 +49,34 @@ serve(async (req) => {
 
     const safeTableName = (tableName || '').replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 50);
 
-    const systemPrompt = `Eres un experto en análisis de datos ganaderos. Se te muestra una imagen que puede contener una tabla, lista o documento con información de animales.
+    const today = new Date().toISOString().split('T')[0];
+    const systemPrompt = `Eres un experto en análisis de datos ganaderos. Se te muestra una imagen que puede contener una tabla, lista o documento con información de animales. La fecha de hoy es ${today}.
 
 Tu tarea:
-1. Identificar si la imagen contiene datos tabulares (tablas, listas, planillas)
-2. Extraer TODOS los datos visibles de la imagen
-3. Mapear inteligentemente las columnas a los campos esperados de la base de datos
-4. Interpretar abreviaciones del sector ganadero (ej: PRE=preñada, ABT=vacía/abierta, GES=gestación, ANOS=edad, etc.)
+1. PRIMERO: Busca en TODO el documento (título, encabezado, pie de página, texto libre) cualquier fecha global que aplique a todos los registros. Puede aparecer como "Fecha: 15/01/2025", "01-2025", "Enero 2025", "15 de enero 2025", "2025-01-15", o cualquier formato de fecha visible FUERA de la tabla de datos.
+2. Identificar si la imagen contiene datos tabulares (tablas, listas, planillas)
+3. Extraer TODOS los datos visibles de la imagen
+4. Mapear inteligentemente las columnas a los campos esperados de la base de datos
+5. Interpretar abreviaciones del sector ganadero (ej: PRE=preñada, ABT=vacía/abierta, GES=gestación, ANOS=edad, etc.)
 
 Campos esperados para la tabla "${safeTableName}":
 ${JSON.stringify(expectedColumns || [], null, 2)}
 
-Reglas importantes:
-- Si ves números que parecen chapetas/arete de animales, mapéalos a "tag_id"
+Reglas CRÍTICAS:
+- FECHA GLOBAL: Si encuentras una fecha en el título o encabezado del documento (no en las columnas de la tabla), pon esa fecha en el campo "globalDate" del JSON. Esta fecha se aplicará a TODAS las filas que no tengan su propia fecha. Convierte la fecha al formato YYYY-MM-DD.
+- Si una fila de la tabla tiene su propia fecha, usa esa fecha en lugar de la global.
+- Si ves números que parecen chapetas/arete de animales, mapéalos a "tag_id"  
 - Si ves estados como PRE, ABT, GES, mapéalos a reproductive_status
-- Si ves edades en años, calcula la fecha de nacimiento aproximada desde hoy
+- Si ves edades en años (ANOS), calcula birth_date restando esos años desde la fecha de hoy (${today})
 - Si ves condición corporal (1-5), mapéala a condition_score
-- Extrae TODOS los filas de datos que puedas ver, incluso si son muchas
+- Si ves valores de producción de leche (litros, lts, L), mapéalos a los campos de producción
+- Extrae TODAS las filas de datos que puedas ver, incluso si son muchas
+- NO omitas ninguna fila aunque le falten datos
+- Si una columna de la tabla tiene un valor que parece fecha (ULTIMO, PALPACION, FECHA_PALP), inclúyela aunque no sea la fecha principal
 
 Responde SOLO con JSON válido en este formato:
 {
+  "globalDate": "2025-01-15",
   "headers": ["columna1", "columna2", ...],
   "rows": [
     ["valor1", "valor2", ...],
@@ -77,12 +85,13 @@ Responde SOLO con JSON válido en este formato:
   "mappings": [
     {"excelColumn": "columna1", "dbColumn": "campo_db", "confidence": 90, "suggestedBy": "ai"}
   ],
-  "analysis": "Descripción breve de lo que encontraste en la imagen",
+  "analysis": "Descripción breve de lo que encontraste en la imagen, incluyendo si encontraste una fecha global",
   "warnings": ["advertencia si aplica"]
 }
 
 Si NO encuentras datos tabulares en la imagen, responde:
 {
+  "globalDate": null,
   "headers": [],
   "rows": [],
   "mappings": [],

@@ -27,6 +27,13 @@ export interface ImportedAnimalRow {
   lot_name: string | null;
   status: AnimalStatus;
   productive_stage: string | null;
+  // Extended fields
+  birth_date: string | null;
+  age_years: number | null;
+  reproductive_status: string | null;
+  last_service_date: string | null;
+  condition_score: number | null;
+  notes: string | null;
   // Matching
   matched_animal: Animal | null;
   is_update: boolean;
@@ -68,7 +75,7 @@ const PRODUCTIVE_STAGES: ProductiveStage[] = [
   { label: 'Búfalo', category: 'bufalo', sex: 'macho', species: ['bufalo'] },
 ];
 
-// Sex inference rules - comprehensive list for automatic detection
+// Sex inference rules
 const FEMALE_KEYWORDS = [
   'vaca', 'vaca seca', 'vaca parida', 'vaca horra', 'vaca gestante', 'vaca lactante',
   'novilla', 'novilla de vientre', 'nov. vientre', 'nov.', 'nva',
@@ -77,7 +84,7 @@ const FEMALE_KEYWORDS = [
   'becerra', 'becerrita',
   'búfala', 'bufala',
   'cerda', 'marrana', 'puerca', 'hembra levante', 'hemb. levante', 'hemb levante',
-  'vientre', 'parida', 'seca', 'gestante', 'preñada'
+  'vientre', 'parida', 'seca', 'gestante', 'prenada', 'abierta'
 ];
 const MALE_KEYWORDS = [
   'toro', 'torete', 'toro reproductor',
@@ -90,13 +97,43 @@ const MALE_KEYWORDS = [
   'verraco', 'macho levante', 'mac. levante', 'mac levante'
 ];
 
+// Reproductive status mapping
+// TIP / ESTADO columns
+const REPRODUCTIVE_STATUS_MAP: Record<string, string> = {
+  'pre': 'preñada',
+  'pre.': 'preñada',
+  'pren': 'preñada',
+  'prenada': 'preñada',
+  'preñada': 'preñada',
+  'gestante': 'preñada',
+  'gest': 'preñada',
+  'abt': 'vacia',
+  'abierta': 'vacia',
+  'vacia': 'vacia',
+  'vac': 'vacia',
+  'vac.': 'vacia',
+  'vacía': 'vacia',
+  'seca': 'vacia',
+  'pst': 'vacia',
+  'pos': 'vacia',
+  'pos parto': 'vacia',
+  'postparto': 'vacia',
+  'inseminada': 'inseminada',
+  'ins': 'inseminada',
+  'ins.': 'inseminada',
+  'servida': 'inseminada',
+  'serv': 'inseminada',
+  'parida': 'parida',
+  'par': 'parida',
+};
+
 export function useSmartAnimalImport(existingAnimals: Animal[]) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedRows, setProcessedRows] = useState<ImportedAnimalRow[]>([]);
   const [selectedSpecies, setSelectedSpecies] = useState<Species>('bovino');
   const { toast } = useToast();
 
-  // Normalize tag_id for matching (remove spaces, standardize separators)
+  // Normalize tag_id for matching
   const normalizeTagId = useCallback((tag: string): string => {
     return tag
       .toString()
@@ -107,172 +144,222 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       .replace(/[\/\\]/g, '/');
   }, []);
 
-  // Find existing animal by tag
+  // Find existing animal by tag - comprehensive matching
   const findExistingAnimal = useCallback((tagId: string): Animal | null => {
     const normalizedInput = normalizeTagId(tagId);
-    return existingAnimals.find(a => normalizeTagId(a.tag_id) === normalizedInput) || null;
+    // Try exact match
+    const exact = existingAnimals.find(a => normalizeTagId(a.tag_id) === normalizedInput);
+    if (exact) return exact;
+    // Try without leading zeros (e.g. "0001" matches "1")
+    const stripped = normalizedInput.replace(/^0+/, '');
+    const strippedMatch = existingAnimals.find(a => normalizeTagId(a.tag_id).replace(/^0+/, '') === stripped);
+    return strippedMatch || null;
   }, [existingAnimals, normalizeTagId]);
 
-  // Infer sex from phase/stage text - intelligent detection
+  // Infer sex from text
   const inferSexFromText = useCallback((text: string): AnimalSex | null => {
     if (!text) return null;
-    
     const normalized = text.toLowerCase().trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // Remove accents
-    
-    // Check single letter codes first (they're most specific)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
     if (normalized === 'h' || normalized === 'f') return 'hembra';
     if (normalized === 'm') return 'macho';
-    
-    // Check for female keywords (prioritize longer matches first)
+
     const sortedFemaleKeywords = [...FEMALE_KEYWORDS].sort((a, b) => b.length - a.length);
     for (const keyword of sortedFemaleKeywords) {
       const normalizedKeyword = keyword.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       if (normalized.includes(normalizedKeyword)) return 'hembra';
     }
-    
-    // Check for male keywords
+
     const sortedMaleKeywords = [...MALE_KEYWORDS].sort((a, b) => b.length - a.length);
     for (const keyword of sortedMaleKeywords) {
       const normalizedKeyword = keyword.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       if (normalized.includes(normalizedKeyword)) return 'macho';
     }
-    
+
     return null;
   }, []);
 
   // Map phase/stage to category
   const mapStageToCategory = useCallback((stageText: string, species: Species): { category: AnimalCategory | null; sex: AnimalSex | null } => {
     const normalized = stageText.toLowerCase().trim();
-    
-    // Try exact match first
+
     for (const stage of PRODUCTIVE_STAGES) {
       if (stage.species.includes(species) && stage.label.toLowerCase() === normalized) {
         return { category: stage.category, sex: stage.sex };
       }
     }
-    
-    // Try partial match
+
     for (const stage of PRODUCTIVE_STAGES) {
-      if (stage.species.includes(species) && 
-          (normalized.includes(stage.label.toLowerCase()) || 
-           stage.label.toLowerCase().includes(normalized))) {
+      if (stage.species.includes(species) &&
+        (normalized.includes(stage.label.toLowerCase()) ||
+          stage.label.toLowerCase().includes(normalized))) {
         return { category: stage.category, sex: stage.sex };
       }
     }
-    
-    // Fallback: just infer sex
+
     const sex = inferSexFromText(stageText);
     return { category: null, sex };
   }, [inferSexFromText]);
 
-  // Normalize category from text - FORCES buffalo categories when species is bufalo
+  // Normalize category from text
   const normalizeCategory = useCallback((value: string, species: Species): AnimalCategory | null => {
     const normalized = value.toLowerCase().trim()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    
-    // If species is bufalo, force buffalo categories
+
     if (species === 'bufalo') {
-      // Map bovine categories to buffalo equivalents based on sex inference
       const sex = inferSexFromText(value);
-      
-      // Check if it's explicitly buffalo
       if (normalized.includes('bufala') || normalized.includes('bufalo')) {
         return sex === 'macho' ? 'bufalo' : 'bufala';
       }
-      
-      // Map common bovine terms to buffalo
       const femaleTerms = ['vaca', 'novilla', 'ternera', 'becerra', 'hembra'];
       const maleTerms = ['toro', 'novillo', 'ternero', 'becerro', 'macho', 'reproductor'];
-      
       for (const term of femaleTerms) {
         if (normalized.includes(term)) return 'bufala';
       }
       for (const term of maleTerms) {
         if (normalized.includes(term)) return 'bufalo';
       }
-      
-      // If sex was detected, use it
       if (sex === 'hembra') return 'bufala';
       if (sex === 'macho') return 'bufalo';
-      
       return null;
     }
-    
+
     const categoryMap: Record<string, AnimalCategory> = {
-      'vaca': 'vaca',
-      'toro': 'toro',
-      'novilla': 'novilla',
-      'novillo': 'novillo',
-      'ternera': 'ternera',
-      'ternero': 'ternero',
-      'becerra': 'becerra',
-      'becerro': 'becerro',
-      'bufala': 'bufala',
-      'bufalo': 'bufalo',
+      'vaca': 'vaca', 'toro': 'toro', 'novilla': 'novilla', 'novillo': 'novillo',
+      'ternera': 'ternera', 'ternero': 'ternero', 'becerra': 'becerra', 'becerro': 'becerro',
+      'bufala': 'bufala', 'bufalo': 'bufalo',
     };
-    
-    // Direct match
-    if (categoryMap[normalized]) {
-      return categoryMap[normalized];
-    }
-    
-    // Try mapping from stage
+
+    if (categoryMap[normalized]) return categoryMap[normalized];
+
     const stageResult = mapStageToCategory(value, species);
-    if (stageResult.category) {
-      return stageResult.category;
-    }
-    
+    if (stageResult.category) return stageResult.category;
+
     return null;
   }, [mapStageToCategory, inferSexFromText]);
 
   // Parse date from various formats
   const parseDate = useCallback((value: unknown): string | null => {
     if (!value) return null;
-    
+
     if (typeof value === 'number') {
       const date = XLSX.SSF.parse_date_code(value);
       if (date) {
         return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
       }
     }
-    
+
     if (typeof value === 'string') {
       const dateStr = value.trim();
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-      
+
       const ddmmyyyy = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
       if (ddmmyyyy) {
         return `${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, '0')}-${ddmmyyyy[1].padStart(2, '0')}`;
       }
+
+      // Try mmyy or mm/yy (e.g. "01/23" = january 2023)
+      const mmyy = dateStr.match(/^(\d{1,2})[\/\-](\d{2})$/);
+      if (mmyy) {
+        const year = parseInt(mmyy[2]) + 2000;
+        return `${year}-${mmyy[1].padStart(2, '0')}-01`;
+      }
     }
-    
+
     return null;
   }, []);
 
   // Parse weight
   const parseWeight = useCallback((value: unknown): number | null => {
     if (!value) return null;
-    
     const numStr = value.toString().replace(',', '.').replace(/[^\d.]/g, '');
     const num = parseFloat(numStr);
-    
     if (isNaN(num) || num <= 0) return null;
     return num;
+  }, []);
+
+  /**
+   * Parse age/years from a value and return birth_date.
+   * Handles: "3", "3.5", "3 años", "3 anos", "3a", "3a6m", "3 años 6 meses"
+   */
+  const parseAgeTobirthDate = useCallback((value: unknown): { birthDate: string | null; ageYears: number | null } => {
+    if (!value) return { birthDate: null, ageYears: null };
+
+    const str = value.toString().toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    // Extract years
+    let years = 0;
+    let months = 0;
+
+    // Pattern: "3a6m", "3 años 6 meses", "3 anos 6 meses"
+    const fullMatch = str.match(/(\d+(?:\.\d+)?)\s*a(?:ños?|nos?|\.)?(?:\s*(\d+)\s*m(?:eses?)?)?/);
+    if (fullMatch) {
+      years = parseFloat(fullMatch[1]);
+      months = fullMatch[2] ? parseInt(fullMatch[2]) : 0;
+    } else {
+      // Simple number (years)
+      const simpleNum = str.match(/^(\d+(?:\.\d+)?)$/);
+      if (simpleNum) {
+        years = parseFloat(simpleNum[1]);
+      }
+    }
+
+    if (years === 0 && months === 0) return { birthDate: null, ageYears: null };
+
+    const totalMonths = Math.round(years * 12 + months);
+    const now = new Date();
+    now.setMonth(now.getMonth() - totalMonths);
+    const birthDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+    return { birthDate, ageYears: parseFloat((years + months / 12).toFixed(1)) };
+  }, []);
+
+  /**
+   * Parse reproductive status from TIP / GES / ESTADO columns.
+   */
+  const parseReproductiveStatus = useCallback((value: unknown): string | null => {
+    if (!value) return null;
+    const str = value.toString().toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    // Direct map lookup
+    const mapped = REPRODUCTIVE_STATUS_MAP[str];
+    if (mapped) return mapped;
+
+    // Partial match
+    for (const [key, status] of Object.entries(REPRODUCTIVE_STATUS_MAP)) {
+      if (str.includes(key.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))) {
+        return status;
+      }
+    }
+
+    return null;
+  }, []);
+
+  /**
+   * Parse body condition score (D column) 1-5
+   */
+  const parseConditionScore = useCallback((value: unknown): number | null => {
+    if (!value) return null;
+    const num = parseFloat(value.toString().replace(',', '.'));
+    if (!isNaN(num) && num >= 1 && num <= 5) return num;
+    return null;
   }, []);
 
   // Helper function to find a value from multiple possible keys
   const findValue = useCallback((rowData: Record<string, unknown>, keys: string[]): unknown => {
     for (const key of keys) {
-      // Direct key match
       if (rowData[key] !== undefined && rowData[key] !== null && rowData[key] !== '') {
         return rowData[key];
       }
-      // Try case-insensitive partial match
       for (const dataKey of Object.keys(rowData)) {
         const normalizedDataKey = dataKey.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const normalizedSearchKey = key.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        if (normalizedDataKey.includes(normalizedSearchKey) || normalizedSearchKey.includes(normalizedDataKey)) {
+        if (normalizedDataKey === normalizedSearchKey ||
+          normalizedDataKey.includes(normalizedSearchKey) ||
+          normalizedSearchKey.includes(normalizedDataKey)) {
           if (rowData[dataKey] !== undefined && rowData[dataKey] !== null && rowData[dataKey] !== '') {
             return rowData[dataKey];
           }
@@ -290,135 +377,138 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
   ): ImportedAnimalRow => {
     const errors: string[] = [];
     const warnings: string[] = [];
-    
-    // Extended list of possible tag field names
+
+    // ─────────────────────────────────────────────────
+    // 1. TAG / CHAPETA / NUMERO (REQUIRED)
+    // ─────────────────────────────────────────────────
     const tagFields = [
-      'tag_id', 'arete', 'id', 'numero', 'identificador', 'codigo', 
+      'tag_id', 'arete', 'id', 'numero', 'número', 'identificador', 'codigo', 'código',
       'no', 'n°', 'n.', 'num', 'animal', 'arete/id', 'id animal',
-      'identificacion', 'chapeta', 'ear tag', 'tag', 'nro', 'numero animal',
+      'identificacion', 'identificación', 'chapeta', 'ear tag', 'tag', 'nro', 'numero animal',
       'no.', '#', 'consecutivo', 'registro'
     ];
-    
-    // Extract tag_id (primary identifier)
+
     let tagId = '';
     const tagValue = findValue(rowData, tagFields);
     if (tagValue) {
       tagId = tagValue.toString().trim();
     }
-    
-    // If still no tag, try the first column value
+
     if (!tagId) {
       const firstKey = Object.keys(rowData)[0];
       if (firstKey && rowData[firstKey]) {
         const firstVal = rowData[firstKey]?.toString().trim();
-        // Only use if it looks like an ID (not a text description)
         if (firstVal && /^[\d\w\-\/\.]+$/i.test(firstVal) && firstVal.length < 50) {
           tagId = firstVal;
         }
       }
     }
-    
+
     if (!tagId) {
       errors.push('ID/Arete no encontrado');
     }
-    
-    // Extract name (optional) - expanded field list
+
+    // ─────────────────────────────────────────────────
+    // 2. CHECK FOR DUPLICATES (is_update detection)
+    // ─────────────────────────────────────────────────
+    const matchedAnimal = tagId ? findExistingAnimal(tagId) : null;
+    const isUpdate = matchedAnimal !== null;
+
+    if (isUpdate) {
+      warnings.push(`Animal ya existe en el sistema → se actualizarán sus datos`);
+    }
+
+    // ─────────────────────────────────────────────────
+    // 3. NAME (optional)
+    // ─────────────────────────────────────────────────
     const nameFields = ['name', 'nombre', 'alias', 'apodo'];
     const nameValue = findValue(rowData, nameFields);
     const name = nameValue?.toString().trim() || null;
-    
-    // Extract stage/phase and derive category/sex - expanded field list
+
+    // ─────────────────────────────────────────────────
+    // 4. SEX / CATEGORY (SPECIES RULES ALWAYS WIN)
+    // ─────────────────────────────────────────────────
     const stageFields = [
-      'stage', 'fase', 'etapa', 'estado_productivo', 'category', 'categoria',
-      'tipo', 'clasificacion', 'fase productiva', 'tipo animal', 'descripcion'
+      'stage', 'fase', 'etapa', 'estado_productivo', 'category', 'categoria', 'categoría',
+      'tipo', 'clasificacion', 'clasificación', 'fase productiva', 'tipo animal', 'descripcion', 'descripción',
+      'tip', 'estado'
     ];
-    let stageText = (findValue(rowData, stageFields) || '').toString();
-    
+    const stageText = (findValue(rowData, stageFields) || '').toString();
+
     let category: AnimalCategory | null = null;
     let sex: AnimalSex | null = null;
-    
-    // INTELLIGENT SEX DETECTION: Scan ALL text fields for sex indicators
-    // This is the primary method for detecting sex - analyze entire row content
+
+    // Collect all text from row for sex detection
     const allTextContent = Object.values(rowData)
       .filter(v => v !== null && v !== undefined)
       .map(v => v.toString())
       .join(' ');
-    
-    // First try explicit sex field
-    const sexFields = ['sex', 'sexo', 'genero', 'gender'];
+
+    // Explicit sex field
+    const sexFields = ['sex', 'sexo', 'genero', 'género', 'gender'];
     const directSex = findValue(rowData, sexFields);
     if (directSex) {
       const normalizedSex = directSex.toString().toLowerCase().trim();
       if (['hembra', 'h', 'f', 'female', 'hem', 'fem'].includes(normalizedSex)) sex = 'hembra';
       else if (['macho', 'm', 'male', 'mac'].includes(normalizedSex)) sex = 'macho';
     }
-    
-    // If no explicit sex, infer from stage/phase text
-    if (!sex && stageText) {
-      sex = inferSexFromText(stageText);
-    }
-    
-    // If still no sex, try to infer from ALL text content in the row
-    if (!sex) {
-      sex = inferSexFromText(allTextContent);
-    }
-    
-    // Try to get category directly - expanded field list
-    const categoryFields = ['category', 'categoria', 'tipo', 'clasificacion'];
+
+    if (!sex && stageText) sex = inferSexFromText(stageText);
+    if (!sex) sex = inferSexFromText(allTextContent);
+
+    // Try to get category
+    const categoryFields = ['category', 'categoria', 'categoría', 'tipo', 'clasificacion'];
     const directCategory = findValue(rowData, categoryFields);
     if (directCategory) {
       category = normalizeCategory(directCategory.toString(), species);
     }
-    
-    // If stage text exists, try to infer category
     if (stageText && !category) {
       const stageResult = mapStageToCategory(stageText, species);
       if (stageResult.category) category = stageResult.category;
     }
-    
-    // BUFFALO SPECIES: Auto-assign category based on sex (PRIORITY RULE)
-    // When species is 'bufalo', the user should NOT need to select category manually
+
+    // *** SPECIES RULE: ALWAYS overrides document data for buffalo ***
     if (species === 'bufalo') {
-      // For buffalos, category is ALWAYS determined by sex:
-      // - Hembra → Búfala
-      // - Macho → Búfalo
       if (sex) {
         category = sex === 'macho' ? 'bufalo' : 'bufala';
       } else {
-        // If sex couldn't be determined, default to hembra (most common in cattle/buffalo farms)
-        // This is a safe assumption and can be corrected if needed
         sex = 'hembra';
         category = 'bufala';
       }
     }
-    
-    // Warnings for missing data (only for non-buffalo species)
-    if (!category && species !== 'bufalo') {
-      warnings.push('Categoría no detectada - requiere selección manual');
-    }
-    if (!sex && species !== 'bufalo') {
-      warnings.push('Sexo no detectado - requiere selección manual');
-    }
-    
-    // Extract breed (optional) - expanded field list
+
+    if (!category && species !== 'bufalo') warnings.push('Categoría no detectada - requiere selección manual');
+    if (!sex && species !== 'bufalo') warnings.push('Sexo no detectado - requiere selección manual');
+
+    // ─────────────────────────────────────────────────
+    // 5. BREED (optional)
+    // ─────────────────────────────────────────────────
     const breedFields = ['breed', 'raza', 'raza animal', 'tipo raza'];
     const breedValue = findValue(rowData, breedFields);
     const breed = breedValue?.toString().trim() || null;
-    
-    // Extract weight (optional) - expanded field list
+
+    // ─────────────────────────────────────────────────
+    // 6. WEIGHT (optional)
+    // ─────────────────────────────────────────────────
     const weightFields = ['weight', 'peso', 'peso_actual', 'peso_vivo', 'kg', 'peso kg', 'peso (kg)'];
     const weightRaw = findValue(rowData, weightFields);
     const currentWeight = parseWeight(weightRaw);
-    
-    // Extract lot (optional) - expanded field list
-    const lotFields = ['lot_name', 'lote', 'potrero', 'corral', 'grupo', 'ubicacion', 'location'];
+
+    // ─────────────────────────────────────────────────
+    // 7. LOT / POTRERO (optional)
+    // ─────────────────────────────────────────────────
+    const lotFields = ['lot_name', 'lote', 'potrero', 'corral', 'grupo', 'ubicacion', 'ubicación', 'location'];
     const lotValue = findValue(rowData, lotFields);
     const lotName = lotValue?.toString().trim() || null;
-    
-    // Extract status (default to activo) - expanded field list
+
+    // ─────────────────────────────────────────────────
+    // 8. STATUS (default activo)
+    // ─────────────────────────────────────────────────
     let status: AnimalStatus = 'activo';
-    const statusFields = ['status', 'estado', 'situacion', 'condicion'];
-    const statusRaw = findValue(rowData, statusFields);
+    // Only check "estado" column for status if it's NOT a reproductive field
+    // TIP and GES are reproductive, not animal status
+    const animalStatusFields = ['status', 'situacion', 'situación', 'condicion', 'condición'];
+    const statusRaw = findValue(rowData, animalStatusFields);
     if (statusRaw) {
       const normalizedStatus = statusRaw.toString().toLowerCase().trim();
       if (normalizedStatus.includes('vendido') || normalizedStatus.includes('venta')) status = 'vendido';
@@ -426,15 +516,56 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       else if (normalizedStatus.includes('descartado') || normalizedStatus.includes('descarte')) status = 'descartado';
       else if (normalizedStatus.includes('trasladado') || normalizedStatus.includes('traslado')) status = 'trasladado';
     }
-    
-    // Check for existing animal (matching)
-    const matchedAnimal = tagId ? findExistingAnimal(tagId) : null;
-    const isUpdate = matchedAnimal !== null;
-    
-    if (isUpdate) {
-      warnings.push(`Animal existente encontrado - se actualizarán datos`);
-    }
-    
+
+    // ─────────────────────────────────────────────────
+    // 9. AGE / YEARS → birth_date  (ANOS, EDAD, AÑOS, AGE column)
+    // ─────────────────────────────────────────────────
+    const ageFields = ['anos', 'años', 'edad', 'age', 'years', 'anos_vida', 'edad_años', 'a'];
+    const ageRaw = findValue(rowData, ageFields);
+    const { birthDate, ageYears } = parseAgeTobirthDate(ageRaw);
+
+    // Also check if there's an explicit birth_date column
+    const birthDateFields = ['birth_date', 'fecha_nacimiento', 'nacimiento', 'fecha nac', 'fec nac'];
+    const birthDateRaw = findValue(rowData, birthDateFields);
+    const explicitBirthDate = parseDate(birthDateRaw);
+
+    const finalBirthDate = explicitBirthDate || birthDate;
+
+    // ─────────────────────────────────────────────────
+    // 10. REPRODUCTIVE STATUS  (TIP, GES, GESTACION)
+    // ─────────────────────────────────────────────────
+    // TIP = tipo reproductivo (PRE, ABT, etc.)
+    const tipFields = ['tip', 'tipo_repr', 'tipo_reproductivo', 'tipo reprod', 'gest', 'gestacion', 'gestación', 'ges'];
+    const tipRaw = findValue(rowData, tipFields);
+    const reproductiveStatus = parseReproductiveStatus(tipRaw);
+
+    // ─────────────────────────────────────────────────
+    // 11. LAST SERVICE / PALPATION DATE  (ULTIMO column)
+    // ─────────────────────────────────────────────────
+    const lastServiceFields = [
+      'ultimo', 'último', 'ultima', 'última', 'last', 'ultima_palpacion', 'última palpación',
+      'ult palp', 'ult. palp', 'fecha_servicio', 'fecha servicio', 'last service', 'ultimo servicio'
+    ];
+    const lastServiceRaw = findValue(rowData, lastServiceFields);
+    const lastServiceDate = parseDate(lastServiceRaw);
+
+    // ─────────────────────────────────────────────────
+    // 12. BODY CONDITION SCORE  (D column, 1-5)
+    // ─────────────────────────────────────────────────
+    const conditionFields = [
+      'd', 'cc', 'cs', 'condicion', 'condición', 'condicion_corporal', 'body_condition',
+      'bcs', 'score', 'calificacion', 'calificación'
+    ];
+    const conditionRaw = findValue(rowData, conditionFields);
+    const conditionScore = parseConditionScore(conditionRaw);
+
+    // ─────────────────────────────────────────────────
+    // 13. NOTES (optional)
+    // ─────────────────────────────────────────────────
+    const notesFields = ['notes', 'notas', 'observaciones', 'obs', 'comentarios'];
+    const notesRaw = findValue(rowData, notesFields);
+    const notes = notesRaw?.toString().trim() || null;
+
     return {
       row_number: rowNumber,
       original_data: rowData,
@@ -447,12 +578,19 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       lot_name: lotName,
       status,
       productive_stage: stageText || null,
+      birth_date: finalBirthDate,
+      age_years: ageYears,
+      reproductive_status: reproductiveStatus,
+      last_service_date: lastServiceDate,
+      condition_score: conditionScore,
+      notes,
       matched_animal: matchedAnimal,
       is_update: isUpdate,
       errors,
       warnings,
     };
-  }, [normalizeCategory, mapStageToCategory, inferSexFromText, parseWeight, findExistingAnimal, findValue]);
+  }, [normalizeCategory, mapStageToCategory, inferSexFromText, parseWeight, parseDate,
+    parseAgeTobirthDate, parseReproductiveStatus, parseConditionScore, findExistingAnimal, findValue]);
 
   // Process Excel file
   const processExcelFile = useCallback(async (file: File, species: Species): Promise<ImportedAnimalRow[]> => {
@@ -463,11 +601,10 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
 
     if (jsonData.length < 2) return [];
 
-    const headers = (jsonData[0] as string[]).map(h => 
-      h?.toString().toLowerCase().trim()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') || ''
+    const headers = (jsonData[0] as string[]).map(h =>
+      h?.toString().trim() || ''
     );
-    
+
     const results: ImportedAnimalRow[] = [];
 
     for (let i = 1; i < jsonData.length; i++) {
@@ -477,7 +614,13 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       const rowData: Record<string, unknown> = {};
       headers.forEach((header, idx) => {
         if (header && row[idx] !== undefined && row[idx] !== null) {
+          // Store BOTH original header name AND normalized version
           rowData[header] = row[idx];
+          const normalizedHeader = header.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (normalizedHeader !== header) {
+            rowData[normalizedHeader] = row[idx];
+          }
         }
       });
 
@@ -495,14 +638,18 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
     );
 
     const expectedColumns = [
-      { db: 'tag_id', labels: ['arete', 'id', 'numero', 'identificador', 'codigo', 'tag'], required: true },
+      { db: 'tag_id', labels: ['arete', 'id', 'numero', 'número', 'identificador', 'codigo', 'tag', 'chapeta', 'no'], required: true },
       { db: 'name', labels: ['nombre', 'name'], required: false },
-      { db: 'stage', labels: ['fase', 'etapa', 'estado', 'categoria', 'tipo', 'estado_productivo'], required: false },
+      { db: 'stage', labels: ['fase', 'etapa', 'estado', 'categoria', 'tipo', 'tip'], required: false },
       { db: 'sex', labels: ['sexo', 'sex', 'genero'], required: false },
       { db: 'breed', labels: ['raza', 'breed'], required: false },
       { db: 'weight', labels: ['peso', 'weight', 'peso_actual', 'peso_vivo', 'kg'], required: false },
       { db: 'lot_name', labels: ['lote', 'lot', 'potrero', 'corral', 'grupo'], required: false },
-      { db: 'status', labels: ['estado', 'status', 'situacion'], required: false },
+      { db: 'anos', labels: ['anos', 'años', 'edad', 'age', 'years'], required: false },
+      { db: 'ges', labels: ['ges', 'gestacion', 'gestación'], required: false },
+      { db: 'tip', labels: ['tip', 'tipo', 'tipo_reproductivo'], required: false },
+      { db: 'ultimo', labels: ['ultimo', 'último', 'ultima', 'ult palp'], required: false },
+      { db: 'd', labels: ['d', 'cc', 'cs', 'condicion', 'bcs'], required: false },
     ];
 
     const response = await supabase.functions.invoke('pdf-import-parser', {
@@ -519,11 +666,6 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
 
     if (!rows || rows.length === 0) return [];
 
-    const normalizedHeaders = headers.map(h => 
-      h?.toString().toLowerCase().trim()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') || ''
-    );
-
     const results: ImportedAnimalRow[] = [];
 
     for (let i = 0; i < rows.length; i++) {
@@ -531,9 +673,14 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       if (!row || row.length === 0) continue;
 
       const rowData: Record<string, unknown> = {};
-      normalizedHeaders.forEach((header, idx) => {
+      headers.forEach((header, idx) => {
         if (header && row[idx] !== undefined && row[idx] !== null) {
           rowData[header] = row[idx];
+          const normalizedHeader = header.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (normalizedHeader !== header) {
+            rowData[normalizedHeader] = row[idx];
+          }
         }
       });
 
@@ -547,17 +694,17 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
   const processFile = useCallback(async (file: File, species: Species) => {
     setIsProcessing(true);
     setSelectedSpecies(species);
-    
+
     try {
       const isPDF = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
-      
+
       let results: ImportedAnimalRow[];
       if (isPDF) {
         results = await processPDFFile(file, species);
       } else {
         results = await processExcelFile(file, species);
       }
-      
+
       setProcessedRows(results);
       return results;
     } catch (error) {
@@ -573,62 +720,74 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
     }
   }, [processExcelFile, processPDFFile, toast]);
 
-  // Update a row manually (for user corrections)
+  // Update a row manually
   const updateRow = useCallback((rowNumber: number, updates: Partial<ImportedAnimalRow>) => {
-    setProcessedRows(prev => 
-      prev.map(row => 
-        row.row_number === rowNumber 
+    setProcessedRows(prev =>
+      prev.map(row =>
+        row.row_number === rowNumber
           ? { ...row, ...updates, errors: [], warnings: row.warnings.filter(w => !w.includes('requiere selección')) }
           : row
       )
     );
   }, []);
 
-  // Import animals to database
+  // Import animals to database - CRITICAL: existing animals are UPDATED not duplicated
   const importAnimals = useCallback(async (
     rows: ImportedAnimalRow[],
     organizationId: string
   ): Promise<ImportResult> => {
     const result: ImportResult = { created: 0, updated: 0, skipped: 0, errors: [] };
-    
-    // Filter valid rows
+
     const validRows = rows.filter(r => r.tag_id && r.errors.length === 0);
-    
+
     for (const row of validRows) {
       try {
         if (row.is_update && row.matched_animal) {
-          // Update existing animal
+          // ── UPDATE EXISTING ANIMAL ──────────────────────────────────────
+          // ALWAYS update with all available data from file (don't skip if already has value)
           const updates: Record<string, unknown> = {};
-          if (row.current_weight && !row.matched_animal.current_weight) {
+
+          if (row.current_weight) {
             updates.current_weight = row.current_weight;
             updates.last_weight_date = new Date().toISOString().split('T')[0];
           }
-          if (row.lot_name && !row.matched_animal.lot_name) {
-            updates.lot_name = row.lot_name;
+          if (row.lot_name) updates.lot_name = row.lot_name;
+          if (row.breed) updates.breed = row.breed;
+          if (row.birth_date) updates.birth_date = row.birth_date;
+          if (row.reproductive_status) updates.reproductive_status = row.reproductive_status;
+          if (row.last_service_date) updates.last_service_date = row.last_service_date;
+          if (row.notes) updates.notes = row.notes;
+          // Update condition score in notes if not a dedicated column
+          if (row.condition_score && !updates.notes) {
+            updates.notes = `CC: ${row.condition_score}`;
+          } else if (row.condition_score && updates.notes) {
+            updates.notes = `${updates.notes} | CC: ${row.condition_score}`;
           }
-          if (row.breed && !row.matched_animal.breed) {
-            updates.breed = row.breed;
-          }
-          
+
           if (Object.keys(updates).length > 0) {
             const { error } = await supabase
               .from('animals')
               .update(updates)
               .eq('id', row.matched_animal.id);
-            
+
             if (error) throw error;
             result.updated++;
           } else {
             result.skipped++;
           }
-        } else {
-          // Create new animal
+        } else if (!row.is_update) {
+          // ── CREATE NEW ANIMAL ────────────────────────────────────────────
           if (!row.category || !row.sex) {
             result.errors.push(`Fila ${row.row_number}: Categoría o sexo no definido`);
             result.skipped++;
             continue;
           }
-          
+
+          const notesArr = [];
+          if (row.notes) notesArr.push(row.notes);
+          if (row.condition_score) notesArr.push(`CC: ${row.condition_score}`);
+          if (row.age_years) notesArr.push(`Edad al importar: ${row.age_years} años`);
+
           const { error } = await supabase
             .from('animals')
             .insert({
@@ -641,20 +800,24 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
               last_weight_date: row.current_weight ? new Date().toISOString().split('T')[0] : null,
               lot_name: row.lot_name,
               status: row.status,
+              birth_date: row.birth_date,
+              reproductive_status: row.reproductive_status || 'vacia',
+              last_service_date: row.last_service_date,
+              notes: notesArr.length > 0 ? notesArr.join(' | ') : null,
               organization_id: organizationId,
               entry_date: new Date().toISOString().split('T')[0],
             });
-          
+
           if (error) throw error;
           result.created++;
         }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
-        result.errors.push(`Fila ${row.row_number}: ${errorMsg}`);
+        result.errors.push(`Fila ${row.row_number} (${row.tag_id}): ${errorMsg}`);
         result.skipped++;
       }
     }
-    
+
     return result;
   }, []);
 
@@ -671,24 +834,23 @@ export function useSmartAnimalImport(existingAnimals: Animal[]) {
       `- Omitidos: ${result.skipped}`,
       '',
     ];
-    
+
     if (result.errors.length > 0) {
       lines.push('Errores:', ...result.errors, '');
     }
-    
+
     lines.push('Detalle por registro:', '');
-    
+
     for (const row of rows) {
       const status = row.is_update ? 'ACTUALIZADO' : (row.errors.length > 0 ? 'ERROR' : 'CREADO');
       lines.push(`[${status}] Fila ${row.row_number}: ${row.tag_id}`);
-      if (row.warnings.length > 0) {
-        lines.push(`  Advertencias: ${row.warnings.join(', ')}`);
-      }
-      if (row.errors.length > 0) {
-        lines.push(`  Errores: ${row.errors.join(', ')}`);
-      }
+      if (row.age_years) lines.push(`  Edad: ${row.age_years} años`);
+      if (row.reproductive_status) lines.push(`  Estado reproductivo: ${row.reproductive_status}`);
+      if (row.condition_score) lines.push(`  Condición corporal: ${row.condition_score}`);
+      if (row.warnings.length > 0) lines.push(`  Advertencias: ${row.warnings.join(', ')}`);
+      if (row.errors.length > 0) lines.push(`  Errores: ${row.errors.join(', ')}`);
     }
-    
+
     return lines.join('\n');
   }, [selectedSpecies]);
 

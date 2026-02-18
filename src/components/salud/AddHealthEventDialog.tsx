@@ -6,6 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { ChevronsUpDown, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Animal {
@@ -53,6 +57,7 @@ export const AddHealthEventDialog = ({
 }: AddHealthEventDialogProps) => {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(false);
+  const [animalOpen, setAnimalOpen] = useState(false);
   const [eventType, setEventType] = useState<'tratamiento' | 'vacuna' | 'diagnostico' | 'palpacion'>('tratamiento');
   const [form, setForm] = useState({
     animal_id: '',
@@ -181,18 +186,47 @@ export const AddHealthEventDialog = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Animal * {isPalpation && <span className="text-xs text-muted-foreground">(solo hembras)</span>}</Label>
-                <Select value={form.animal_id} onValueChange={(v) => setForm({ ...form, animal_id: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {animalsToShow.map((animal) => (
-                      <SelectItem key={animal.id} value={animal.id}>
-                        {animal.tag_id} {animal.name && `- ${animal.name}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={animalOpen} onOpenChange={setAnimalOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={animalOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {form.animal_id
+                        ? (() => {
+                            const a = animalsToShow.find(a => a.id === form.animal_id);
+                            return a ? `${a.tag_id}${a.name ? ` - ${a.name}` : ''}` : 'Seleccionar';
+                          })()
+                        : 'Seleccionar'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar por arete o nombre..." />
+                      <CommandList>
+                        <CommandEmpty>No se encontró ningún animal.</CommandEmpty>
+                        <CommandGroup>
+                          {animalsToShow.map((animal) => (
+                            <CommandItem
+                              key={animal.id}
+                              value={`${animal.tag_id} ${animal.name ?? ''}`}
+                              onSelect={() => {
+                                setForm({ ...form, animal_id: animal.id });
+                                setAnimalOpen(false);
+                              }}
+                            >
+                              <Check className={cn('mr-2 h-4 w-4', form.animal_id === animal.id ? 'opacity-100' : 'opacity-0')} />
+                              {animal.tag_id}{animal.name && ` - ${animal.name}`}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-2">
                 <Label>Fecha *</Label>

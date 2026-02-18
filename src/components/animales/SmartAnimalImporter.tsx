@@ -400,23 +400,25 @@ export function SmartAnimalImporter({
                     <TableRow className="bg-muted/50">
                       <TableHead className="w-12">#</TableHead>
                       <TableHead>Arete/ID</TableHead>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Fase Detectada</TableHead>
                       <TableHead>Categoría</TableHead>
                       <TableHead>Sexo</TableHead>
+                      <TableHead>Edad</TableHead>
+                      <TableHead>Est. Reprod.</TableHead>
+                      <TableHead>Ult. Servicio</TableHead>
+                      <TableHead>CC</TableHead>
                       <TableHead>Peso</TableHead>
                       <TableHead>Lote</TableHead>
                       <TableHead>Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {processedRows.slice(0, 50).map((row) => (
-                      <TableRow 
+                    {processedRows.slice(0, 100).map((row) => (
+                      <TableRow
                         key={row.row_number}
                         className={
-                          row.errors.length > 0 
-                            ? 'bg-red-50 dark:bg-red-950/20' 
-                            : row.is_update 
+                          row.errors.length > 0
+                            ? 'bg-red-50 dark:bg-red-950/20'
+                            : row.is_update
                               ? 'bg-blue-50 dark:bg-blue-950/20'
                               : (!row.category || !row.sex)
                                 ? 'bg-amber-50 dark:bg-amber-950/20'
@@ -427,18 +429,11 @@ export function SmartAnimalImporter({
                         <TableCell className="font-medium">
                           {row.tag_id || <span className="text-red-500">Sin ID</span>}
                           {row.is_update && (
-                            <Badge variant="secondary" className="ml-2 text-xs">Existe</Badge>
+                            <Badge variant="secondary" className="ml-1 text-xs">Ya existe</Badge>
                           )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {row.name || '-'}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {row.productive_stage || '-'}
                         </TableCell>
                         <TableCell>
                           {isBuffaloImport ? (
-                            // For buffalo imports, show the auto-assigned category as text (read-only)
                             <Badge variant="outline" className="font-normal">
                               {row.category === 'bufalo' ? 'Búfalo' : 'Búfala'}
                             </Badge>
@@ -462,7 +457,6 @@ export function SmartAnimalImporter({
                         </TableCell>
                         <TableCell>
                           {isBuffaloImport ? (
-                            // For buffalo imports, show the auto-assigned sex as text (read-only)
                             <Badge variant="outline" className="font-normal">
                               {row.sex === 'macho' ? 'Macho' : 'Hembra'}
                             </Badge>
@@ -480,6 +474,22 @@ export function SmartAnimalImporter({
                               </SelectContent>
                             </Select>
                           )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {row.age_years ? `${row.age_years} a` : row.birth_date ? row.birth_date : '-'}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {row.reproductive_status ? (
+                            <Badge variant="outline" className="text-xs font-normal capitalize">
+                              {row.reproductive_status}
+                            </Badge>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {row.last_service_date || '-'}
+                        </TableCell>
+                        <TableCell className="text-sm text-center">
+                          {row.condition_score ?? '-'}
                         </TableCell>
                         <TableCell>
                           {row.current_weight ? `${row.current_weight} kg` : '-'}
@@ -502,9 +512,9 @@ export function SmartAnimalImporter({
                     ))}
                   </TableBody>
                 </Table>
-                {processedRows.length > 50 && (
+                {processedRows.length > 100 && (
                   <div className="text-center py-2 text-sm text-muted-foreground bg-muted/30">
-                    Mostrando 50 de {processedRows.length} registros
+                    Mostrando 100 de {processedRows.length} registros
                   </div>
                 )}
               </ScrollArea>

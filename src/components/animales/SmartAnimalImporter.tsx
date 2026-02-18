@@ -156,15 +156,30 @@ export function SmartAnimalImporter({
   };
 
   const handleImport = async () => {
-    const { data: profile } = await supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'No has iniciado sesión',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('organization_id')
-      .single();
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+    }
 
     if (!profile?.organization_id) {
       toast({
         title: 'Error',
-        description: 'No se encontró la organización',
+        description: 'No se encontró la organización. Por favor verifica tu cuenta.',
         variant: 'destructive',
       });
       return;

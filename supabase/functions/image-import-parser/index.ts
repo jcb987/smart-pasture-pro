@@ -50,46 +50,70 @@ serve(async (req) => {
     const safeTableName = (tableName || '').replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 50);
 
     const today = new Date().toISOString().split('T')[0];
-    const systemPrompt = `Eres un experto en análisis de datos ganaderos. Se te muestra una imagen que puede contener una tabla, lista o documento con información de animales. La fecha de hoy es ${today}.
+    const systemPrompt = `Eres un experto en análisis de datos ganaderos. Se te muestra una imagen que puede contener una tabla, lista o documento con información de animales o producción. La fecha de hoy es ${today}.
 
 Tu tarea:
-1. PRIMERO: Busca en TODO el documento (título, encabezado, pie de página, texto libre) cualquier fecha global que aplique a todos los registros. Puede aparecer como "Fecha: 15/01/2025", "01-2025", "Enero 2025", "15 de enero 2025", "2025-01-15", o cualquier formato de fecha visible FUERA de la tabla de datos.
+1. PRIMERO: Busca en TODO el documento (título, encabezado, pie de página, texto libre, cualquier lugar FUERA de la tabla) cualquier fecha global. Puede aparecer como "Fecha: 15/01/2025", "01-2025", "Enero 2025", "15 de enero 2025", "2025-01-15", "15/01/25", o simplemente una fecha escrita a mano o impresa en la parte superior. Esto es CRÍTICO.
 2. Identificar si la imagen contiene datos tabulares (tablas, listas, planillas)
-3. Extraer TODOS los datos visibles de la imagen
+3. Extraer TODOS los datos visibles de la imagen con la MAYOR PRECISIÓN posible
 4. Mapear inteligentemente las columnas a los campos esperados de la base de datos
-5. Interpretar abreviaciones del sector ganadero (ej: PRE=preñada, ABT=vacía/abierta, GES=gestación, ANOS=edad, etc.)
+5. Interpretar abreviaciones del sector ganadero
 
 Campos esperados para la tabla "${safeTableName}":
 ${JSON.stringify(expectedColumns || [], null, 2)}
 
-Reglas CRÍTICAS:
-- FECHA GLOBAL: Si encuentras una fecha en el título o encabezado del documento (no en las columnas de la tabla), pon esa fecha en el campo "globalDate" del JSON. Esta fecha se aplicará a TODAS las filas que no tengan su propia fecha. Convierte la fecha al formato YYYY-MM-DD.
-- Si una fila de la tabla tiene su propia fecha, usa esa fecha en lugar de la global.
-- Si ves números que parecen chapetas/arete de animales, mapéalos a "tag_id"  
+Reglas CRÍTICAS para lectura correcta:
+- LEE CADA CELDA CON CUIDADO. No confundas guiones (-) con valores numéricos. Un guión "-" significa SIN DATO (null), NO cero.
+- Si una celda está vacía o tiene un guión, el valor es null, NO "0" ni "-".
+- NÚMEROS DECIMALES: Lee con precisión. 2.3 es 2.3, no 23 ni 0.23.
+- CHAPETAS/ARETES: Lee el número exacto incluyendo guiones y barras. Ej: "020-113", "024/7", "053-4" deben leerse exactamente así.
+
+Reglas para PRODUCCIÓN DE LECHE (milk_production):
+- Si ves columnas como "AM", "Mañana", "1er ordeño" → mapear a "morning_liters"
+- Si ves columnas como "PM", "Tarde", "2do ordeño" → mapear a "afternoon_liters"  
+- Si ves columnas como "Noche", "3er ordeño" → mapear a "evening_liters"
+- Si ves columnas como "Total", "Producción", "Litros" (una sola columna con total) → mapear a "total_liters"
+- IMPORTANTE: Si hay UNA SOLA columna numérica de litros (no dividida en AM/PM), mapéala como "total_liters", NO la dupliques.
+- Si hay MÚLTIPLES columnas numéricas para un mismo animal, distingue si son AM/PM/Total o si son diferentes días.
+- NUNCA mapees la misma columna de origen a múltiples campos destino.
+- NUNCA mapees múltiples columnas de origen al mismo campo destino.
+- Cada columna de la imagen debe mapearse a UN SOLO campo de la base de datos.
+
+FECHA GLOBAL (CRÍTICO):
+- Si encuentras una fecha FUERA de la tabla de datos (en el título, encabezado, pie de página, texto libre), ponla en "globalDate" en formato YYYY-MM-DD.
+- Esta fecha se aplicará a TODAS las filas.
+- Si la fecha solo tiene mes/año (ej: "Enero 2025"), usa el primer día del mes: "2025-01-01".
+
+Reglas de mapeo general:
+- Si ves números que parecen chapetas/arete de animales, mapéalos a "animal_tag" (no a "tag_id")
 - Si ves estados como PRE, ABT, GES, mapéalos a reproductive_status
-- Si ves edades en años (ANOS), calcula birth_date restando esos años desde la fecha de hoy (${today})
+- Si ves edades en años (ANOS), calcula birth_date restando esos años desde ${today}
 - Si ves condición corporal (1-5), mapéala a condition_score
-- Si ves valores de producción de leche (litros, lts, L), mapéalos a los campos de producción
 - Extrae TODAS las filas de datos que puedas ver, incluso si son muchas
 - NO omitas ninguna fila aunque le falten datos
-- Si una columna de la tabla tiene un valor que parece fecha (ULTIMO, PALPACION, FECHA_PALP), inclúyela aunque no sea la fecha principal
 
 Responde SOLO con JSON válido en este formato:
 {
   "globalDate": "2025-01-15",
-  "headers": ["columna1", "columna2", ...],
+  "headers": ["columna_origen_1", "columna_origen_2", ...],
   "rows": [
     ["valor1", "valor2", ...],
     ...
   ],
   "mappings": [
-    {"excelColumn": "columna1", "dbColumn": "campo_db", "confidence": 90, "suggestedBy": "ai"}
+    {"excelColumn": "columna_origen_1", "dbColumn": "campo_db", "confidence": 90, "suggestedBy": "ai"}
   ],
-  "analysis": "Descripción breve de lo que encontraste en la imagen, incluyendo si encontraste una fecha global",
+  "analysis": "Descripción breve de lo que encontraste",
   "warnings": ["advertencia si aplica"]
 }
 
-Si NO encuentras datos tabulares en la imagen, responde:
+IMPORTANTE sobre mappings:
+- "excelColumn" debe coincidir EXACTAMENTE con un valor de "headers"
+- Cada "excelColumn" debe aparecer SOLO UNA VEZ en mappings
+- Cada "dbColumn" debe aparecer SOLO UNA VEZ en mappings
+- Solo incluye mappings para columnas que realmente tienen correspondencia con los campos esperados
+
+Si NO encuentras datos tabulares:
 {
   "globalDate": null,
   "headers": [],
@@ -124,7 +148,7 @@ Si NO encuentras datos tabulares en la imagen, responde:
             ]
           }
         ],
-        temperature: 0.1,
+        temperature: 0.05,
       }),
     });
 
@@ -147,6 +171,20 @@ Si NO encuentras datos tabulares en la imagen, responde:
     }
 
     const result = JSON.parse(jsonStr.trim());
+
+    // Post-processing: validate no duplicate mappings
+    if (result.mappings && Array.isArray(result.mappings)) {
+      const seenExcel = new Set<string>();
+      const seenDb = new Set<string>();
+      result.mappings = result.mappings.filter((m: any) => {
+        if (seenExcel.has(m.excelColumn) || seenDb.has(m.dbColumn)) {
+          return false;
+        }
+        seenExcel.add(m.excelColumn);
+        seenDb.add(m.dbColumn);
+        return true;
+      });
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

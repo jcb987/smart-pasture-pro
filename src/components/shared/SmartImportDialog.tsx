@@ -29,8 +29,6 @@ import {
   Loader2,
   Brain,
   Sparkles,
-  Pencil,
-  Save,
   FileText,
   Image
 } from 'lucide-react';
@@ -89,8 +87,6 @@ export function SmartImportDialog({
   const [importResults, setImportResults] = useState({ success: 0, errors: 0 });
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [globalDate, setGlobalDate] = useState<string | null>(null);
-  const [editingRow, setEditingRow] = useState<number | null>(null);
-  const [editValues, setEditValues] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const resetDialog = () => {
@@ -104,55 +100,11 @@ export function SmartImportDialog({
     setImportResults({ success: 0, errors: 0 });
     setAiAnalysis(null);
     setGlobalDate(null);
-    setEditingRow(null);
-    setEditValues({});
   };
 
   const handleClose = () => {
     resetDialog();
     onOpenChange(false);
-  };
-
-  const startEditing = (rowIndex: number) => {
-    const row = parsedData[rowIndex];
-    const values: Record<string, string> = {};
-    for (const col of displayColumns) {
-      values[col] = String(row.data[col] ?? '');
-    }
-    setEditValues(values);
-    setEditingRow(rowIndex);
-  };
-
-  const saveEditing = () => {
-    if (editingRow === null) return;
-    const updatedData = [...parsedData];
-    const row = { ...updatedData[editingRow] };
-    const newData = { ...row.data };
-    
-    for (const [key, value] of Object.entries(editValues)) {
-      if (value === '' || value === '-') {
-        newData[key] = null;
-      } else if (!isNaN(Number(value)) && value.trim() !== '') {
-        newData[key] = Number(value);
-      } else {
-        newData[key] = value;
-      }
-    }
-    
-    row.data = newData;
-    // Re-validate the edited row
-    const { errors, warnings } = config.validateRow(newData, existingData);
-    row.errors = errors;
-    row.warnings = warnings;
-    updatedData[editingRow] = row;
-    setParsedData(updatedData);
-    setEditingRow(null);
-    setEditValues({});
-  };
-
-  const cancelEditing = () => {
-    setEditingRow(null);
-    setEditValues({});
   };
 
   // AI-powered column mapping
@@ -687,7 +639,7 @@ export function SmartImportDialog({
 
           {step === 'preview' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-4">
                 <Badge variant="outline" className="gap-1">
                   <FileSpreadsheet className="h-3 w-3" />
                   {file?.name}
@@ -714,11 +666,10 @@ export function SmartImportDialog({
                         <TableHead key={col}>{col}</TableHead>
                       ))}
                       <TableHead>Errores/Avisos</TableHead>
-                      <TableHead className="w-16">Editar</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {parsedData.map((row, rowIdx) => (
+                    {parsedData.map((row) => (
                       <TableRow key={row.row_number} className={row.errors.length > 0 ? 'bg-destructive/5' : ''}>
                         <TableCell className="text-muted-foreground">{row.row_number}</TableCell>
                         <TableCell>
@@ -731,17 +682,8 @@ export function SmartImportDialog({
                           )}
                         </TableCell>
                         {displayColumns.map(col => (
-                          <TableCell key={col} className="max-w-[150px]">
-                            {editingRow === rowIdx ? (
-                              <input
-                                type="text"
-                                value={editValues[col] ?? ''}
-                                onChange={(e) => setEditValues(prev => ({ ...prev, [col]: e.target.value }))}
-                                className="w-full px-1.5 py-0.5 text-sm border rounded bg-background"
-                              />
-                            ) : (
-                              <span className="truncate block">{String(row.data[col] ?? '-')}</span>
-                            )}
+                          <TableCell key={col} className="max-w-[150px] truncate">
+                            {String(row.data[col] ?? '-')}
                           </TableCell>
                         ))}
                         <TableCell className="max-w-[200px]">
@@ -750,22 +692,6 @@ export function SmartImportDialog({
                           )}
                           {row.warnings.length > 0 && (
                             <div className="text-xs text-amber-600">{row.warnings.join(', ')}</div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {editingRow === rowIdx ? (
-                            <div className="flex gap-1">
-                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={saveEditing}>
-                                <Save className="h-3.5 w-3.5 text-green-600" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={cancelEditing}>
-                                <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEditing(rowIdx)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
                           )}
                         </TableCell>
                       </TableRow>

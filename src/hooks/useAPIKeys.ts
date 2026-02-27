@@ -50,9 +50,13 @@ export const useAPIKeys = () => {
   const fetchAPIKeys = async () => {
     try {
       setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
       const { data: profile } = await supabase
         .from('profiles')
         .select('organization_id')
+        .eq('user_id', user.id)
         .single();
 
       if (!profile?.organization_id) return;
@@ -74,9 +78,13 @@ export const useAPIKeys = () => {
 
   const createAPIKey = async (keyData: CreateAPIKeyData): Promise<{ success: boolean; key?: string; error?: any }> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+      
       const { data: profile } = await supabase
         .from('profiles')
-        .select('organization_id, user_id')
+        .select('organization_id')
+        .eq('user_id', user.id)
         .single();
 
       if (!profile?.organization_id) {
@@ -89,7 +97,7 @@ export const useAPIKeys = () => {
 
       const { error } = await supabase.from('api_keys').insert({
         organization_id: profile.organization_id,
-        created_by: profile.user_id,
+        created_by: user.id,
         name: keyData.name,
         key_hash: keyHash,
         key_prefix: keyPrefix,
@@ -201,4 +209,15 @@ export const API_PERMISSIONS = [
   { value: 'financial:write', label: 'Escribir finanzas' },
   { value: 'inventory:read', label: 'Leer inventario' },
   { value: 'inventory:write', label: 'Escribir inventario' },
+  { value: 'feed:read', label: 'Leer alimentación' },
+  { value: 'feed:write', label: 'Escribir alimentación' },
+  { value: 'paddocks:read', label: 'Leer praderas' },
+  { value: 'paddocks:write', label: 'Escribir praderas' },
+  { value: 'tasks:read', label: 'Leer tareas' },
+  { value: 'tasks:write', label: 'Escribir tareas' },
+  { value: 'invoices:read', label: 'Leer facturas' },
+  { value: 'invoices:write', label: 'Escribir facturas' },
+  { value: 'genetics:read', label: 'Leer genética' },
+  { value: 'genetics:write', label: 'Escribir genética' },
+  { value: '*', label: 'Acceso total (todos los permisos)' },
 ];

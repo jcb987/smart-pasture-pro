@@ -4,7 +4,7 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Upload, Download, Activity, Target } from 'lucide-react';
+import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Upload, Download, Activity, Target, Camera } from 'lucide-react';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { useLactationAnalysis } from '@/hooks/useLactationAnalysis';
 import { AddMilkRecordDialog } from '@/components/produccion/AddMilkRecordDialog';
@@ -13,6 +13,7 @@ import { RankingTable } from '@/components/produccion/RankingTable';
 import { ProductionRecordsTable } from '@/components/produccion/ProductionRecordsTable';
 import { LactationAnalysisCard } from '@/components/produccion/LactationAnalysisCard';
 import { SmartImportDialog } from '@/components/shared/SmartImportDialog';
+import { MilkImageImportDialog } from '@/components/produccion/MilkImageImportDialog';
 import { milkImportConfig } from '@/config/importConfigs';
 import { useExportMilk } from '@/hooks/useExportMilk';
 import { useImportMilk } from '@/hooks/useImportMilk';
@@ -21,6 +22,7 @@ const ProduccionLeche = () => {
   const { canWrite, canDelete } = useModulePermissions('produccion-leche');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showImageImportDialog, setShowImageImportDialog] = useState(false);
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
   const { exportToExcel, exporting } = useExportMilk();
   const { importData } = useImportMilk();
@@ -68,9 +70,15 @@ const ProduccionLeche = () => {
           </div>
           <div className="flex gap-2">
             {canWrite && (
+              <Button variant="outline" onClick={() => setShowImageImportDialog(true)}>
+                <Camera className="mr-2 h-4 w-4" />
+                Importar Imagen
+              </Button>
+            )}
+            {canWrite && (
               <Button variant="outline" onClick={() => setShowImportDialog(true)}>
                 <Upload className="mr-2 h-4 w-4" />
-                Importar
+                Importar Excel
               </Button>
             )}
             <Button variant="outline" onClick={exportToExcel} disabled={exporting}>
@@ -262,6 +270,15 @@ const ProduccionLeche = () => {
         config={milkImportConfig}
         existingData={records}
         onImport={importData}
+      />
+
+      <MilkImageImportDialog
+        open={showImageImportDialog}
+        onOpenChange={setShowImageImportDialog}
+        onImportComplete={() => {
+          // Trigger refetch by re-rendering
+          window.location.reload();
+        }}
       />
     </DashboardLayout>
   );

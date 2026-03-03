@@ -15,7 +15,7 @@ const findAnimalByTag = async (tag: string | undefined, organizationId: string) 
 
 export const reproductionImportConfig: ImportConfig = {
   title: 'Importar Eventos Reproductivos',
-  description: 'Importa eventos de reproducción como celos, servicios, palpaciones y partos desde Excel',
+  description: 'Importa eventos de reproducción desde Excel, PDF o imagen (JPG/PNG)',
   tableName: 'reproductive_events',
   requiredColumns: [
     { db: 'animal_tag', labels: ['arete', 'id', 'tag_id', 'animal', 'identificacion'] },
@@ -81,7 +81,7 @@ export const reproductionImportConfig: ImportConfig = {
 
 export const milkImportConfig: ImportConfig = {
   title: 'Importar Producción de Leche',
-  description: 'Importa registros de producción lechera desde Excel',
+  description: 'Importa registros de producción lechera desde Excel, PDF o imagen (JPG/PNG)',
   tableName: 'milk_production',
   requiredColumns: [
     { db: 'animal_tag', labels: ['arete', 'id', 'tag_id', 'animal', 'vaca'] },
@@ -151,7 +151,7 @@ export const milkImportConfig: ImportConfig = {
 
 export const meatImportConfig: ImportConfig = {
   title: 'Importar Registros de Peso',
-  description: 'Importa pesajes y registros de engorde desde Excel',
+  description: 'Importa pesajes y registros de engorde desde Excel, PDF o imagen (JPG/PNG)',
   tableName: 'weight_records',
   requiredColumns: [
     { db: 'animal_tag', labels: ['arete', 'id', 'tag_id', 'animal', 'identificacion'] },

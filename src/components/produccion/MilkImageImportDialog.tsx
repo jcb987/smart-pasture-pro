@@ -78,13 +78,13 @@ export function MilkImageImportDialog({
     onOpenChange(false);
   };
 
-  const loadAnimals = useCallback(async () => {
+  const loadAnimals = useCallback(async (): Promise<Map<string, { id: string; tag_id: string }>> => {
     const { data: profile } = await supabase
       .from('profiles')
       .select('organization_id')
       .single();
 
-    if (!profile?.organization_id) return;
+    if (!profile?.organization_id) return new Map();
     setOrganizationId(profile.organization_id);
 
     const { data: animals } = await supabase
@@ -94,37 +94,46 @@ export function MilkImageImportDialog({
 
     const map = new Map<string, { id: string; tag_id: string }>();
     (animals || []).forEach(a => {
-      map.set(a.tag_id.toLowerCase().trim(), { id: a.id, tag_id: a.tag_id });
+      const key = a.tag_id.toLowerCase().trim();
+      map.set(key, { id: a.id, tag_id: a.tag_id });
       // Also map without leading zeros
       const noLeadingZeros = a.tag_id.replace(/^0+/, '').toLowerCase().trim();
-      if (noLeadingZeros !== a.tag_id.toLowerCase().trim()) {
+      if (noLeadingZeros !== key) {
         map.set(noLeadingZeros, { id: a.id, tag_id: a.tag_id });
       }
+      // Also map with separator variants (/ <-> -)
+      const withHyphen = key.replace(/\//g, '-');
+      const withSlash = key.replace(/-/g, '/');
+      if (withHyphen !== key) map.set(withHyphen, { id: a.id, tag_id: a.tag_id });
+      if (withSlash !== key) map.set(withSlash, { id: a.id, tag_id: a.tag_id });
     });
     setAnimalMap(map);
+    return map;
   }, []);
 
-  const findAnimal = useCallback((numero: string) => {
+  const findAnimalInMap = useCallback((numero: string, map: Map<string, { id: string; tag_id: string }>) => {
     const normalized = numero.toLowerCase().trim();
-    let found = animalMap.get(normalized);
+    let found = map.get(normalized);
     if (!found) {
-      // Try without leading zeros
-      found = animalMap.get(normalized.replace(/^0+/, ''));
+      found = map.get(normalized.replace(/^0+/, ''));
     }
     if (!found) {
-      // Try with common separators replaced
       const variants = [
         normalized.replace(/[\/\-]/g, ''),
         normalized.replace(/[\/\-]/g, '-'),
         normalized.replace(/[\/\-]/g, '/'),
       ];
       for (const v of variants) {
-        found = animalMap.get(v);
+        found = map.get(v);
         if (found) break;
       }
     }
     return found;
-  }, [animalMap]);
+  }, []);
+
+  const findAnimal = useCallback((numero: string) => {
+    return findAnimalInMap(numero, animalMap);
+  }, [animalMap, findAnimalInMap]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -144,7 +153,7 @@ export function MilkImageImportDialog({
     }
 
     setStep('analyzing');
-    await loadAnimals();
+    const loadedMap = await loadAnimals();
 
     try {
       // Convert to base64
@@ -176,12 +185,11 @@ export function MilkImageImportDialog({
       // Map records and check animal existence
       const mappedRecords: MilkImageRecord[] = parsedRegistros
         .filter(r => {
-          // Only include records with at least one numeric value
           const vals = Object.values(r.valores || {});
           return vals.some(v => v !== null && v !== undefined && !isNaN(Number(v)));
         })
         .map(r => {
-          const animal = findAnimal(r.numero);
+          const animal = findAnimalInMap(r.numero, loadedMap);
           return {
             numero: r.numero,
             valores: r.valores || {},

@@ -78,6 +78,16 @@ export function MilkImageImportDialog({
     onOpenChange(false);
   };
 
+  const normalizeId = (id: string): string => {
+    if (!id) return '';
+    return id
+      .toLowerCase()
+      .trim()
+      .replace(/[\/\s\-]+/g, '-')
+      .replace(/^0+/, '')
+      .replace(/^-+|-+$/g, '');
+  };
+
   const loadAnimals = useCallback(async (): Promise<Map<string, { id: string; tag_id: string }>> => {
     const { data: profile } = await supabase
       .from('profiles')
@@ -94,41 +104,23 @@ export function MilkImageImportDialog({
 
     const map = new Map<string, { id: string; tag_id: string }>();
     (animals || []).forEach(a => {
-      const key = a.tag_id.toLowerCase().trim();
-      map.set(key, { id: a.id, tag_id: a.tag_id });
-      // Also map without leading zeros
-      const noLeadingZeros = a.tag_id.replace(/^0+/, '').toLowerCase().trim();
-      if (noLeadingZeros !== key) {
-        map.set(noLeadingZeros, { id: a.id, tag_id: a.tag_id });
-      }
-      // Also map with separator variants (/ <-> -)
-      const withHyphen = key.replace(/\//g, '-');
-      const withSlash = key.replace(/-/g, '/');
-      if (withHyphen !== key) map.set(withHyphen, { id: a.id, tag_id: a.tag_id });
-      if (withSlash !== key) map.set(withSlash, { id: a.id, tag_id: a.tag_id });
+      const entry = { id: a.id, tag_id: a.tag_id };
+      map.set(a.tag_id.toLowerCase().trim(), entry);
+      map.set(normalizeId(a.tag_id), entry);
     });
+    console.log('[MilkImport] Loaded', map.size, 'animal keys');
     setAnimalMap(map);
     return map;
   }, []);
 
   const findAnimalInMap = useCallback((numero: string, map: Map<string, { id: string; tag_id: string }>) => {
-    const normalized = numero.toLowerCase().trim();
-    let found = map.get(normalized);
-    if (!found) {
-      found = map.get(normalized.replace(/^0+/, ''));
-    }
-    if (!found) {
-      const variants = [
-        normalized.replace(/[\/\-]/g, ''),
-        normalized.replace(/[\/\-]/g, '-'),
-        normalized.replace(/[\/\-]/g, '/'),
-      ];
-      for (const v of variants) {
-        found = map.get(v);
-        if (found) break;
-      }
-    }
-    return found;
+    const lower = numero.toLowerCase().trim();
+    let found = map.get(lower);
+    if (found) return found;
+    found = map.get(normalizeId(numero));
+    if (found) return found;
+    console.log(`[MilkImport] No match for "${numero}"`);
+    return undefined;
   }, []);
 
   const findAnimal = useCallback((numero: string) => {
@@ -357,10 +349,7 @@ export function MilkImageImportDialog({
             .insert({
               animal_id: record.animalId!,
               production_date: parsedDate,
-              total_liters: valor,
-              morning_liters: null,
-              afternoon_liters: null,
-              evening_liters: null,
+              morning_liters: valor,
               organization_id: organizationId,
             });
 

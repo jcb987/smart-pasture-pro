@@ -507,9 +507,8 @@ export function MilkImageImportDialog({
     setImportResults({ success, errors: errors + parseErrors, skipped: skipped + skippedWarnings });
     setStep('complete');
 
-    if (success > 0) {
-      onImportComplete();
-    }
+    // Always trigger refresh so the page shows current data
+    onImportComplete();
   };
 
   const validCount = records.filter(r => r.status === 'valid').length;
@@ -736,10 +735,12 @@ export function MilkImageImportDialog({
               <CheckCircle2 className="h-16 w-16 text-green-500" />
               <p className="text-lg font-medium">Importación completada</p>
               <div className="flex gap-4 text-sm">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{importResults.success}</p>
-                  <p className="text-muted-foreground">Registros guardados</p>
-                </div>
+                {importResults.success > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{importResults.success}</p>
+                    <p className="text-muted-foreground">Nuevos registros</p>
+                  </div>
+                )}
                 {importResults.errors > 0 && (
                   <div className="text-center">
                     <p className="text-2xl font-bold text-red-600">{importResults.errors}</p>
@@ -749,10 +750,15 @@ export function MilkImageImportDialog({
                 {importResults.skipped > 0 && (
                   <div className="text-center">
                     <p className="text-2xl font-bold text-muted-foreground">{importResults.skipped}</p>
-                    <p className="text-muted-foreground">Omitidos</p>
+                    <p className="text-muted-foreground">Ya existían</p>
                   </div>
                 )}
               </div>
+              {importResults.success === 0 && importResults.skipped > 0 && importResults.errors === 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Todos los registros ya estaban en el sistema. No se modificaron datos existentes.
+                </p>
+              )}
             </div>
           )}
         </div>

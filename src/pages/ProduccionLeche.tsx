@@ -34,7 +34,8 @@ const ProduccionLeche = () => {
     deleteRecord, 
     getStats, 
     getRankings, 
-    getProductionCurve 
+    getProductionCurve,
+    fetchRecords,
   } = useMilkProduction();
 
   const stats = getStats();
@@ -276,8 +277,7 @@ const ProduccionLeche = () => {
         open={showImageImportDialog}
         onOpenChange={setShowImageImportDialog}
         onImportComplete={() => {
-          // Trigger refetch by re-rendering
-          window.location.reload();
+          fetchRecords();
         }}
       />
     </DashboardLayout>

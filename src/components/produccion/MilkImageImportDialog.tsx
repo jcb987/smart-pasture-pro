@@ -36,6 +36,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -152,6 +153,7 @@ export function MilkImageImportDialog({
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [animalMap, setAnimalMap] = useState<Map<string, { id: string; tag_id: string }>>(new Map());
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const resetDialog = () => {
     setStep('upload');
@@ -179,10 +181,12 @@ export function MilkImageImportDialog({
   };
 
   const loadAnimals = useCallback(async (): Promise<Map<string, { id: string; tag_id: string }>> => {
+    if (!user) return new Map();
     const { data: profile } = await supabase
       .from('profiles')
       .select('organization_id')
-      .single();
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     if (!profile?.organization_id) return new Map();
     setOrganizationId(profile.organization_id);
@@ -201,7 +205,7 @@ export function MilkImageImportDialog({
     console.log('[MilkImport] Loaded', map.size, 'animal keys');
     setAnimalMap(map);
     return map;
-  }, []);
+  }, [user]);
 
   const findAnimalInMap = useCallback((numero: string, map: Map<string, { id: string; tag_id: string }>) => {
     const lower = numero.toLowerCase().trim();

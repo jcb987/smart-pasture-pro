@@ -276,8 +276,10 @@ const ProduccionLeche = () => {
       <MilkImageImportDialog
         open={showImageImportDialog}
         onOpenChange={setShowImageImportDialog}
-        onImportComplete={() => {
-          fetchRecords();
+        onImportComplete={async () => {
+          // Small delay to ensure DB has committed, then force fresh fetch
+          await new Promise(r => setTimeout(r, 500));
+          await fetchRecords();
         }}
       />
     </DashboardLayout>

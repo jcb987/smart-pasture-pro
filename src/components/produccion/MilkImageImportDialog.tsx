@@ -166,8 +166,13 @@ export function MilkImageImportDialog({
   };
 
   const handleClose = () => {
+    const wasComplete = step === 'complete';
     resetDialog();
     onOpenChange(false);
+    // Always trigger a fresh data reload when closing after import
+    if (wasComplete) {
+      onImportComplete();
+    }
   };
 
   const normalizeId = (id: string): string => {

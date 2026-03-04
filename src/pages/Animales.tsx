@@ -65,13 +65,15 @@ const Animales = () => {
   const alertas = getAlertas();
 
   const handleViewAnimal = (animal: Animal) => {
-    setSelectedAnimal(animal);
+    // Always get the freshest version from the animals array
+    const fresh = animals.find(a => a.id === animal.id) || animal;
+    setSelectedAnimal(fresh);
     setDetailDialogOpen(true);
   };
 
   const handleEditAnimal = (animal: Animal) => {
-    // Por ahora solo abrimos el detalle
-    setSelectedAnimal(animal);
+    const fresh = animals.find(a => a.id === animal.id) || animal;
+    setSelectedAnimal(fresh);
     setDetailDialogOpen(true);
   };
 
@@ -81,7 +83,9 @@ const Animales = () => {
   };
 
   const handleDeleteAnimal = (animal: Animal) => {
-    setSelectedAnimal(animal);
+    // Get the freshest version to avoid stale name
+    const fresh = animals.find(a => a.id === animal.id) || animal;
+    setSelectedAnimal(fresh);
     setDeleteDialogOpen(true);
   };
 

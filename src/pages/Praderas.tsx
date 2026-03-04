@@ -93,11 +93,11 @@ const Praderas = () => {
             </Sheet>
             {canWrite && (
               <>
-                <Button variant="outline" onClick={() => setShowRotationDialog(true)}>
+                <Button variant="outline" onClick={(e) => { e.stopPropagation(); setShowRotationDialog(true); }}>
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Iniciar Rotación
                 </Button>
-                <Button onClick={() => setShowPaddockDialog(true)}>
+                <Button onClick={(e) => { e.stopPropagation(); setShowPaddockDialog(true); }} className="relative z-10">
                   <Plus className="mr-2 h-4 w-4" />
                   Agregar Potrero
                 </Button>

@@ -428,7 +428,9 @@ export function MilkImageImportDialog({
       animal_id: string;
       production_date: string;
       morning_liters: number;
+      total_liters: number;
       organization_id: string;
+      created_by: string | undefined;
     }> = [];
 
     for (const record of activeRecords) {
@@ -448,7 +450,9 @@ export function MilkImageImportDialog({
           animal_id: record.animalId!,
           production_date: parsedDate,
           morning_liters: valor,
+          total_liters: valor,
           organization_id: organizationId,
+          created_by: user?.id,
         });
       }
     }
@@ -456,33 +460,32 @@ export function MilkImageImportDialog({
     let success = 0;
     let errors = 0;
 
-    // Insert in batches of 50, using upsert with ignoreDuplicates to skip existing records
+    // Insert in batches, one-by-one to handle duplicates gracefully
     const BATCH_SIZE = 50;
     for (let i = 0; i < rowsToInsert.length; i += BATCH_SIZE) {
       const batch = rowsToInsert.slice(i, i + BATCH_SIZE);
       try {
-        const { data, error } = await supabase
+        // Try batch insert first (fastest path)
+        const { error } = await supabase
           .from('milk_production')
-          .upsert(batch, {
-            onConflict: 'animal_id,production_date',
-            ignoreDuplicates: true,
-          })
-          .select('id');
+          .insert(batch);
 
         if (error) {
-          console.error('Batch upsert error:', error);
-          // Fallback: insert one by one to save as many as possible
+          // If batch fails (likely duplicate conflict), fall back to one-by-one
+          console.warn('Batch insert failed, trying one-by-one:', error.message);
           for (const row of batch) {
             try {
               const { error: singleErr } = await supabase
                 .from('milk_production')
-                .upsert(row, {
-                  onConflict: 'animal_id,production_date',
-                  ignoreDuplicates: true,
-                });
+                .insert(row);
               if (singleErr) {
-                console.error('Single upsert error:', singleErr);
-                errors++;
+                // Check if it's a duplicate conflict (code 23505)
+                if (singleErr.code === '23505') {
+                  skipped++;
+                } else {
+                  console.error('Single insert error:', singleErr);
+                  errors++;
+                }
               } else {
                 success++;
               }
@@ -491,10 +494,7 @@ export function MilkImageImportDialog({
             }
           }
         } else {
-          // data contains only newly inserted rows (duplicates are skipped)
-          const inserted = data?.length ?? batch.length;
-          success += inserted;
-          skipped += batch.length - inserted;
+          success += batch.length;
         }
       } catch (err) {
         console.error('Batch exception:', err);

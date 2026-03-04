@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { FounderProvider } from "@/contexts/FounderContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
@@ -81,8 +81,25 @@ const App = () => (
 
                   {/* Legal routes */}
                   <Route path="/terminos" element={<Terminos />} />
+                  <Route path="/terms" element={<Navigate to="/terminos" replace />} />
                   <Route path="/privacidad" element={<Privacidad />} />
+                  <Route path="/privacy" element={<Navigate to="/privacidad" replace />} />
                   <Route path="/cookies" element={<Cookies />} />
+
+                  {/* Redirect conventional routes */}
+                  <Route path="/login" element={<Navigate to="/auth" replace />} />
+                  <Route path="/register" element={<Navigate to="/auth" replace />} />
+                  <Route path="/pricing" element={<Navigate to="/#pricing" replace />} />
+                  <Route path="/about" element={<Navigate to="/" replace />} />
+                  <Route path="/contact" element={<Navigate to="/" replace />} />
+                  <Route path="/demo" element={<Navigate to="/auth" replace />} />
+                  <Route path="/animals" element={<Navigate to="/animales" replace />} />
+                  <Route path="/paddocks" element={<Navigate to="/praderas" replace />} />
+                  <Route path="/health" element={<Navigate to="/salud" replace />} />
+                  <Route path="/reproduction" element={<Navigate to="/reproduccion" replace />} />
+                  <Route path="/births" element={<Navigate to="/reproduccion" replace />} />
+                  <Route path="/settings" element={<Navigate to="/configuracion" replace />} />
+                  <Route path="/profile" element={<Navigate to="/configuracion" replace />} />
 
                   {/* Founder route */}
                   <Route path="/founder" element={<ProtectedRoute><ErrorBoundary moduleName="Panel Founder"><FounderDashboard /></ErrorBoundary></ProtectedRoute>} />

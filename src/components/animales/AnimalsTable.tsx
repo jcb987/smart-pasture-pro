@@ -101,7 +101,7 @@ export function AnimalsTable({ animals, onView, onEdit, onAddWeight, onDelete }:
               <TableHead>Peso (kg)</TableHead>
               <TableHead>Lote</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
+              <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -134,43 +134,50 @@ export function AnimalsTable({ animals, onView, onEdit, onAddWeight, onDelete }:
                   </Badge>
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
+                  <div className="flex items-center gap-1">
+                    {onEdit && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => onEdit(animal)}
+                        title="Editar animal"
+                      >
+                        <Edit className="h-4 w-4" />
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-popover">
-                      <DropdownMenuItem onClick={() => onView(animal)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Ver detalle
-                      </DropdownMenuItem>
-                      {onEdit && (
-                        <DropdownMenuItem onClick={() => onEdit(animal)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuItem onClick={() => onView(animal)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver detalle
                         </DropdownMenuItem>
-                      )}
-                      {onAddWeight && (
-                        <DropdownMenuItem onClick={() => onAddWeight(animal)}>
-                          <Scale className="mr-2 h-4 w-4" />
-                          Registrar peso
-                        </DropdownMenuItem>
-                      )}
-                      {onDelete && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => onDelete(animal)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
+                        {onAddWeight && (
+                          <DropdownMenuItem onClick={() => onAddWeight(animal)}>
+                            <Scale className="mr-2 h-4 w-4" />
+                            Registrar peso
                           </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        )}
+                        {onDelete && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => onDelete(animal)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

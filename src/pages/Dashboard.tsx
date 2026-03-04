@@ -165,10 +165,14 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{kpis.diasAbiertosPromedio || '-'}</span>
-                <Badge variant={kpis.diasAbiertosPromedio <= 120 ? 'default' : 'destructive'}>
-                  {kpis.diasAbiertosPromedio <= 120 ? 'Normal' : 'Alto'}
-                </Badge>
+                <span className="text-2xl font-bold">{kpis.diasAbiertosPromedio || '–'}</span>
+                {kpis.diasAbiertosPromedio > 0 ? (
+                  <Badge variant={kpis.diasAbiertosPromedio <= 120 ? 'default' : 'destructive'}>
+                    {kpis.diasAbiertosPromedio <= 120 ? 'Normal' : 'Alto'}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">Sin datos</Badge>
+                )}
               </div>
               <Progress value={kpis.diasAbiertosPromedio > 0 ? 100 - (kpis.diasAbiertosPromedio / 200) * 100 : 0} className="mt-2" />
             </CardContent>

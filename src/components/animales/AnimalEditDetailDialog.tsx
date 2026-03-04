@@ -186,6 +186,27 @@ export function AnimalEditDetailDialog({
     }
   };
 
+  // Keep editData in sync if animal prop changes (e.g., after save + refetch)
+  useEffect(() => {
+    if (animal && !isEditing) {
+      setEditData({
+        name: animal.name,
+        category: animal.category,
+        sex: animal.sex,
+        breed: animal.breed,
+        color: animal.color,
+        birth_date: animal.birth_date,
+        entry_date: animal.entry_date,
+        status: animal.status,
+        origin: animal.origin,
+        lot_name: animal.lot_name,
+        mother_id: animal.mother_id,
+        father_id: animal.father_id,
+        notes: animal.notes,
+      });
+    }
+  }, [animal?.name, animal?.category, animal?.sex, animal?.breed, animal?.color, animal?.status, animal?.lot_name, animal?.notes, isEditing]);
+
   const handleCategoryChange = (value: AnimalCategory) => {
     const femaleCategories: AnimalCategory[] = ['vaca', 'novilla', 'ternera', 'becerra', 'bufala'];
     setEditData(prev => ({
@@ -225,7 +246,7 @@ export function AnimalEditDetailDialog({
                       className="h-8 w-48"
                     />
                   ) : (
-                    animal.name || animal.tag_id
+                    editData.name || animal.name || animal.tag_id
                   )}
                 </DialogTitle>
                 <div className="flex items-center gap-2 mt-1">

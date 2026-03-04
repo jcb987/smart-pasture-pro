@@ -420,9 +420,16 @@ export function MilkImageImportDialog({
     setStep('importing');
 
     const activeRecords = records.filter(r => r.status !== 'excluded' && r.animalId);
-    let success = 0;
-    let errors = 0;
     let skipped = 0;
+    let parseErrors = 0;
+
+    // Build all rows to insert
+    const rowsToInsert: Array<{
+      animal_id: string;
+      production_date: string;
+      morning_liters: number;
+      organization_id: string;
+    }> = [];
 
     for (const record of activeRecords) {
       for (const [fecha, valor] of Object.entries(record.valores)) {
@@ -433,36 +440,71 @@ export function MilkImageImportDialog({
 
         const parsedDate = parseDateString(fecha, year);
         if (!parsedDate) {
-          errors++;
+          parseErrors++;
           continue;
         }
 
-        try {
-          const { error } = await supabase
-            .from('milk_production')
-            .insert({
-              animal_id: record.animalId!,
-              production_date: parsedDate,
-              morning_liters: valor,
-              organization_id: organizationId,
-            });
+        rowsToInsert.push({
+          animal_id: record.animalId!,
+          production_date: parsedDate,
+          morning_liters: valor,
+          organization_id: organizationId,
+        });
+      }
+    }
 
-          if (error) {
-            console.error('Insert error:', error);
-            errors++;
-          } else {
-            success++;
+    let success = 0;
+    let errors = 0;
+
+    // Insert in batches of 50, using upsert with ignoreDuplicates to skip existing records
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < rowsToInsert.length; i += BATCH_SIZE) {
+      const batch = rowsToInsert.slice(i, i + BATCH_SIZE);
+      try {
+        const { data, error } = await supabase
+          .from('milk_production')
+          .upsert(batch, {
+            onConflict: 'animal_id,production_date',
+            ignoreDuplicates: true,
+          })
+          .select('id');
+
+        if (error) {
+          console.error('Batch upsert error:', error);
+          // Fallback: insert one by one to save as many as possible
+          for (const row of batch) {
+            try {
+              const { error: singleErr } = await supabase
+                .from('milk_production')
+                .upsert(row, {
+                  onConflict: 'animal_id,production_date',
+                  ignoreDuplicates: true,
+                });
+              if (singleErr) {
+                console.error('Single upsert error:', singleErr);
+                errors++;
+              } else {
+                success++;
+              }
+            } catch {
+              errors++;
+            }
           }
-        } catch (err) {
-          console.error('Insert exception:', err);
-          errors++;
+        } else {
+          // data contains only newly inserted rows (duplicates are skipped)
+          const inserted = data?.length ?? batch.length;
+          success += inserted;
+          skipped += batch.length - inserted;
         }
+      } catch (err) {
+        console.error('Batch exception:', err);
+        errors += batch.length;
       }
     }
 
     const skippedWarnings = records.filter(r => r.status === 'warning' && !r.animalId).length;
 
-    setImportResults({ success, errors, skipped: skipped + skippedWarnings });
+    setImportResults({ success, errors: errors + parseErrors, skipped: skipped + skippedWarnings });
     setStep('complete');
 
     if (success > 0) {

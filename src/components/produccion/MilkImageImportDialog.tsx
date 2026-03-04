@@ -428,7 +428,6 @@ export function MilkImageImportDialog({
       animal_id: string;
       production_date: string;
       morning_liters: number;
-      total_liters: number;
       organization_id: string;
       created_by: string | undefined;
     }> = [];
@@ -450,7 +449,6 @@ export function MilkImageImportDialog({
           animal_id: record.animalId!,
           production_date: parsedDate,
           morning_liters: valor,
-          total_liters: valor,
           organization_id: organizationId,
           created_by: user?.id,
         });

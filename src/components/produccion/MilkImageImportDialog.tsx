@@ -29,7 +29,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   Camera,
+  Search,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,6 +45,90 @@ interface MilkImageRecord {
   status: 'valid' | 'warning' | 'excluded';
   warningMessage?: string;
   animalId?: string;
+}
+
+// Subcomponent for searchable animal selection in each row
+function AnimalSearchCell({
+  value,
+  animalId,
+  disabled,
+  animalMap,
+  onSelect,
+}: {
+  value: string;
+  animalId?: string;
+  disabled: boolean;
+  animalMap: Map<string, { id: string; tag_id: string }>;
+  onSelect: (numero: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  // Build unique animal list from the map
+  const uniqueAnimals = Array.from(
+    new Map(
+      Array.from(animalMap.values()).map(a => [a.id, a])
+    ).values()
+  );
+
+  const filtered = search
+    ? uniqueAnimals.filter(a =>
+        a.tag_id.toLowerCase().includes(search.toLowerCase())
+      )
+    : uniqueAnimals;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            'h-8 w-28 justify-between text-sm font-normal px-2',
+            !animalId && value && 'border-yellow-400',
+            animalId && 'border-primary',
+          )}
+          disabled={disabled}
+        >
+          <span className="truncate">{value || 'Buscar...'}</span>
+          <Search className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-0" align="start">
+        <Command>
+          <CommandInput
+            placeholder="Buscar chapeta..."
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>No encontrado</CommandEmpty>
+            <CommandGroup className="max-h-40 overflow-y-auto">
+              {filtered.slice(0, 50).map(animal => (
+                <CommandItem
+                  key={animal.id}
+                  value={animal.tag_id}
+                  onSelect={() => {
+                    onSelect(animal.tag_id);
+                    setOpen(false);
+                    setSearch('');
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-3 w-3',
+                      animalId === animal.id ? 'opacity-100' : 'opacity-0'
+                    )}
+                  />
+                  {animal.tag_id}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 interface MilkImageImportDialogProps {
@@ -516,11 +606,12 @@ export function MilkImageImportDialog({
                           {idx + 1}
                         </TableCell>
                         <TableCell className="sticky left-8 bg-background z-10">
-                          <Input
+                          <AnimalSearchCell
                             value={record.numero}
-                            onChange={(e) => updateAnimalNumber(idx, e.target.value)}
-                            className="h-8 text-sm w-24"
+                            animalId={record.animalId}
                             disabled={record.status === 'excluded'}
+                            animalMap={animalMap}
+                            onSelect={(numero) => updateAnimalNumber(idx, numero)}
                           />
                         </TableCell>
                         {fechas.map(f => (

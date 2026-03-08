@@ -668,63 +668,116 @@ export function SmartImportDialog({
 
           {step === 'preview' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Badge variant="outline" className="gap-1">
-                  <FileSpreadsheet className="h-3 w-3" />
-                  {file?.name}
-                </Badge>
-                <Badge variant="default" className="gap-1 bg-green-600">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {validCount} válidos
-                </Badge>
-                {errorCount > 0 && (
-                  <Badge variant="destructive" className="gap-1">
-                    <XCircle className="h-3 w-3" />
-                    {errorCount} con errores
+              {/* Image preview for image imports */}
+              {imagePreviewUrl && (
+                <div className="border rounded-lg overflow-hidden max-h-[180px]">
+                  <img
+                    src={imagePreviewUrl}
+                    alt="Imagen original importada"
+                    className="w-full h-full object-contain bg-muted"
+                    style={{ maxHeight: '180px' }}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="gap-1">
+                    <FileSpreadsheet className="h-3 w-3" />
+                    {file?.name}
                   </Badge>
-                )}
+                  <Badge variant="default" className="gap-1 bg-green-600">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {validCount} válidos
+                  </Badge>
+                  {errorCount > 0 && (
+                    <Badge variant="destructive" className="gap-1">
+                      <XCircle className="h-3 w-3" />
+                      {errorCount} con errores
+                    </Badge>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditAll(!editAll)}
+                  className="gap-1"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  {editAll ? 'Dejar de editar' : 'Editar todo'}
+                </Button>
               </div>
 
-              <ScrollArea className="h-[350px] border rounded-lg">
+              {errorCount > 0 && validCount > 0 && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs">
+                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+                  Se importarán {validCount} de {parsedData.length} registros. {errorCount} tienen errores y serán omitidos.
+                </div>
+              )}
+
+              <ScrollArea className={imagePreviewUrl ? 'h-[220px] border rounded-lg' : 'h-[350px] border rounded-lg'}>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Estado</TableHead>
+                      <TableHead className="w-10">#</TableHead>
+                      <TableHead className="w-10"></TableHead>
                       {displayColumns.map(col => (
-                        <TableHead key={col}>{col}</TableHead>
+                        <TableHead key={col} className="text-xs">{col}</TableHead>
                       ))}
-                      <TableHead>Errores/Avisos</TableHead>
+                      <TableHead className="text-xs">Errores/Avisos</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {parsedData.map((row) => (
-                      <TableRow key={row.row_number} className={row.errors.length > 0 ? 'bg-destructive/5' : ''}>
-                        <TableCell className="text-muted-foreground">{row.row_number}</TableCell>
-                        <TableCell>
-                          {row.errors.length > 0 ? (
-                            <XCircle className="h-4 w-4 text-destructive" />
-                          ) : row.warnings.length > 0 ? (
-                            <AlertTriangle className="h-4 w-4 text-amber-500" />
-                          ) : (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          )}
-                        </TableCell>
-                        {displayColumns.map(col => (
-                          <TableCell key={col} className="max-w-[150px] truncate">
-                            {String(row.data[col] ?? '-')}
+                    {parsedData.map((row, rowIdx) => {
+                      const hasError = row.errors.length > 0;
+                      const hasWarning = row.warnings.length > 0;
+                      return (
+                        <TableRow key={row.row_number} className={hasError ? 'bg-destructive/5' : ''}>
+                          <TableCell className="text-muted-foreground text-xs">{row.row_number}</TableCell>
+                          <TableCell>
+                            {hasError ? (
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            ) : hasWarning ? (
+                              <AlertTriangle className="h-4 w-4 text-amber-500" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            )}
                           </TableCell>
-                        ))}
-                        <TableCell className="max-w-[200px]">
-                          {row.errors.length > 0 && (
-                            <div className="text-xs text-destructive">{row.errors.join(', ')}</div>
-                          )}
-                          {row.warnings.length > 0 && (
-                            <div className="text-xs text-amber-600">{row.warnings.join(', ')}</div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          {displayColumns.map(col => (
+                            <TableCell key={col} className="p-1">
+                              {editAll || hasError ? (
+                                <Input
+                                  value={String(row.data[col] ?? '')}
+                                  onChange={(e) => handleCellEdit(rowIdx, col, e.target.value)}
+                                  className="h-7 text-xs min-w-[80px]"
+                                />
+                              ) : (
+                                <span
+                                  className="cursor-pointer text-xs hover:underline block truncate max-w-[120px]"
+                                  onClick={() => {
+                                    // Enable editing for this single row
+                                    setEditAll(false);
+                                    // Just toggle to editAll briefly to allow single cell edit
+                                    handleCellEdit(rowIdx, col, String(row.data[col] ?? ''));
+                                  }}
+                                  title="Clic para editar"
+                                >
+                                  {String(row.data[col] ?? '-')}
+                                </span>
+                              )}
+                            </TableCell>
+                          ))}
+                          <TableCell className="max-w-[180px]">
+                            {hasError && (
+                              <div className="text-xs text-destructive">{row.errors.join(', ')}</div>
+                            )}
+                            {hasWarning && (
+                              <div className="text-xs text-amber-600">{row.warnings.join(', ')}</div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </ScrollArea>
@@ -774,7 +827,11 @@ export function SmartImportDialog({
           {step === 'preview' && (
             <>
               <Button variant="outline" onClick={() => setStep('mapping')}>Volver</Button>
-              <Button onClick={handleImport} disabled={validCount === 0}>
+              <Button
+                onClick={handleImport}
+                disabled={validCount === 0}
+                className={validCount > 0 ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
+              >
                 Importar {validCount} registros
               </Button>
             </>

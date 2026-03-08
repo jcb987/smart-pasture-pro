@@ -319,15 +319,16 @@ export function SmartImportDialog({
         setRawData(dataRows);
 
         // Use mappings from image AI directly
-        if (imageResult.mappings && imageResult.mappings.length > 0) {
-          setColumnMappings(imageResult.mappings);
-          setAiAnalysis(imageResult.analysis + (imageResult.globalDate ? ` | Fecha global detectada: ${imageResult.globalDate}` : ''));
-        } else {
-          setColumnMappings(fallbackMapping(headers));
-          setAiAnalysis(imageResult.analysis);
-        }
+        const detectedMappings = (imageResult.mappings && imageResult.mappings.length > 0)
+          ? imageResult.mappings
+          : fallbackMapping(headers);
+        
+        setColumnMappings(detectedMappings);
+        const analysisText = imageResult.analysis + (imageResult.globalDate ? ` | Fecha global detectada: ${imageResult.globalDate}` : '');
+        setAiAnalysis(analysisText);
 
-        setStep('mapping');
+        // Skip mapping step - process directly
+        processWithMappings(headers, dataRows, detectedMappings, imageResult.globalDate || null);
         return;
       }
 
@@ -401,17 +402,20 @@ export function SmartImportDialog({
 
       // Try AI analysis first
       const aiResult = await analyzeWithAI(headers);
+      let detectedMappings: ColumnMapping[];
       
       if (aiResult) {
+        detectedMappings = aiResult.mappings;
         setColumnMappings(aiResult.mappings);
         setAiAnalysis(aiResult.analysis);
       } else {
-        // Fallback to basic mapping
-        setColumnMappings(fallbackMapping(headers));
+        detectedMappings = fallbackMapping(headers);
+        setColumnMappings(detectedMappings);
         setAiAnalysis(null);
       }
 
-      setStep('mapping');
+      // Skip mapping step - process directly
+      processWithMappings(headers, dataRows, detectedMappings, null);
     } catch (error) {
       console.error('Parse error:', error);
       toast({
@@ -423,13 +427,23 @@ export function SmartImportDialog({
     }
   };
 
-  const processWithMappings = () => {
+  const processWithMappings = (
+    headersArg?: string[],
+    dataArg?: unknown[][],
+    mappingsArg?: ColumnMapping[],
+    globalDateArg?: string | null,
+  ) => {
+    const headers = headersArg ?? rawHeaders;
+    const data = dataArg ?? rawData;
+    const mappings = mappingsArg ?? columnMappings;
+    const gDate = globalDateArg !== undefined ? globalDateArg : globalDate;
+
     const parsedRows: ParsedRow[] = [];
     
     // Create column index map
     const colIndexMap: Record<string, number> = {};
-    columnMappings.forEach(mapping => {
-      const idx = rawHeaders.findIndex(h => h === mapping.excelColumn);
+    mappings.forEach(mapping => {
+      const idx = headers.findIndex(h => h === mapping.excelColumn);
       if (idx !== -1) {
         colIndexMap[mapping.dbColumn] = idx;
       }
@@ -440,8 +454,8 @@ export function SmartImportDialog({
       col.includes('date') || col.includes('fecha')
     );
 
-    for (let i = 0; i < rawData.length; i++) {
-      const row = rawData[i] as unknown[];
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i] as unknown[];
       if (!row || row.length === 0) continue;
 
       const rowData: Record<string, unknown> = {};
@@ -458,20 +472,18 @@ export function SmartImportDialog({
       }
 
       // Apply globalDate to any date column that is missing a value
-      if (globalDate) {
+      if (gDate) {
         for (const dateCol of dateColumns) {
           if (!rowData[dateCol]) {
-            rowData[dateCol] = globalDate;
+            rowData[dateCol] = gDate;
           }
         }
-        // Also fill the most common date field names if none were mapped but globalDate exists
         const commonDateFields = ['production_date', 'event_date', 'weight_date', 'date'];
         for (const field of commonDateFields) {
           if (!(field in rowData) && !colIndexMap[field]) {
-            // Check if this field is expected by the config
             const isExpected = [...config.requiredColumns, ...(config.optionalColumns || [])].some(c => c.db === field);
             if (isExpected) {
-              rowData[field] = globalDate;
+              rowData[field] = gDate;
             }
           }
         }
@@ -581,8 +593,9 @@ export function SmartImportDialog({
           <DialogDescription>
             {step === 'upload' && config.description}
             {step === 'analyzing' && 'Analizando estructura del archivo con IA...'}
-            {step === 'mapping' && 'Revisa el mapeo de columnas detectado'}
             {step === 'preview' && 'Revisa los datos antes de importar'}
+            {step === 'importing' && 'Importando datos...'}
+            {step === 'complete' && 'Importación completada'}
             {step === 'importing' && 'Importando datos...'}
             {step === 'complete' && 'Importación completada'}
           </DialogDescription>
@@ -654,60 +667,6 @@ export function SmartImportDialog({
             </div>
           )}
 
-          {step === 'mapping' && (
-            <div className="space-y-4">
-              {aiAnalysis && (
-                <div className="p-3 bg-primary/10 rounded-lg flex items-start gap-2">
-                  <Brain className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-sm">{aiAnalysis}</p>
-                </div>
-              )}
-
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Columna Excel</TableHead>
-                      <TableHead>Campo Detectado</TableHead>
-                      <TableHead>Confianza</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {columnMappings.map((mapping, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-mono text-sm">{mapping.excelColumn}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{mapping.dbColumn}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className={`h-2 w-16 rounded-full ${
-                                mapping.confidence >= 90 ? 'bg-green-500' :
-                                mapping.confidence >= 70 ? 'bg-amber-500' : 'bg-red-500'
-                              }`}
-                              style={{ width: `${mapping.confidence * 0.6}px` }}
-                            />
-                            <span className="text-xs text-muted-foreground">
-                              {mapping.confidence}%
-                              {mapping.suggestedBy === 'ai' && ' (IA)'}
-                            </span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {rawHeaders.filter(h => !columnMappings.some(m => m.excelColumn === h)).length > 0 && (
-                <div className="text-sm text-muted-foreground">
-                  <span className="font-medium">Columnas ignoradas: </span>
-                  {rawHeaders.filter(h => !columnMappings.some(m => m.excelColumn === h)).join(', ')}
-                </div>
-              )}
-            </div>
-          )}
 
           {step === 'preview' && (
             <div className="space-y-4">
@@ -859,17 +818,9 @@ export function SmartImportDialog({
           {step === 'upload' && (
             <Button variant="outline" onClick={handleClose}>Cancelar</Button>
           )}
-          {step === 'mapping' && (
-            <>
-              <Button variant="outline" onClick={() => setStep('upload')}>Volver</Button>
-              <Button onClick={processWithMappings}>
-                Continuar con mapeo
-              </Button>
-            </>
-          )}
           {step === 'preview' && (
             <>
-              <Button variant="outline" onClick={() => setStep('mapping')}>Volver</Button>
+              <Button variant="outline" onClick={() => { resetDialog(); }}>Volver</Button>
               <Button
                 onClick={handleImport}
                 disabled={validCount === 0}

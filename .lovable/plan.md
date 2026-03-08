@@ -1,34 +1,58 @@
 
 
-## Plan: Skip Mapping Step and Go Directly to Edit/Validate
+## Plan: Reemplazar encuesta por mensaje de bienvenida para usuarios agregados
 
-**Problem**: The mapping screen is blocking the flow (button may not work) and the user doesn't want to see it. They want to go straight from file upload → data editing/validation.
+### Problema raiz
 
-**Solution**: After file analysis completes, automatically call `processWithMappings()` and skip the `mapping` step entirely, going directly to the `preview` (edit & validate) step.
+La Edge Function `create-team-user` intenta insertar un registro en `user_onboarding` con valores como `'na'` para saltar la encuesta, pero la tabla tiene restricciones CHECK que solo permiten valores especificos (ej: `production_type` solo acepta `'carne'`, `'leche'`, `'doble_proposito'`). Por eso el insert falla silenciosamente y la encuesta sigue apareciendo.
 
-### Changes
+### Estrategia
 
-**File: `src/components/shared/SmartImportDialog.tsx`**
+En lugar de forzar datos falsos en la encuesta, vamos a:
 
-1. Remove the `mapping` step from the flow entirely. After analyzing the file and detecting column mappings, automatically process the data and jump to `preview`.
+1. Marcar al usuario como "agregado por admin" para que el sistema sepa que NO debe mostrar la encuesta
+2. Mostrar un mensaje de bienvenida amigable en vez de la encuesta cuando el usuario es agregado
 
-2. In `handleFileChange`:
-   - For **image imports** (line ~330): Instead of `setStep('mapping')`, call `processWithMappings` directly after setting mappings.
-   - For **Excel/PDF imports** (line ~414): Same — skip `setStep('mapping')` and go straight to processing.
+### Cambios a realizar
 
-3. Since `processWithMappings` reads from state (`rawHeaders`, `rawData`, `columnMappings`), refactor it to accept parameters directly so it can be called inline without waiting for state updates.
+#### 1. Agregar columna `is_team_member` a la tabla `profiles`
 
-4. Remove the entire `mapping` step UI block (lines 657-710) and its footer buttons (lines 862-868).
+Una columna booleana que indica si el usuario fue creado por un administrador (vs. auto-registrado). Valor por defecto: `false`.
 
-5. Update the "Volver" button in the `preview` footer to go back to `upload` instead of `mapping`.
-
-### Technical approach
-
-Refactor `processWithMappings` to accept `(headers, data, mappings)` as parameters (with fallback to state). Call it directly at the end of `handleFileChange` with the local variables, bypassing the React state timing issue.
-
-```
-handleFileChange → analyze → detect mappings → processWithMappings(headers, data, mappings) → preview step
+```sql
+ALTER TABLE profiles ADD COLUMN is_team_member boolean DEFAULT false;
 ```
 
-No mapping UI shown at all. The AI analysis info message can optionally appear in the preview step.
+#### 2. Actualizar Edge Function `create-team-user`
+
+- Remover el insert fallido a `user_onboarding`
+- En su lugar, marcar `is_team_member = true` en el perfil del usuario (ya se hace un `update` al perfil, solo se agrega este campo)
+
+#### 3. Modificar `ProtectedRoute.tsx`
+
+Cambiar la logica de verificacion de onboarding:
+- Si el usuario tiene `is_team_member = true` en su perfil Y no tiene registro en `user_onboarding`: mostrar **dialogo de bienvenida** (no la encuesta)
+- Si el usuario NO tiene `is_team_member` (es dueno) Y no tiene registro en `user_onboarding`: mostrar la **encuesta normal**
+- Si ya tiene registro en `user_onboarding`: no mostrar nada
+
+#### 4. Crear componente `WelcomeDialog.tsx`
+
+Un dialogo sencillo y amigable que:
+- Muestra un mensaje de bienvenida al sistema
+- Indica el nombre del hato/organizacion al que fue agregado
+- Tiene un unico boton "Comenzar" que cierra el dialogo
+- Al cerrarse, inserta un registro minimo en `user_onboarding` (con valores validos) para que no vuelva a aparecer
+
+### Archivos a modificar
+
+1. **Migracion SQL** - Agregar columna `is_team_member` a `profiles`
+2. **`supabase/functions/create-team-user/index.ts`** - Marcar `is_team_member = true` y remover insert fallido a `user_onboarding`
+3. **`src/components/ProtectedRoute.tsx`** - Agregar logica para diferenciar usuario agregado vs. auto-registrado
+4. **`src/components/onboarding/WelcomeDialog.tsx`** (nuevo) - Componente de bienvenida para usuarios agregados
+
+### Flujo resultante
+
+- **Dueno se registra por primera vez**: Ve la encuesta de 5 pasos (sin cambios)
+- **Usuario agregado por admin inicia sesion por primera vez**: Ve un mensaje de bienvenida sencillo con un boton "Comenzar"
+- **Cualquier usuario que ya completo onboarding**: No ve nada (sin cambios)
 

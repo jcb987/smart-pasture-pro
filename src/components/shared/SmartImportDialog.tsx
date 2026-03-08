@@ -280,7 +280,14 @@ export function SmartImportDialog({
     const isPDF = selectedFile.name.toLowerCase().endsWith('.pdf') || selectedFile.type === 'application/pdf';
     const isImage = selectedFile.type === 'image/jpeg' || selectedFile.type === 'image/png' ||
       selectedFile.name.toLowerCase().endsWith('.jpg') || selectedFile.name.toLowerCase().endsWith('.jpeg') ||
-      selectedFile.name.toLowerCase().endsWith('.png');
+      selectedFile.name.toLowerCase().endsWith('.png') ||
+      selectedFile.name.toLowerCase().endsWith('.webp');
+
+    // Create image preview URL for image files
+    if (isImage) {
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+      setImagePreviewUrl(URL.createObjectURL(selectedFile));
+    }
 
     try {
       let headers: string[];

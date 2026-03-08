@@ -104,6 +104,9 @@ export function SmartImportDialog({
     setImportResults({ success: 0, errors: 0 });
     setAiAnalysis(null);
     setGlobalDate(null);
+    setEditAll(false);
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImagePreviewUrl(null);
   };
 
   const handleClose = () => {

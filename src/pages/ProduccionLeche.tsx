@@ -63,6 +63,10 @@ const ProduccionLeche = () => {
             <p className="text-muted-foreground">Control completo de producción lechera</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setShowExportDialog(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              Exportar Datos
+            </Button>
             {canWrite && (
               <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" />

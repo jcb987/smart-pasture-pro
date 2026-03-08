@@ -818,17 +818,9 @@ export function SmartImportDialog({
           {step === 'upload' && (
             <Button variant="outline" onClick={handleClose}>Cancelar</Button>
           )}
-          {step === 'mapping' && (
-            <>
-              <Button variant="outline" onClick={() => setStep('upload')}>Volver</Button>
-              <Button onClick={processWithMappings}>
-                Continuar con mapeo
-              </Button>
-            </>
-          )}
           {step === 'preview' && (
             <>
-              <Button variant="outline" onClick={() => setStep('mapping')}>Volver</Button>
+              <Button variant="outline" onClick={() => { resetDialog(); }}>Volver</Button>
               <Button
                 onClick={handleImport}
                 disabled={validCount === 0}

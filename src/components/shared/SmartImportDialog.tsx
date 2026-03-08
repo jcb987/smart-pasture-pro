@@ -504,17 +504,20 @@ export function SmartImportDialog({
   };
 
   const handleImport = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: 'Error', description: 'No se encontró el usuario autenticado', variant: 'destructive' });
+      return;
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('organization_id')
+      .eq('user_id', user.id)
       .single();
 
     if (!profile?.organization_id) {
-      toast({
-        title: 'Error',
-        description: 'No se encontró la organización',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'No se encontró la organización', variant: 'destructive' });
       return;
     }
 

@@ -23,6 +23,7 @@ const ProduccionLeche = () => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const { importData } = useImportMilk();
   
   const { 
     records, 

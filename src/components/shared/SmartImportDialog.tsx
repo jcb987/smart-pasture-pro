@@ -510,7 +510,22 @@ export function SmartImportDialog({
   const errorCount = parsedData.filter(r => r.errors.length > 0).length;
 
   // Get display columns for preview
-  const displayColumns = columnMappings.slice(0, 5).map(m => m.dbColumn);
+  const displayColumns = columnMappings.slice(0, 6).map(m => m.dbColumn);
+
+  // Handler for inline cell editing
+  const handleCellEdit = (rowIndex: number, col: string, value: string) => {
+    setParsedData(prev => {
+      const updated = [...prev];
+      const row = { ...updated[rowIndex] };
+      row.data = { ...row.data, [col]: value };
+      // Re-validate
+      const { errors, warnings } = config.validateRow(row.data, existingData);
+      row.errors = errors;
+      row.warnings = warnings;
+      updated[rowIndex] = row;
+      return updated;
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

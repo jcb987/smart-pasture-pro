@@ -1,8 +1,7 @@
-import { Check, Star, Crown, Zap } from "lucide-react";
+import { Check, Star, Crown, Zap, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
 
 const plans = [
   {
@@ -20,7 +19,7 @@ const plans = [
       "Soporte técnico",
       "Actualizaciones gratuitas",
     ],
-    description: "Ideal para probar la plataforma",
+    description: "Ideal para conocer la plataforma",
   },
   {
     name: "Semestral",
@@ -39,7 +38,7 @@ const plans = [
       "Integraciones premium",
       "Backup automático",
     ],
-    description: "Recomendado para resultados sostenibles",
+    description: "El más elegido por ganaderos",
   },
   {
     name: "Anual",
@@ -59,7 +58,7 @@ const plans = [
       "API para integraciones",
       "SLA garantizado",
     ],
-    description: "Mejor valor para operaciones profesionales",
+    description: "Mejor valor para profesionales",
   },
 ];
 
@@ -73,11 +72,8 @@ const formatPrice = (price: number) => {
 };
 
 export const PricingSection = () => {
-  const navigate = useNavigate();
-
   const handleSelectPlan = (planName: string) => {
-    // Open WhatsApp with pre-filled message
-    const message = encodeURIComponent(`Hola, quiero suscribirme al plan ${planName} de SmartPasture Pro`);
+    const message = encodeURIComponent(`Hola, quiero suscribirme al plan ${planName} de Agro Data`);
     window.open(`https://wa.me/573001234567?text=${message}`, "_blank");
   };
 
@@ -85,15 +81,13 @@ export const PricingSection = () => {
     <section id="precios" className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">
-            Planes y Precios
-          </Badge>
+          <Badge variant="secondary" className="mb-4">Planes y Precios</Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Elige el plan perfecto para tu finca
+            Invierte Menos de lo que Cuesta Perder una Vaca
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Todos los planes incluyen acceso completo a la plataforma, sin límites de animales ni usuarios.
-            Paga menos al suscribirte por más tiempo.
+            Sin límites. Sin sorpresas. Sin contratos forzosos.
+            Todos los planes incluyen acceso completo.
           </p>
         </div>
 
@@ -140,7 +134,7 @@ export const PricingSection = () => {
                       {plan.duration} • Total: {formatPrice(plan.total)}
                     </p>
                     {plan.savings && (
-                      <Badge variant="secondary" className="mt-2 bg-green-100 text-green-700">
+                      <Badge variant="secondary" className="mt-2 bg-primary/10 text-primary">
                         Ahorra {formatPrice(plan.savings)} ({plan.discount}% dto.)
                       </Badge>
                     )}
@@ -149,7 +143,7 @@ export const PricingSection = () => {
                   <ul className="space-y-3">
                     {plan.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm">
-                        <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -157,13 +151,7 @@ export const PricingSection = () => {
 
                   <Button
                     onClick={() => handleSelectPlan(plan.name)}
-                    className={`w-full ${
-                      plan.popular 
-                        ? "bg-primary hover:bg-primary/90" 
-                        : plan.best 
-                          ? "bg-accent hover:bg-accent/90 text-accent-foreground" 
-                          : ""
-                    }`}
+                    className="w-full"
                     variant={plan.popular || plan.best ? "default" : "outline"}
                     size="lg"
                   >
@@ -175,13 +163,15 @@ export const PricingSection = () => {
           })}
         </div>
 
-        <div className="text-center mt-12">
-          <p className="text-muted-foreground mb-4">
-            ¿Tienes una operación grande? Contáctanos para planes empresariales personalizados.
+        {/* Guarantee */}
+        <div className="text-center mt-12 max-w-lg mx-auto">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <ShieldCheck size={20} className="text-primary" />
+            <span className="font-semibold text-foreground">Garantía de Satisfacción</span>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Prueba gratis por 30 días. Si no ves resultados, te devolvemos tu dinero sin preguntas.
           </p>
-          <Button variant="link" onClick={() => window.open("https://wa.me/573001234567?text=Hola,%20necesito%20un%20plan%20empresarial", "_blank")}>
-            Contactar ventas →
-          </Button>
         </div>
       </div>
     </section>

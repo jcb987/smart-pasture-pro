@@ -21,7 +21,7 @@ const Navbar = () => {
   const navLinks = [
     { label: "Características", href: "#features" },
     { label: "Beneficios", href: "#benefits" },
-    { label: "Conectividad", href: "#connectivity" },
+    { label: "Precios", href: "#precios" },
     { label: "Testimonios", href: "#testimonials" },
   ];
 
@@ -35,19 +35,13 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
           <a href="#" className="flex items-center gap-2">
-            <img 
-              src={logoImage} 
-              alt="Agro Data Logo" 
-              className="w-10 h-10 rounded-xl"
-            />
+            <img src={logoImage} alt="Agro Data Logo" className="w-10 h-10 rounded-xl" />
             <span className={`font-bold text-xl transition-colors ${isScrolled ? 'text-foreground' : 'text-primary-foreground'}`}>
               Agro Data
             </span>
           </a>
 
-          {/* Desktop Navigation - Centered */}
           <div className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
             {navLinks.map((link) => (
               <a
@@ -62,7 +56,6 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
             <Button
               variant={isScrolled ? "outline" : "heroOutline"}
@@ -80,7 +73,6 @@ const Navbar = () => {
             </Button>
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className={`md:hidden p-2 rounded-lg transition-colors ${
@@ -91,7 +83,6 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden mt-4 py-4 border-t border-border/20 animate-fade-in">
             <div className="flex flex-col gap-4">

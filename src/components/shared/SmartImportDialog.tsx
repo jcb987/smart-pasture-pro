@@ -423,13 +423,23 @@ export function SmartImportDialog({
     }
   };
 
-  const processWithMappings = () => {
+  const processWithMappings = (
+    headersArg?: string[],
+    dataArg?: unknown[][],
+    mappingsArg?: ColumnMapping[],
+    globalDateArg?: string | null,
+  ) => {
+    const headers = headersArg ?? rawHeaders;
+    const data = dataArg ?? rawData;
+    const mappings = mappingsArg ?? columnMappings;
+    const gDate = globalDateArg !== undefined ? globalDateArg : globalDate;
+
     const parsedRows: ParsedRow[] = [];
     
     // Create column index map
     const colIndexMap: Record<string, number> = {};
-    columnMappings.forEach(mapping => {
-      const idx = rawHeaders.findIndex(h => h === mapping.excelColumn);
+    mappings.forEach(mapping => {
+      const idx = headers.findIndex(h => h === mapping.excelColumn);
       if (idx !== -1) {
         colIndexMap[mapping.dbColumn] = idx;
       }

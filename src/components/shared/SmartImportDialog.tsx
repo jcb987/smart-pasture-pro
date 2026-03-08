@@ -364,8 +364,36 @@ export function SmartImportDialog({
           return;
         }
 
-        headers = (jsonData[0] as string[]).map(h => h?.toString().trim() || '');
-        dataRows = jsonData.slice(1);
+        // Smart header detection: find the row that best matches expected column labels
+        const allExpectedLabels = [...config.requiredColumns, ...(config.optionalColumns || [])]
+          .flatMap(c => c.labels.map(l => l.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')));
+        
+        let headerRowIndex = 0;
+        let bestScore = 0;
+        
+        for (let r = 0; r < Math.min(jsonData.length, 10); r++) {
+          const row = jsonData[r] as unknown[];
+          if (!row || row.length < 2) continue;
+          let score = 0;
+          for (const cell of row) {
+            if (!cell) continue;
+            const normalized = String(cell).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+            if (allExpectedLabels.some(l => normalized.includes(l) || l.includes(normalized))) {
+              score++;
+            }
+          }
+          if (score > bestScore) {
+            bestScore = score;
+            headerRowIndex = r;
+          }
+        }
+
+        headers = (jsonData[headerRowIndex] as string[]).map(h => h?.toString().trim().replace(/\s*\*\s*$/, '') || '');
+        dataRows = jsonData.slice(headerRowIndex + 1).filter(row => {
+          // Skip empty rows
+          const r = row as unknown[];
+          return r && r.some(cell => cell !== null && cell !== undefined && cell !== '');
+        });
       }
 
       setRawHeaders(headers);

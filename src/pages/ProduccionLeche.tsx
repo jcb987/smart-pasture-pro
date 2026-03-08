@@ -4,8 +4,7 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Upload, Download, Activity, Target, Camera } from 'lucide-react';
+import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Activity } from 'lucide-react';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { useLactationAnalysis } from '@/hooks/useLactationAnalysis';
 import { AddMilkRecordDialog } from '@/components/produccion/AddMilkRecordDialog';
@@ -13,20 +12,11 @@ import { ProductionChart } from '@/components/produccion/ProductionChart';
 import { RankingTable } from '@/components/produccion/RankingTable';
 import { ProductionRecordsTable } from '@/components/produccion/ProductionRecordsTable';
 import { LactationAnalysisCard } from '@/components/produccion/LactationAnalysisCard';
-import { SmartImportDialog } from '@/components/shared/SmartImportDialog';
-import { MilkImageImportDialog } from '@/components/produccion/MilkImageImportDialog';
-import { milkImportConfig } from '@/config/importConfigs';
-import { useExportMilk } from '@/hooks/useExportMilk';
-import { useImportMilk } from '@/hooks/useImportMilk';
 
 const ProduccionLeche = () => {
   const { canWrite, canDelete } = useModulePermissions('produccion-leche');
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [showImageImportDialog, setShowImageImportDialog] = useState(false);
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
-  const { exportToExcel, exporting } = useExportMilk();
-  const { importData } = useImportMilk();
   
   const { 
     records, 

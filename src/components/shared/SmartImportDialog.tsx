@@ -402,17 +402,20 @@ export function SmartImportDialog({
 
       // Try AI analysis first
       const aiResult = await analyzeWithAI(headers);
+      let detectedMappings: ColumnMapping[];
       
       if (aiResult) {
+        detectedMappings = aiResult.mappings;
         setColumnMappings(aiResult.mappings);
         setAiAnalysis(aiResult.analysis);
       } else {
-        // Fallback to basic mapping
-        setColumnMappings(fallbackMapping(headers));
+        detectedMappings = fallbackMapping(headers);
+        setColumnMappings(detectedMappings);
         setAiAnalysis(null);
       }
 
-      setStep('mapping');
+      // Skip mapping step - process directly
+      processWithMappings(headers, dataRows, detectedMappings, null);
     } catch (error) {
       console.error('Parse error:', error);
       toast({

@@ -557,8 +557,14 @@ export function SmartImportDialog({
       await onImport(dataToImport);
       setImportProgress(100);
       setImportResults({ success: dataToImport.length, errors: 0 });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Import error:', error);
+      const errMsg = error?.message || 'Error desconocido';
+      toast({
+        title: 'Error en importación',
+        description: errMsg,
+        variant: 'destructive',
+      });
       setImportResults({ success: 0, errors: dataToImport.length });
     }
 

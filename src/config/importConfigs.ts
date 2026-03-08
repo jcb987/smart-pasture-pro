@@ -115,8 +115,9 @@ export const milkImportConfig: ImportConfig = {
       errors.push('Fecha es obligatoria');
     }
 
-    // Check that at least one production value exists
-    if (!row.morning_liters && !row.afternoon_liters && !row.evening_liters && !row.total_liters) {
+    // Check that at least one production value exists (use explicit null/undefined/empty checks, not truthiness)
+    const hasValue = (v: unknown) => v !== null && v !== undefined && v !== '' && String(v).trim() !== '';
+    if (!hasValue(row.morning_liters) && !hasValue(row.afternoon_liters) && !hasValue(row.evening_liters) && !hasValue(row.total_liters)) {
       errors.push('Debe incluir al menos un valor de producción');
     }
 

@@ -567,6 +567,11 @@ export function SmartImportDialog({
   // Get display columns for preview
   const displayColumns = columnMappings.slice(0, 6).map(m => m.dbColumn);
 
+  // Handler to delete a row
+  const handleDeleteRow = (rowIndex: number) => {
+    setParsedData(prev => prev.filter((_, i) => i !== rowIndex));
+  };
+
   // Handler for inline cell editing
   const handleCellEdit = (rowIndex: number, col: string, value: string) => {
     setParsedData(prev => {

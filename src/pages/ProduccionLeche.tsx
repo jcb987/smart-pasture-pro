@@ -4,6 +4,7 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Upload, Download, Activity, Target, Camera } from 'lucide-react';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { useLactationAnalysis } from '@/hooks/useLactationAnalysis';

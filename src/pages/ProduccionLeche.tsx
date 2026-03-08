@@ -246,6 +246,12 @@ const ProduccionLeche = () => {
         onSubmit={addRecord} 
       />
 
+      <MilkExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        records={records}
+      />
+
     </DashboardLayout>
   );
 };

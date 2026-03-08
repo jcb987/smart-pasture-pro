@@ -4,8 +4,11 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Activity, Download } from 'lucide-react';
+import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Activity, Download, Upload } from 'lucide-react';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
+import { SmartImportDialog } from '@/components/shared/SmartImportDialog';
+import { milkImportConfig } from '@/config/importConfigs';
+import { useImportMilk } from '@/hooks/useImportMilk';
 import { useLactationAnalysis } from '@/hooks/useLactationAnalysis';
 import { AddMilkRecordDialog } from '@/components/produccion/AddMilkRecordDialog';
 import { ProductionChart } from '@/components/produccion/ProductionChart';
@@ -18,7 +21,9 @@ const ProduccionLeche = () => {
   const { canWrite, canDelete } = useModulePermissions('produccion-leche');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const { importData } = useImportMilk();
   
   const { 
     records, 
@@ -63,6 +68,10 @@ const ProduccionLeche = () => {
             <p className="text-muted-foreground">Control completo de producción lechera</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar Datos
+            </Button>
             <Button variant="outline" onClick={() => setShowExportDialog(true)}>
               <Download className="mr-2 h-4 w-4" />
               Exportar Datos
@@ -250,6 +259,17 @@ const ProduccionLeche = () => {
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
         records={records}
+      />
+
+      <SmartImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        config={milkImportConfig}
+        existingData={records}
+        onImport={async (data) => {
+          await importData(data);
+          fetchRecords();
+        }}
       />
 
     </DashboardLayout>

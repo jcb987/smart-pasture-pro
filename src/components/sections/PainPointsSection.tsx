@@ -28,12 +28,12 @@ const PainPointsSection = () => {
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-14">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-destructive/10 text-destructive text-sm font-semibold mb-4">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4">
             ¿Te suena familiar?
           </span>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
             Estos Problemas le Cuestan
-            <span className="text-destructive block">Miles de Dólares a tu Finca</span>
+            <span className="text-primary block">Miles de Dólares a tu Finca</span>
           </h2>
         </div>
 
@@ -41,10 +41,10 @@ const PainPointsSection = () => {
           {painPoints.map((point) => (
             <div
               key={point.title}
-              className="group bg-card rounded-2xl p-6 border border-border/60 shadow-sm hover:shadow-md transition-all duration-200 hover:border-destructive/20"
+              className="group bg-card rounded-2xl p-6 border border-border/60 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20"
             >
-              <div className="w-12 h-12 rounded-lg bg-destructive/10 flex items-center justify-center mb-4 group-hover:bg-destructive/15 transition-colors">
-                <point.icon className="w-6 h-6 text-destructive" />
+              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/15 transition-colors">
+                <point.icon className="w-6 h-6 text-primary" />
               </div>
               <h3 className="text-lg font-bold text-foreground mb-2">{point.title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">{point.description}</p>

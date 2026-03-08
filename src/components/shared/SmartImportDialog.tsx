@@ -89,6 +89,8 @@ export function SmartImportDialog({
   const [importResults, setImportResults] = useState({ success: 0, errors: 0 });
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [globalDate, setGlobalDate] = useState<string | null>(null);
+  const [editAll, setEditAll] = useState(false);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   const resetDialog = () => {

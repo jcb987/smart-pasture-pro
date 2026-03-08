@@ -267,7 +267,6 @@ const ProduccionLeche = () => {
         config={milkImportConfig}
         existingData={records}
         onImport={async (data) => {
-          const { importData } = useImportMilk();
           await importData(data);
           fetchRecords();
         }}

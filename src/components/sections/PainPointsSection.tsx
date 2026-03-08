@@ -28,12 +28,12 @@ const PainPointsSection = () => {
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-14">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-destructive/10 text-destructive text-sm font-semibold mb-4">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4">
             ¿Te suena familiar?
           </span>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
             Estos Problemas le Cuestan
-            <span className="text-destructive block">Miles de Dólares a tu Finca</span>
+            <span className="text-primary block">Miles de Dólares a tu Finca</span>
           </h2>
         </div>
 

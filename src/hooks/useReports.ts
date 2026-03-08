@@ -499,43 +499,152 @@ export const useReports = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Title
-    doc.setFontSize(18);
+    // Header with branding
+    doc.setFillColor(34, 87, 122);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text(reportData.title, pageWidth / 2, 20, { align: 'center' });
+    doc.text('Agro Data', 14, 18);
 
-    // Subtitle
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(reportData.subtitle, pageWidth / 2, 28, { align: 'center' });
-
-    // Generated date
-    doc.setFontSize(10);
-    doc.text(`Generado: ${formatDate(reportData.generatedAt)}`, pageWidth / 2, 35, { align: 'center' });
-
-    // Summary
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Resumen', 14, 48);
-
-    let yPos = 55;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    Object.entries(reportData.summary).forEach(([key, value]) => {
-      doc.text(`${key}: ${value}`, 14, yPos);
-      yPos += 6;
+    doc.text('Software Ganadero Inteligente', 14, 25);
+
+    doc.setFontSize(9);
+    doc.text(`Generado: ${formatDate(reportData.generatedAt)}`, pageWidth - 14, 18, { align: 'right' });
+    if (reportData.filters.dateFrom && reportData.filters.dateTo) {
+      doc.text(`Período: ${formatDate(reportData.filters.dateFrom)} - ${formatDate(reportData.filters.dateTo)}`, pageWidth - 14, 25, { align: 'right' });
+    }
+
+    // Report title
+    doc.setTextColor(34, 87, 122);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(reportData.title, 14, 52);
+
+    // Divider
+    doc.setDrawColor(34, 87, 122);
+    doc.setLineWidth(0.5);
+    doc.line(14, 55, pageWidth - 14, 55);
+
+    // Summary section
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Resumen', 14, 64);
+
+    let yPos = 72;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const summaryEntries = Object.entries(reportData.summary);
+    const colWidth = (pageWidth - 28) / 2;
+    summaryEntries.forEach(([key, value], i) => {
+      const x = i % 2 === 0 ? 14 : 14 + colWidth;
+      const row = Math.floor(i / 2);
+      const y = 72 + row * 7;
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${key}:`, x, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(` ${value}`, x + doc.getTextWidth(`${key}: `), y);
+      yPos = y + 7;
     });
 
-    // Data table
+    // Top producers (for milk reports)
+    if (reportData.topProducers && reportData.topProducers.length > 0) {
+      yPos += 4;
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(34, 87, 122);
+      doc.text('Top Productoras', 14, yPos);
+      yPos += 2;
+      doc.setTextColor(0, 0, 0);
+
+      autoTable(doc, {
+        head: [['#', 'Animal', 'Total (L)', 'Promedio (L/día)']],
+        body: reportData.topProducers.map((p, i) => [
+          i + 1,
+          p.name,
+          p.total,
+          p.avg,
+        ]),
+        startY: yPos,
+        styles: { fontSize: 9, cellPadding: 2 },
+        headStyles: { fillColor: [52, 131, 79], textColor: 255 },
+        alternateRowStyles: { fillColor: [240, 248, 240] },
+        margin: { left: 14, right: 14 },
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 8;
+    }
+
+    // Production curve chart placeholder (textual summary)
+    if (reportData.chartData && reportData.chartData.length > 0) {
+      if (yPos > 240) { doc.addPage(); yPos = 20; }
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(34, 87, 122);
+      doc.text('Curva de Producción', 14, yPos);
+      yPos += 2;
+      doc.setTextColor(0, 0, 0);
+
+      // Draw a simple bar chart
+      const chartStartY = yPos + 2;
+      const chartHeight = 40;
+      const maxVal = Math.max(...reportData.chartData.map(d => d.value), 1);
+      const barWidth = Math.min(6, (pageWidth - 28) / reportData.chartData.length);
+      
+      doc.setFillColor(34, 87, 122);
+      reportData.chartData.forEach((d, i) => {
+        const barHeight = (d.value / maxVal) * chartHeight;
+        const x = 14 + i * barWidth;
+        doc.rect(x, chartStartY + chartHeight - barHeight, barWidth - 1, barHeight, 'F');
+      });
+
+      // Axis labels
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'normal');
+      if (reportData.chartData.length <= 15) {
+        reportData.chartData.forEach((d, i) => {
+          const x = 14 + i * barWidth;
+          doc.text(d.label.substring(0, 5), x, chartStartY + chartHeight + 5, { angle: 45 });
+        });
+      }
+
+      yPos = chartStartY + chartHeight + 12;
+    }
+
+    // Detailed records table
     if (reportData.rows.length > 0) {
+      if (yPos > 200) { doc.addPage(); yPos = 20; }
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(34, 87, 122);
+      doc.text('Registros Detallados', 14, yPos);
+      doc.setTextColor(0, 0, 0);
+
       autoTable(doc, {
         head: [reportData.headers],
         body: reportData.rows,
-        startY: yPos + 10,
-        styles: { fontSize: 8, cellPadding: 2 },
+        startY: yPos + 4,
+        styles: { fontSize: 7, cellPadding: 2 },
         headStyles: { fillColor: [34, 87, 122], textColor: 255 },
         alternateRowStyles: { fillColor: [245, 245, 245] },
+        margin: { left: 14, right: 14 },
       });
+    }
+
+    // Footer on all pages
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(128, 128, 128);
+      doc.text(`Agro Data - Reporte generado automáticamente`, 14, pageHeight - 10);
+      doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
     }
 
     const today = new Date().toISOString().split('T')[0];

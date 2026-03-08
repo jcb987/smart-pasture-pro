@@ -148,33 +148,52 @@ export function SmartImportDialog({
   const fallbackMapping = (headers: string[]): ColumnMapping[] => {
     const allExpected = [...config.requiredColumns, ...(config.optionalColumns || [])];
     const mappings: ColumnMapping[] = [];
+    const usedHeaders = new Set<string>();
 
+    // Normalize helper: lowercase, remove accents, collapse whitespace
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+
+    // Pass 1: Exact matches (highest priority)
     for (const expected of allExpected) {
+      if (mappings.some(m => m.dbColumn === expected.db)) continue;
       for (const header of headers) {
-        const normalizedHeader = header.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-        
-        // Check exact match
-        if (expected.labels.some(l => l.toLowerCase() === normalizedHeader)) {
-          mappings.push({
-            excelColumn: header,
-            dbColumn: expected.db,
-            confidence: 100,
-            suggestedBy: 'exact',
-          });
+        if (usedHeaders.has(header)) continue;
+        const nh = norm(header);
+        if (expected.labels.some(l => norm(l) === nh)) {
+          mappings.push({ excelColumn: header, dbColumn: expected.db, confidence: 100, suggestedBy: 'exact' });
+          usedHeaders.add(header);
           break;
         }
-        
-        // Check partial match
-        if (expected.labels.some(l => 
-          normalizedHeader.includes(l.toLowerCase()) || 
-          l.toLowerCase().includes(normalizedHeader)
-        )) {
-          mappings.push({
-            excelColumn: header,
-            dbColumn: expected.db,
-            confidence: 70,
-            suggestedBy: 'similar',
-          });
+      }
+    }
+
+    // Pass 2: Starts-with matches
+    for (const expected of allExpected) {
+      if (mappings.some(m => m.dbColumn === expected.db)) continue;
+      for (const header of headers) {
+        if (usedHeaders.has(header)) continue;
+        const nh = norm(header);
+        if (expected.labels.some(l => nh.startsWith(norm(l)) || norm(l).startsWith(nh))) {
+          mappings.push({ excelColumn: header, dbColumn: expected.db, confidence: 85, suggestedBy: 'similar' });
+          usedHeaders.add(header);
+          break;
+        }
+      }
+    }
+
+    // Pass 3: Contains matches (lowest priority, only if header has 2+ words to avoid false positives)
+    for (const expected of allExpected) {
+      if (mappings.some(m => m.dbColumn === expected.db)) continue;
+      for (const header of headers) {
+        if (usedHeaders.has(header)) continue;
+        const nh = norm(header);
+        if (expected.labels.some(l => {
+          const nl = norm(l);
+          // Only match if both are reasonably specific (>= 2 chars)
+          return nl.length >= 2 && nh.length >= 2 && (nh.includes(nl) || nl.includes(nh));
+        })) {
+          mappings.push({ excelColumn: header, dbColumn: expected.db, confidence: 60, suggestedBy: 'similar' });
+          usedHeaders.add(header);
           break;
         }
       }
@@ -391,9 +410,13 @@ export function SmartImportDialog({
 
         headers = (jsonData[headerRowIndex] as string[]).map(h => h?.toString().trim().replace(/\s*\*\s*$/, '') || '');
         dataRows = jsonData.slice(headerRowIndex + 1).filter(row => {
-          // Skip empty rows
+          // Skip empty rows and rows without meaningful data (e.g. only formula results like 0.0)
           const r = row as unknown[];
-          return r && r.some(cell => cell !== null && cell !== undefined && cell !== '');
+          if (!r || r.length === 0) return false;
+          // Check that at least the first column (usually animal tag) has a value
+          const firstCell = r[0];
+          if (firstCell === null || firstCell === undefined || String(firstCell).trim() === '') return false;
+          return true;
         });
       }
 
@@ -534,8 +557,14 @@ export function SmartImportDialog({
       await onImport(dataToImport);
       setImportProgress(100);
       setImportResults({ success: dataToImport.length, errors: 0 });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Import error:', error);
+      const errMsg = error?.message || 'Error desconocido';
+      toast({
+        title: 'Error en importación',
+        description: errMsg,
+        variant: 'destructive',
+      });
       setImportResults({ success: 0, errors: dataToImport.length });
     }
 

@@ -185,6 +185,27 @@ export const useReports = () => {
     const avgFat = records?.filter(r => r.fat_percentage).reduce((sum, r) => sum + (r.fat_percentage || 0), 0) / (records?.filter(r => r.fat_percentage).length || 1);
     const avgProtein = records?.filter(r => r.protein_percentage).reduce((sum, r) => sum + (r.protein_percentage || 0), 0) / (records?.filter(r => r.protein_percentage).length || 1);
 
+    // Calculate top producers
+    const animalMap = new Map<string, { total: number; count: number; name: string }>();
+    records?.forEach(r => {
+      const existing = animalMap.get(r.animal_id);
+      const animalName = r.animal?.name || r.animal?.tag_id || '-';
+      if (existing) {
+        existing.total += r.total_liters || 0;
+        existing.count += 1;
+      } else {
+        animalMap.set(r.animal_id, { total: r.total_liters || 0, count: 1, name: animalName });
+      }
+    });
+    const topProducers = Array.from(animalMap.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5)
+      .map(p => ({
+        name: p.name,
+        total: formatNumber(p.total, 1),
+        avg: formatNumber(p.count > 0 ? p.total / p.count : 0, 1),
+      }));
+
     return {
       title: 'Reporte de Producción de Leche',
       subtitle: `Período: ${formatDate(dateFrom)} - ${formatDate(dateTo)}`,
@@ -210,6 +231,7 @@ export const useReports = () => {
         r.protein_percentage ? formatNumber(r.protein_percentage, 2) : '-',
       ]) || [],
       chartData: aggregateByDate(records || [], 'production_date', 'total_liters'),
+      topProducers,
     };
   };
 

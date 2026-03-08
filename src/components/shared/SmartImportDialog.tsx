@@ -755,10 +755,6 @@ export function SmartImportDialog({
                               <XCircle className="h-4 w-4" />
                             </Button>
                           </TableCell>
-                            ) : (
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            )}
-                          </TableCell>
                           {displayColumns.map(col => (
                             <TableCell key={col} className="p-1">
                               {editAll || hasError ? (

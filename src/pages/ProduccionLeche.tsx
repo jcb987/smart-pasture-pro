@@ -4,7 +4,7 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Activity } from 'lucide-react';
+import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Activity, Download } from 'lucide-react';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { useLactationAnalysis } from '@/hooks/useLactationAnalysis';
 import { AddMilkRecordDialog } from '@/components/produccion/AddMilkRecordDialog';
@@ -12,10 +12,12 @@ import { ProductionChart } from '@/components/produccion/ProductionChart';
 import { RankingTable } from '@/components/produccion/RankingTable';
 import { ProductionRecordsTable } from '@/components/produccion/ProductionRecordsTable';
 import { LactationAnalysisCard } from '@/components/produccion/LactationAnalysisCard';
+import { MilkExportDialog } from '@/components/produccion/MilkExportDialog';
 
 const ProduccionLeche = () => {
   const { canWrite, canDelete } = useModulePermissions('produccion-leche');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
   
   const { 
@@ -61,6 +63,10 @@ const ProduccionLeche = () => {
             <p className="text-muted-foreground">Control completo de producción lechera</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setShowExportDialog(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              Exportar Datos
+            </Button>
             {canWrite && (
               <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -238,6 +244,12 @@ const ProduccionLeche = () => {
         open={showAddDialog} 
         onOpenChange={setShowAddDialog} 
         onSubmit={addRecord} 
+      />
+
+      <MilkExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        records={records}
       />
 
     </DashboardLayout>

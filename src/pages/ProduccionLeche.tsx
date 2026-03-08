@@ -240,23 +240,6 @@ const ProduccionLeche = () => {
         onSubmit={addRecord} 
       />
 
-      <SmartImportDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-        config={milkImportConfig}
-        existingData={records}
-        onImport={importData}
-      />
-
-      <MilkImageImportDialog
-        open={showImageImportDialog}
-        onOpenChange={setShowImageImportDialog}
-        onImportComplete={async () => {
-          // Small delay to ensure DB has committed, then force fresh fetch
-          await new Promise(r => setTimeout(r, 500));
-          await fetchRecords();
-        }}
-      />
     </DashboardLayout>
   );
 };

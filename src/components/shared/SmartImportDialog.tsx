@@ -500,6 +500,21 @@ export function SmartImportDialog({
   };
 
   const downloadTemplate = () => {
+    // If a static template file exists for this config, download it directly
+    const staticTemplates: Record<string, string> = {
+      'plantilla_produccion_leche.xlsx': '/templates/plantilla_produccion_leche.xlsx',
+    };
+    const staticPath = staticTemplates[config.templateFileName];
+    if (staticPath) {
+      const a = document.createElement('a');
+      a.href = staticPath;
+      a.download = config.templateFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+    // Fallback: generate template dynamically
     const ws = XLSX.utils.aoa_to_sheet(config.templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');

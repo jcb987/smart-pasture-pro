@@ -1,58 +1,116 @@
 
 
-## Plan: Reemplazar encuesta por mensaje de bienvenida para usuarios agregados
+# Plan: Rediseño Completo de Landing Page - Optimizada para Conversiones
 
-### Problema raiz
+## Resumen
 
-La Edge Function `create-team-user` intenta insertar un registro en `user_onboarding` con valores como `'na'` para saltar la encuesta, pero la tabla tiene restricciones CHECK que solo permiten valores especificos (ej: `production_type` solo acepta `'carne'`, `'leche'`, `'doble_proposito'`). Por eso el insert falla silenciosamente y la encuesta sigue apareciendo.
+Reestructurar la landing page de Agro Data con copy persuasivo, nueva estructura enfocada en ventas, y secciones optimizadas para convertir visitantes en leads/clientes. Se mantiene la tecnologia existente (React + Tailwind) y el sistema de diseno actual.
 
-### Estrategia
+## Nueva Estructura de Secciones (Index.tsx)
 
-En lugar de forzar datos falsos en la encuesta, vamos a:
+```text
+ANTES (13 secciones, estructura dispersa):
+Hero → Advantages → Features → DashboardPreview → Benefits → Pricing → MobileApp → Projections → ActionLists → Connectivity → Security → UseCases → Testimonials → CTA
 
-1. Marcar al usuario como "agregado por admin" para que el sistema sepa que NO debe mostrar la encuesta
-2. Mostrar un mensaje de bienvenida amigable en vez de la encuesta cuando el usuario es agregado
-
-### Cambios a realizar
-
-#### 1. Agregar columna `is_team_member` a la tabla `profiles`
-
-Una columna booleana que indica si el usuario fue creado por un administrador (vs. auto-registrado). Valor por defecto: `false`.
-
-```sql
-ALTER TABLE profiles ADD COLUMN is_team_member boolean DEFAULT false;
+DESPUES (10 secciones, embudo de ventas claro):
+Hero → PainPoints (NUEVA) → Solution (NUEVA) → Features → Benefits → DashboardPreview → Testimonials → Pricing → Connectivity → CTA
 ```
 
-#### 2. Actualizar Edge Function `create-team-user`
+Secciones eliminadas: AdvantagesSection (redundante con Features), MobileAppSection (se integra en Connectivity), ProjectionsSection (se integra en Benefits), ActionListsSection (se integra en DashboardPreview), SecuritySection (se integra en Solution), UseCasesSection (se integra en Testimonials).
 
-- Remover el insert fallido a `user_onboarding`
-- En su lugar, marcar `is_team_member = true` en el perfil del usuario (ya se hace un `update` al perfil, solo se agrega este campo)
+## Cambios por Archivo
 
-#### 3. Modificar `ProtectedRoute.tsx`
+### 1. `src/pages/Index.tsx`
+- Reordenar secciones segun embudo de ventas
+- Agregar PainPointsSection y SolutionSection
+- Eliminar imports de secciones redundantes
 
-Cambiar la logica de verificacion de onboarding:
-- Si el usuario tiene `is_team_member = true` en su perfil Y no tiene registro en `user_onboarding`: mostrar **dialogo de bienvenida** (no la encuesta)
-- Si el usuario NO tiene `is_team_member` (es dueno) Y no tiene registro en `user_onboarding`: mostrar la **encuesta normal**
-- Si ya tiene registro en `user_onboarding`: no mostrar nada
+### 2. `src/components/sections/HeroSection.tsx` - Copy Mejorado
+- Titulo: "Deja de Perder Dinero por Falta de Datos en tu Ganaderia" (orientado al dolor)
+- Subtitulo: enfocado en resultado, no en funcionalidad
+- CTA principal: "Empieza Gratis - Sin Tarjeta" (reduce friccion)
+- CTA secundario: "Ver Como Funciona en 2 Minutos"
+- Eliminar seccion de descarga de apps (distrae del CTA principal)
+- Mantener stats y categorias pero con copy mas orientado a resultados
+- Badge: "Usado por +10,000 fincas en 15 paises"
 
-#### 4. Crear componente `WelcomeDialog.tsx`
+### 3. `src/components/sections/PainPointsSection.tsx` (NUEVA)
+- Titulo: "Estos Problemas te Suenan Familiares?"
+- 4 pain points con iconos y descripciones:
+  - "Pierdes animales por no detectar problemas a tiempo"
+  - "Gastas horas en cuadernos y hojas de Excel"
+  - "No sabes cuales vacas son rentables y cuales no"
+  - "Tomas decisiones a ciegas sin datos confiables"
+- Frase de transicion: "No es tu culpa. Es que no tienes las herramientas correctas."
 
-Un dialogo sencillo y amigable que:
-- Muestra un mensaje de bienvenida al sistema
-- Indica el nombre del hato/organizacion al que fue agregado
-- Tiene un unico boton "Comenzar" que cierra el dialogo
-- Al cerrarse, inserta un registro minimo en `user_onboarding` (con valores validos) para que no vuelva a aparecer
+### 4. `src/components/sections/SolutionSection.tsx` (NUEVA)
+- Titulo: "Agro Data: El Copiloto Inteligente de tu Ganaderia"
+- 3 pilares de la solucion con visual de tarjetas:
+  - "Centraliza Todo" - Un solo lugar para animales, produccion, costos, salud
+  - "Decide con Datos" - KPIs, alertas y tendencias en tiempo real
+  - "Protege tu Inversion" - Seguridad, auditoria y respaldos automaticos
+- Incluye elementos de SecuritySection integrados aqui
 
-### Archivos a modificar
+### 5. `src/components/sections/FeaturesSection.tsx` - Copy Mejorado
+- Titulo: "Todo lo que Necesitas, Nada que No"
+- Subtitulo: "Cada funcion fue disenada escuchando a ganaderos reales"
+- Misma estructura de 6 features pero con copy mas orientado a beneficio
+- Agregar mini-stats en cada card (ej: "Ahorra 4hrs/semana")
 
-1. **Migracion SQL** - Agregar columna `is_team_member` a `profiles`
-2. **`supabase/functions/create-team-user/index.ts`** - Marcar `is_team_member = true` y remover insert fallido a `user_onboarding`
-3. **`src/components/ProtectedRoute.tsx`** - Agregar logica para diferenciar usuario agregado vs. auto-registrado
-4. **`src/components/onboarding/WelcomeDialog.tsx`** (nuevo) - Componente de bienvenida para usuarios agregados
+### 6. `src/components/sections/BenefitsSection.tsx` - Copy Mejorado
+- Titulo: "Resultados que se Ven en el Bolsillo"
+- Integrar datos de ProjectionsSection (simulador visual)
+- Mantener las 3 cards con stats pero agregar "antes vs despues"
+- Checkpoints con copy mas especifico y orientado a resultado
 
-### Flujo resultante
+### 7. `src/components/sections/DashboardPreviewSection.tsx` - Copy Mejorado
+- Titulo: "Mira tu Finca como Nunca Antes"
+- Integrar elementos de ActionListsSection (lista de trabajo)
+- Mostrar el mockup del dashboard + lista de tareas lado a lado
 
-- **Dueno se registra por primera vez**: Ve la encuesta de 5 pasos (sin cambios)
-- **Usuario agregado por admin inicia sesion por primera vez**: Ve un mensaje de bienvenida sencillo con un boton "Comenzar"
-- **Cualquier usuario que ya completo onboarding**: No ve nada (sin cambios)
+### 8. `src/components/sections/TestimonialsSection.tsx` - Mejorado
+- Titulo: "Ganaderos Reales, Resultados Reales"
+- Integrar elementos de UseCasesSection como subtexto en testimonios
+- Agregar foto placeholder/avatar con iniciales
+- Enfatizar resultados numericos en cada testimonio
+
+### 9. `src/components/sections/PricingSection.tsx` - Copy Mejorado
+- Titulo: "Invierte Menos de lo que Cuesta Perder una Vaca"
+- Subtitulo: "Sin limites. Sin sorpresas. Sin contratos."
+- Corregir referencia "SmartPasture Pro" a "Agro Data" en WhatsApp message
+- Agregar garantia de devolucion / satisfaccion
+
+### 10. `src/components/sections/ConnectivitySection.tsx` - Mejorado
+- Titulo: "Funciona Donde Estes, Como Prefieras"
+- Integrar contenido de MobileAppSection (mockup de telefono)
+- Mantener hardware compatibility
+
+### 11. `src/components/sections/CTASection.tsx` - Copy Mejorado
+- Titulo: "Cada Dia sin Datos es Dinero que Pierdes"
+- CTA: "Empieza tu Prueba Gratis Ahora"
+- Agregar urgencia: "Oferta limitada: 30 dias gratis"
+- Reducir opciones de contacto a WhatsApp + email
+
+### 12. `src/components/layout/Navbar.tsx` - Ajustes
+- Agregar "Precios" al nav links
+- CTA "Prueba Gratis" mas visible
+
+### 13. Archivos a Eliminar
+- `src/components/sections/AdvantagesSection.tsx`
+- `src/components/sections/MobileAppSection.tsx`
+- `src/components/sections/ProjectionsSection.tsx`
+- `src/components/sections/ActionListsSection.tsx`
+- `src/components/sections/SecuritySection.tsx`
+- `src/components/sections/UseCasesSection.tsx`
+
+## Mejoras SEO
+- Meta descriptions y titulos en `index.html`
+- Heading hierarchy correcta (h1 solo en Hero, h2 por seccion)
+- Alt texts descriptivos en imagenes
+
+## Notas Tecnicas
+- No se requieren cambios de base de datos
+- No se instalan nuevas dependencias
+- Se reutilizan componentes UI existentes (Button, Card, Tooltip, Badge)
+- Se mantiene el sistema de colores y tema actual
 

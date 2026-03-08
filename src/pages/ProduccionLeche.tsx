@@ -4,6 +4,7 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Milk, Plus, TrendingUp, Award, Droplets, FlaskConical, Upload, Download, Activity, Target, Camera } from 'lucide-react';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { useLactationAnalysis } from '@/hooks/useLactationAnalysis';
@@ -69,18 +70,26 @@ const ProduccionLeche = () => {
             <h1 className="text-3xl font-bold text-foreground">Producción de Leche</h1>
             <p className="text-muted-foreground">Control completo de producción lechera</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canWrite && (
-              <Button variant="outline" onClick={() => setShowImageImportDialog(true)}>
-                <Camera className="mr-2 h-4 w-4" />
-                Importar Imagen
-              </Button>
-            )}
-            {canWrite && (
-              <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Importar Excel
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowImageImportDialog(true)}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Importar desde Imagen
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar desde Excel
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             <Button variant="outline" onClick={exportToExcel} disabled={exporting}>
               <Download className="mr-2 h-4 w-4" />

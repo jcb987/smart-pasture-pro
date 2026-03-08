@@ -667,60 +667,6 @@ export function SmartImportDialog({
             </div>
           )}
 
-          {step === 'mapping' && (
-            <div className="space-y-4">
-              {aiAnalysis && (
-                <div className="p-3 bg-primary/10 rounded-lg flex items-start gap-2">
-                  <Brain className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-sm">{aiAnalysis}</p>
-                </div>
-              )}
-
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Columna Excel</TableHead>
-                      <TableHead>Campo Detectado</TableHead>
-                      <TableHead>Confianza</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {columnMappings.map((mapping, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-mono text-sm">{mapping.excelColumn}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{mapping.dbColumn}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className={`h-2 w-16 rounded-full ${
-                                mapping.confidence >= 90 ? 'bg-green-500' :
-                                mapping.confidence >= 70 ? 'bg-amber-500' : 'bg-red-500'
-                              }`}
-                              style={{ width: `${mapping.confidence * 0.6}px` }}
-                            />
-                            <span className="text-xs text-muted-foreground">
-                              {mapping.confidence}%
-                              {mapping.suggestedBy === 'ai' && ' (IA)'}
-                            </span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {rawHeaders.filter(h => !columnMappings.some(m => m.excelColumn === h)).length > 0 && (
-                <div className="text-sm text-muted-foreground">
-                  <span className="font-medium">Columnas ignoradas: </span>
-                  {rawHeaders.filter(h => !columnMappings.some(m => m.excelColumn === h)).join(', ')}
-                </div>
-              )}
-            </div>
-          )}
 
           {step === 'preview' && (
             <div className="space-y-4">

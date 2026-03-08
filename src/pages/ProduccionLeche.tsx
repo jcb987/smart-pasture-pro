@@ -72,30 +72,6 @@ const ProduccionLeche = () => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {canWrite && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Importar
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setShowImageImportDialog(true)}>
-                    <Camera className="mr-2 h-4 w-4" />
-                    Importar desde Imagen
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Importar desde Excel
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            <Button variant="outline" onClick={exportToExcel} disabled={exporting}>
-              <Download className="mr-2 h-4 w-4" />
-              Exportar
-            </Button>
-            {canWrite && (
               <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Registrar Producción

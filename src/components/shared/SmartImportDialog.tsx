@@ -450,8 +450,8 @@ export function SmartImportDialog({
       col.includes('date') || col.includes('fecha')
     );
 
-    for (let i = 0; i < rawData.length; i++) {
-      const row = rawData[i] as unknown[];
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i] as unknown[];
       if (!row || row.length === 0) continue;
 
       const rowData: Record<string, unknown> = {};

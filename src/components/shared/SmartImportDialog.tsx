@@ -410,9 +410,13 @@ export function SmartImportDialog({
 
         headers = (jsonData[headerRowIndex] as string[]).map(h => h?.toString().trim().replace(/\s*\*\s*$/, '') || '');
         dataRows = jsonData.slice(headerRowIndex + 1).filter(row => {
-          // Skip empty rows
+          // Skip empty rows and rows without meaningful data (e.g. only formula results like 0.0)
           const r = row as unknown[];
-          return r && r.some(cell => cell !== null && cell !== undefined && cell !== '');
+          if (!r || r.length === 0) return false;
+          // Check that at least the first column (usually animal tag) has a value
+          const firstCell = r[0];
+          if (firstCell === null || firstCell === undefined || String(firstCell).trim() === '') return false;
+          return true;
         });
       }
 

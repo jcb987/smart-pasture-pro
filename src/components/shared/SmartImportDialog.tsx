@@ -741,11 +741,17 @@ export function SmartImportDialog({
                       return (
                         <TableRow key={row.row_number} className={hasError ? 'bg-destructive/5' : ''}>
                           <TableCell className="text-muted-foreground text-xs">{row.row_number}</TableCell>
-                          <TableCell>
-                            {hasError ? (
-                              <XCircle className="h-4 w-4 text-destructive" />
-                            ) : hasWarning ? (
-                              <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          <TableCell className="p-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteRow(rowIdx)}
+                              title="Eliminar fila"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                             ) : (
                               <CheckCircle2 className="h-4 w-4 text-green-600" />
                             )}

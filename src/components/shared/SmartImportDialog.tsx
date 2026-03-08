@@ -504,17 +504,20 @@ export function SmartImportDialog({
   };
 
   const handleImport = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: 'Error', description: 'No se encontró el usuario autenticado', variant: 'destructive' });
+      return;
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('organization_id')
+      .eq('user_id', user.id)
       .single();
 
     if (!profile?.organization_id) {
-      toast({
-        title: 'Error',
-        description: 'No se encontró la organización',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'No se encontró la organización', variant: 'destructive' });
       return;
     }
 
@@ -566,6 +569,11 @@ export function SmartImportDialog({
 
   // Get display columns for preview
   const displayColumns = columnMappings.slice(0, 6).map(m => m.dbColumn);
+
+  // Handler to delete a row
+  const handleDeleteRow = (rowIndex: number) => {
+    setParsedData(prev => prev.filter((_, i) => i !== rowIndex));
+  };
 
   // Handler for inline cell editing
   const handleCellEdit = (rowIndex: number, col: string, value: string) => {
@@ -736,14 +744,16 @@ export function SmartImportDialog({
                       return (
                         <TableRow key={row.row_number} className={hasError ? 'bg-destructive/5' : ''}>
                           <TableCell className="text-muted-foreground text-xs">{row.row_number}</TableCell>
-                          <TableCell>
-                            {hasError ? (
-                              <XCircle className="h-4 w-4 text-destructive" />
-                            ) : hasWarning ? (
-                              <AlertTriangle className="h-4 w-4 text-amber-500" />
-                            ) : (
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            )}
+                          <TableCell className="p-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteRow(rowIdx)}
+                              title="Eliminar fila"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                           {displayColumns.map(col => (
                             <TableCell key={col} className="p-1">

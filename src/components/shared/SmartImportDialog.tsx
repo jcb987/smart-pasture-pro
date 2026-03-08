@@ -319,15 +319,16 @@ export function SmartImportDialog({
         setRawData(dataRows);
 
         // Use mappings from image AI directly
-        if (imageResult.mappings && imageResult.mappings.length > 0) {
-          setColumnMappings(imageResult.mappings);
-          setAiAnalysis(imageResult.analysis + (imageResult.globalDate ? ` | Fecha global detectada: ${imageResult.globalDate}` : ''));
-        } else {
-          setColumnMappings(fallbackMapping(headers));
-          setAiAnalysis(imageResult.analysis);
-        }
+        const detectedMappings = (imageResult.mappings && imageResult.mappings.length > 0)
+          ? imageResult.mappings
+          : fallbackMapping(headers);
+        
+        setColumnMappings(detectedMappings);
+        const analysisText = imageResult.analysis + (imageResult.globalDate ? ` | Fecha global detectada: ${imageResult.globalDate}` : '');
+        setAiAnalysis(analysisText);
 
-        setStep('mapping');
+        // Skip mapping step - process directly
+        processWithMappings(headers, dataRows, detectedMappings, imageResult.globalDate || null);
         return;
       }
 

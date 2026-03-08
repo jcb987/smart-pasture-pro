@@ -468,20 +468,18 @@ export function SmartImportDialog({
       }
 
       // Apply globalDate to any date column that is missing a value
-      if (globalDate) {
+      if (gDate) {
         for (const dateCol of dateColumns) {
           if (!rowData[dateCol]) {
-            rowData[dateCol] = globalDate;
+            rowData[dateCol] = gDate;
           }
         }
-        // Also fill the most common date field names if none were mapped but globalDate exists
         const commonDateFields = ['production_date', 'event_date', 'weight_date', 'date'];
         for (const field of commonDateFields) {
           if (!(field in rowData) && !colIndexMap[field]) {
-            // Check if this field is expected by the config
             const isExpected = [...config.requiredColumns, ...(config.optionalColumns || [])].some(c => c.db === field);
             if (isExpected) {
-              rowData[field] = globalDate;
+              rowData[field] = gDate;
             }
           }
         }

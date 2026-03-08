@@ -593,8 +593,9 @@ export function SmartImportDialog({
           <DialogDescription>
             {step === 'upload' && config.description}
             {step === 'analyzing' && 'Analizando estructura del archivo con IA...'}
-            {step === 'mapping' && 'Revisa el mapeo de columnas detectado'}
             {step === 'preview' && 'Revisa los datos antes de importar'}
+            {step === 'importing' && 'Importando datos...'}
+            {step === 'complete' && 'Importación completada'}
             {step === 'importing' && 'Importando datos...'}
             {step === 'complete' && 'Importación completada'}
           </DialogDescription>

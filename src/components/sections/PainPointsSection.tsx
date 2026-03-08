@@ -41,10 +41,10 @@ const PainPointsSection = () => {
           {painPoints.map((point) => (
             <div
               key={point.title}
-              className="group bg-card rounded-2xl p-6 border border-border/60 shadow-sm hover:shadow-md transition-all duration-200 hover:border-destructive/20"
+              className="group bg-card rounded-2xl p-6 border border-border/60 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20"
             >
-              <div className="w-12 h-12 rounded-lg bg-destructive/10 flex items-center justify-center mb-4 group-hover:bg-destructive/15 transition-colors">
-                <point.icon className="w-6 h-6 text-destructive" />
+              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/15 transition-colors">
+                <point.icon className="w-6 h-6 text-primary" />
               </div>
               <h3 className="text-lg font-bold text-foreground mb-2">{point.title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">{point.description}</p>

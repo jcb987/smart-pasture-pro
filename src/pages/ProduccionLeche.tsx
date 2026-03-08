@@ -17,6 +17,7 @@ import { MilkExportDialog } from '@/components/produccion/MilkExportDialog';
 const ProduccionLeche = () => {
   const { canWrite, canDelete } = useModulePermissions('produccion-leche');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
   
   const { 

@@ -260,6 +260,18 @@ const ProduccionLeche = () => {
         records={records}
       />
 
+      <SmartImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        config={milkImportConfig}
+        existingData={records}
+        onImport={async (data) => {
+          const { importData } = useImportMilk();
+          await importData(data);
+          fetchRecords();
+        }}
+      />
+
     </DashboardLayout>
   );
 };

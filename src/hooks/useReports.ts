@@ -33,6 +33,7 @@ export interface ReportData {
   headers: string[];
   rows: (string | number)[][];
   chartData?: { label: string; value: number }[];
+  topProducers?: { name: string; total: string; avg: string }[];
 }
 
 export const REPORT_CONFIGS: ReportConfig[] = [

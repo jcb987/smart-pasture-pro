@@ -96,7 +96,7 @@ class ErrorBoundary extends Component<Props, State> {
                 Ocurrió un error inesperado. No te preocupes, tus datos están seguros.
               </p>
               
-              {import.meta.env.DEV && this.state.error && (
+              {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-32">
                   <summary className="cursor-pointer font-medium">
                     Detalles del error

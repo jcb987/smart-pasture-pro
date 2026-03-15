@@ -43,7 +43,7 @@ export function EventAISuggestionsPanel({
     historyLoaded,
   } = useEventAISuggestions({ animalId, open });
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update local suggestions when context changes
   useEffect(() => {

@@ -4,6 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Heart, TrendingUp, Award, AlertCircle, Target, Users } from 'lucide-react';
 import { FertilityMetrics, HerdFertilityStats } from '@/hooks/useFertilityAnalysis';
+import { useTerminology } from '@/hooks/useTerminology';
 
 interface FertilityAnalysisCardProps {
   allMetrics: FertilityMetrics[];
@@ -11,6 +12,7 @@ interface FertilityAnalysisCardProps {
 }
 
 export const FertilityAnalysisCard = ({ allMetrics, herdStats }: FertilityAnalysisCardProps) => {
+  const { t } = useTerminology();
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 dark:text-green-400';
     if (score >= 60) return 'text-blue-600 dark:text-blue-400';
@@ -47,7 +49,7 @@ export const FertilityAnalysisCard = ({ allMetrics, herdStats }: FertilityAnalys
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <div className="text-2xl font-bold">{herdStats.avgOpenDays}</div>
-              <div className="text-xs text-muted-foreground">Días Abiertos</div>
+              <div className="text-xs text-muted-foreground">{t('dias_abiertos')}</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <div className="text-2xl font-bold">{herdStats.avgCalvingInterval}</div>

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FemaleAnimal } from '@/hooks/useReproduction';
 import { Badge } from '@/components/ui/badge';
+import { useTerminology } from '@/hooks/useTerminology';
 
 interface Props {
   open: boolean;
@@ -37,16 +38,6 @@ interface Props {
   defaultEventType?: string;
 }
 
-const eventTypeLabels: Record<string, string> = {
-  celo: 'Celo Detectado',
-  servicio: 'Servicio (Monta Natural)',
-  inseminacion: 'Inseminación Artificial',
-  palpacion: 'Palpación / Diagnóstico',
-  parto: 'Parto',
-  aborto: 'Aborto',
-  secado: 'Secado',
-};
-
 export const RegisterEventDialog = ({ 
   open, 
   onOpenChange, 
@@ -56,6 +47,18 @@ export const RegisterEventDialog = ({
   defaultAnimalId,
   defaultEventType,
 }: Props) => {
+  const { t } = useTerminology();
+
+  const eventTypeLabels: Record<string, string> = {
+    celo: t('celo'),
+    servicio: t('servicio'),
+    inseminacion: 'Inseminación Artificial',
+    palpacion: t('palpacion'),
+    parto: 'Parto',
+    aborto: 'Aborto',
+    secado: t('secado'),
+  };
+
   const [animalId, setAnimalId] = useState(defaultAnimalId || '');
   const [eventType, setEventType] = useState(defaultEventType || '');
   const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
@@ -203,7 +206,7 @@ export const RegisterEventDialog = ({
           {/* Campos para Servicio */}
           {showServiceFields && (
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
-              <h4 className="font-medium">Datos del Servicio</h4>
+              <h4 className="font-medium">{t('servicio')}</h4>
               <div className="space-y-2">
                 <Label>Toro / Semental *</Label>
                 <Select value={bullId} onValueChange={setBullId}>
@@ -253,7 +256,7 @@ export const RegisterEventDialog = ({
           {/* Campos para Palpación */}
           {showPalpationFields && (
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
-              <h4 className="font-medium">Resultado de Palpación</h4>
+              <h4 className="font-medium">{t('palpacion')}</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Resultado *</Label>

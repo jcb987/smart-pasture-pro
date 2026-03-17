@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTerminology } from '@/hooks/useTerminology';
 
 interface AddDietDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ interface AddDietDialogProps {
 }
 
 export const AddDietDialog = ({ open, onOpenChange, onSubmit, targetGroups }: AddDietDialogProps) => {
+  const { t } = useTerminology();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: '',
@@ -126,7 +128,7 @@ export const AddDietDialog = ({ open, onOpenChange, onSubmit, targetGroups }: Ad
                 />
               </div>
               <div className="space-y-2">
-                <Label>Energía (Mcal/día)</Label>
+                <Label>{t('mcal')}</Label>
                 <Input
                   type="number"
                   step="0.1"
@@ -136,7 +138,7 @@ export const AddDietDialog = ({ open, onOpenChange, onSubmit, targetGroups }: Ad
                 />
               </div>
               <div className="space-y-2">
-                <Label>FDN Objetivo (%)</Label>
+                <Label>{t('fdn')}</Label>
                 <Input
                   type="number"
                   step="0.1"
@@ -146,7 +148,7 @@ export const AddDietDialog = ({ open, onOpenChange, onSubmit, targetGroups }: Ad
                 />
               </div>
               <div className="space-y-2">
-                <Label>Materia Seca (kg/día)</Label>
+                <Label>{t('materia_seca')}</Label>
                 <Input
                   type="number"
                   step="0.1"

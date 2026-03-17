@@ -110,6 +110,13 @@ export function OnboardingSurvey({ open, onComplete, userId, organizationId }: O
 
       if (error) throw error;
 
+      // Sync veterinario role to user_roles (DB trigger only assigns 'ganadero' by default)
+      if (formData.primary_role === 'veterinario') {
+        await supabase
+          .from('user_roles')
+          .upsert({ user_id: userId, role: 'veterinario' }, { onConflict: 'user_id,role' });
+      }
+
       toast({
         title: '¡Bienvenido a Agro Data!',
         description: 'Tu perfil ha sido configurado correctamente',

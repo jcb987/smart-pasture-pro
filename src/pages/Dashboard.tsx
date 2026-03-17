@@ -1,12 +1,13 @@
+import { useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Beef, 
-  Milk, 
-  Heart, 
-  AlertTriangle, 
+import {
+  Beef,
+  Milk,
+  Heart,
+  AlertTriangle,
   TrendingUp,
   Calendar,
   Activity,
@@ -20,14 +21,28 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import { WeatherWidget } from '@/components/dashboard/WeatherWidget';
+import { DashboardOrb } from '@/components/dashboard/DashboardOrb';
 import { AIChatWidget } from '@/components/ai/AIChatWidget';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import gsap from 'gsap';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { kpis, alerts, recentEvents, loading, lastUpdated, refresh } = useDashboardData();
+  const cardsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.kpi-card',
+        { opacity: 0, y: 28, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.09, ease: 'power3.out', delay: 0.15 }
+      );
+    }, cardsRef);
+    return () => ctx.revert();
+  }, []);
 
   const aiContext = {
     totalAnimals: kpis.totalAnimales,
@@ -45,34 +60,37 @@ const Dashboard = () => {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground">
               Vista general de tu ganadería • {formatLastUpdated()}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span className="ml-2 hidden sm:inline">Actualizar</span>
-          </Button>
+          <div className="flex items-center gap-4">
+            <DashboardOrb />
+            <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="ml-2 hidden sm:inline">Actualizar</span>
+            </Button>
+          </div>
         </div>
 
         {/* Weather + Main KPIs */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <WeatherWidget className="md:col-span-2 lg:col-span-1" />
-          
-          <Card className="border-l-4 border-l-primary">
+        <div ref={cardsRef} className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <WeatherWidget className="kpi-card md:col-span-2 lg:col-span-1" />
+
+          <Card className="kpi-card border-l-4 border-l-primary">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Animales</CardTitle>
               <Beef className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{kpis.totalAnimales}</div>
+              <div className="text-2xl font-bold font-data">{kpis.totalAnimales}</div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-green-500" />
                 +{kpis.cambioMensual} este mes
@@ -80,39 +98,39 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-accent">
+          <Card className="kpi-card border-l-4 border-l-accent">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Hembras en Lactancia</CardTitle>
               <Milk className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{kpis.hembrasLactancia}</div>
+              <div className="text-2xl font-bold font-data">{kpis.hembrasLactancia}</div>
               <p className="text-xs text-muted-foreground">
                 {kpis.totalAnimales > 0 ? Math.round((kpis.hembrasLactancia / kpis.totalAnimales) * 100) : 0}% del hato
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-500">
+          <Card className="kpi-card border-l-4 border-l-green-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Producción Diaria</CardTitle>
               <Droplets className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{kpis.produccionDiaria.toFixed(1)} L</div>
+              <div className="text-2xl font-bold font-data">{kpis.produccionDiaria.toFixed(1)} L</div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 Promedio: {kpis.produccionPromedio} L/vaca
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-red-500">
+          <Card className="kpi-card border-l-4 border-l-red-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Alertas Activas</CardTitle>
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-500">{kpis.alertasActivas}</div>
+              <div className="text-2xl font-bold font-data text-red-500">{kpis.alertasActivas}</div>
               <p className="text-xs text-muted-foreground">
                 Requieren atención
               </p>

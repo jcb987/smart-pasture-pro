@@ -88,7 +88,8 @@ export const useAIAssistant = () => {
           const parsed = JSON.parse(jsonStr);
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) onDelta(content);
-        } catch {
+        } catch (parseError) {
+          console.warn('[AI Stream] Error parsing chunk, buffering:', parseError);
           textBuffer = line + '\n' + textBuffer;
           break;
         }
@@ -108,7 +109,9 @@ export const useAIAssistant = () => {
           const parsed = JSON.parse(jsonStr);
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) onDelta(content);
-        } catch { /* ignore */ }
+        } catch (parseError) {
+          console.warn('[AI Stream] Error parsing final chunk, skipping:', parseError);
+        }
       }
     }
 

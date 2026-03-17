@@ -68,7 +68,7 @@ export const useAPIKeys = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setApiKeys((data as any[]) || []);
+      setApiKeys((data as APIKey[]) || []);
     } catch (error: any) {
       console.error('Error fetching API keys:', error);
     } finally {

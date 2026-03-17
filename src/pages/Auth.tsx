@@ -151,11 +151,11 @@ const Auth = () => {
 
     setIsLoading(true);
 
-    if (password.length < 6) {
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
       toast({
         variant: 'destructive',
-        title: 'Contraseña muy corta',
-        description: 'La contraseña debe tener al menos 6 caracteres.',
+        title: 'Contraseña débil',
+        description: 'Mínimo 8 caracteres, una letra mayúscula y un número.',
       });
       setIsLoading(false);
       return;
@@ -245,11 +245,11 @@ const Auth = () => {
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
       toast({
         variant: 'destructive',
-        title: 'Contraseña muy corta',
-        description: 'La contraseña debe tener al menos 6 caracteres.',
+        title: 'Contraseña débil',
+        description: 'Mínimo 8 caracteres, una letra mayúscula y un número.',
       });
       return;
     }

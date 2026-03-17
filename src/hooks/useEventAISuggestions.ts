@@ -78,7 +78,8 @@ export function useEventAISuggestions({ animalId, open }: UseEventAISuggestionsP
         if (!profileData?.organization_id) return;
 
         // Fetch animal info, weights, health events, repro events, and vaccinations in parallel
-        const [animalResult, weightsResult, healthResult, reproResult, vaccinationsResult] = await Promise.all([
+        // Using allSettled so a single query failure doesn't break the whole feature
+        const [animalResult, weightsResult, healthResult, reproResult, vaccinationsResult] = await Promise.allSettled([
           supabase
             .from('animals')
             .select('tag_id, name, birth_date, category, breed, sex, reproductive_status, current_weight, total_calvings')
@@ -114,9 +115,15 @@ export function useEventAISuggestions({ animalId, open }: UseEventAISuggestionsP
             .limit(10),
         ]);
 
+        const animalData = animalResult.status === 'fulfilled' ? animalResult.value : { data: null, error: null };
+        const weightsData = weightsResult.status === 'fulfilled' ? weightsResult.value : { data: null, error: null };
+        const healthData = healthResult.status === 'fulfilled' ? healthResult.value : { data: null, error: null };
+        const reproData = reproResult.status === 'fulfilled' ? reproResult.value : { data: null, error: null };
+        const vaccinationsData = vaccinationsResult.status === 'fulfilled' ? vaccinationsResult.value : { data: null, error: null };
+
         // Get herd average for comparison
         let herdAverages = null;
-        if (animalResult.data?.category) {
+        if (animalData.data?.category) {
           const { data: avgData } = await supabase
             .from('animals')
             .select('current_weight')
@@ -130,30 +137,30 @@ export function useEventAISuggestions({ animalId, open }: UseEventAISuggestionsP
             if (weights.length > 0) {
               herdAverages = {
                 avgWeight: weights.reduce((a, b) => a + b, 0) / weights.length,
-                category: animalResult.data.category,
+                category: animalData.data.category,
               };
             }
           }
         }
 
         setHistory({
-          weights: (weightsResult.data || []).map(w => ({
+          weights: (weightsData.data || []).map(w => ({
             weight: w.weight!,
             date: w.event_date,
           })),
-          healthEvents: healthResult.data || [],
-          reproEvents: (reproResult.data || []).map(r => ({
+          healthEvents: healthData.data || [],
+          reproEvents: (reproData.data || []).map(r => ({
             event_type: r.event_type,
             result: (r.details as { result?: string })?.result,
             date: r.event_date,
           })),
-          vaccinations: (vaccinationsResult.data || [])
+          vaccinations: (vaccinationsData.data || [])
             .filter(v => v.medication)
             .map(v => ({
               vaccine: v.medication!,
               date: v.event_date,
             })),
-          animalInfo: animalResult.data || null,
+          animalInfo: animalData.data || null,
           herdAverages,
         });
       } catch (err) {

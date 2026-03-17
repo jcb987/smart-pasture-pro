@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import { offlineDB, initDB } from '@/lib/offlineDB';
+import { getOrgId } from '@/hooks/useOrgId';
 
 export interface HealthEvent {
   id: string;
@@ -100,27 +101,6 @@ export const useHealth = () => {
   const { user } = useAuth();
   const { isOnline, saveOffline } = useOffline();
 
-  const getOrganizationId = async () => {
-    // Try from cache first if offline
-    if (!isOnline) {
-      const cachedOrgId = await offlineDB.getMetadata<string>('organizationId');
-      if (cachedOrgId) return cachedOrgId;
-    }
-
-    if (!user) return null;
-    const { data } = await supabase
-      .from('profiles')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    
-    const orgId = data?.organization_id || null;
-    if (orgId) {
-      await offlineDB.setMetadata('organizationId', orgId);
-    }
-    return orgId;
-  };
-
   const fetchHealthEvents = useCallback(async () => {
     try {
       await initDB();
@@ -205,7 +185,7 @@ export const useHealth = () => {
     cost?: number;
     notes?: string;
   }) => {
-    const orgId = organizationId || await getOrganizationId();
+    const orgId = organizationId || await getOrgId(isOnline);
     if (!orgId) {
       toast({ title: 'Error', description: 'Organización no encontrada', variant: 'destructive' });
       return null;
@@ -316,7 +296,7 @@ export const useHealth = () => {
     scheduled_date: string;
     notes?: string;
   }) => {
-    const orgId = organizationId || await getOrganizationId();
+    const orgId = organizationId || await getOrgId(isOnline);
     if (!orgId) {
       toast({ title: 'Error', description: 'Organización no encontrada', variant: 'destructive' });
       return null;
@@ -521,7 +501,7 @@ export const useHealth = () => {
   useEffect(() => {
     const init = async () => {
       await initDB();
-      const orgId = await getOrganizationId();
+      const orgId = await getOrgId(isOnline);
       setOrganizationId(orgId);
       if (orgId || !isOnline) {
         await fetchAll();

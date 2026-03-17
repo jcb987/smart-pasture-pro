@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOffline } from '@/contexts/OfflineContext';
 import { offlineDB, initDB } from '@/lib/offlineDB';
+import { getOrgId } from '@/hooks/useOrgId';
 
 export type AnimalCategory = 'vaca' | 'toro' | 'novilla' | 'novillo' | 'ternera' | 'ternero' | 'becerra' | 'becerro' | 'bufala' | 'bufalo';
 export type AnimalStatus = 'activo' | 'vendido' | 'muerto' | 'descartado' | 'trasladado';
@@ -78,32 +79,6 @@ export function useAnimals() {
   const { toast } = useToast();
   const { isOnline, saveOffline } = useOffline();
 
-  const getOrganizationId = async () => {
-    // Try from cache first if offline
-    if (!isOnline) {
-      const cachedOrgId = await offlineDB.getMetadata<string>('organizationId');
-      if (cachedOrgId) return cachedOrgId;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const orgId = profile?.organization_id || null;
-    
-    // Cache for offline use
-    if (orgId) {
-      await offlineDB.setMetadata('organizationId', orgId);
-    }
-    
-    return orgId;
-  };
-
   const fetchAnimals = useCallback(async () => {
     try {
       setLoading(true);
@@ -168,7 +143,7 @@ export function useAnimals() {
 
   const createAnimal = async (animal: Omit<Animal, 'id' | 'created_at' | 'updated_at' | 'organization_id'>) => {
     try {
-      const orgId = organizationId || await getOrganizationId();
+      const orgId = organizationId || await getOrgId(isOnline);
       if (!orgId) {
         throw new Error('No se encontró la organización');
       }
@@ -292,7 +267,7 @@ export function useAnimals() {
 
   const addAnimalEvent = async (event: { animal_id: string; event_type: string; event_date: string; weight?: number | null; notes?: string | null }) => {
     try {
-      const orgId = organizationId || await getOrganizationId();
+      const orgId = organizationId || await getOrgId(isOnline);
       if (!orgId) throw new Error('No se encontró la organización');
 
       const newEvent = {
@@ -410,7 +385,7 @@ export function useAnimals() {
   useEffect(() => {
     const init = async () => {
       await initDB();
-      const orgId = await getOrganizationId();
+      const orgId = await getOrgId(isOnline);
       setOrganizationId(orgId);
       await fetchAnimals();
     };

@@ -90,7 +90,7 @@ serve(async (req) => {
     // Sanitize tableName to prevent injection in prompts
     const safeTableName = tableName.replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 50);
 
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: 'API key not configured' }),
@@ -142,14 +142,14 @@ Si no encuentras datos tabulares, responde:
 
     console.log('Sending PDF to AI for extraction...');
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { 

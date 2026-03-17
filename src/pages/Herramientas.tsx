@@ -25,6 +25,8 @@ import { ScoreDefinitionsManager } from '@/components/scores/ScoreDefinitionsMan
 import { RecordScoreDialog } from '@/components/scores/RecordScoreDialog';
 import { InvoicesTable } from '@/components/facturas/InvoicesTable';
 import { CreateInvoiceDialog } from '@/components/facturas/CreateInvoiceDialog';
+import { InvoiceDetailModal } from '@/components/facturas/InvoiceDetailModal';
+import { Invoice } from '@/hooks/useInvoices';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -42,6 +44,7 @@ const Herramientas = () => {
 
   // Invoices state
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const { invoices, loading: invoicesLoading, createInvoice, markAsPaid, deleteInvoice, overdueInvoices, totalPending } = useInvoices();
 
   // RFID state
@@ -180,7 +183,7 @@ const Herramientas = () => {
               loading={invoicesLoading}
               onMarkAsPaid={markAsPaid}
               onDelete={deleteInvoice}
-              onView={() => {}}
+              onView={(invoice) => setSelectedInvoice(invoice)}
             />
           </TabsContent>
 
@@ -489,6 +492,13 @@ const Herramientas = () => {
         open={invoiceDialogOpen}
         onOpenChange={setInvoiceDialogOpen}
         onSubmit={createInvoice}
+      />
+
+      <InvoiceDetailModal
+        invoice={selectedInvoice}
+        open={!!selectedInvoice}
+        onOpenChange={(open) => { if (!open) setSelectedInvoice(null); }}
+        onMarkAsPaid={markAsPaid}
       />
     </DashboardLayout>
   );

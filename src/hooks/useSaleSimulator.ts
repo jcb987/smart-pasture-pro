@@ -103,9 +103,10 @@ export const useSaleSimulator = () => {
     const projectedRevenue = totalAnimals * targetWeight * marketPricePerKg;
 
     // Estimate costs based on historical data
-    const dailyCostPerAnimal = costPerUnit.costoPorKiloCarne > 0 
-      ? costPerUnit.costoPorKiloCarne * dailyGainKg 
-      : 15000; // Default 15k COP/día
+    const usingFallbackCost = costPerUnit.costoPorKiloCarne <= 0;
+    const dailyCostPerAnimal = usingFallbackCost
+      ? 15000 // Default 15k COP/día cuando no hay datos de costos reales
+      : costPerUnit.costoPorKiloCarne * dailyGainKg;
     const projectedCosts = totalAnimals * dailyCostPerAnimal * daysToTarget;
 
     // Calculate profit
@@ -123,6 +124,7 @@ export const useSaleSimulator = () => {
       projectedProfit,
       profitMarginPercentage,
       marketPricePerKg,
+      usingFallbackCost,
     };
   };
 

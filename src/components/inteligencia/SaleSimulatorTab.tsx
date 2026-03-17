@@ -208,7 +208,14 @@ export const SaleSimulatorTab = () => {
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 rounded-lg bg-red-500/10">
-                  <span className="text-muted-foreground">Costos Estimados</span>
+                  <div>
+                    <span className="text-muted-foreground">Costos Estimados</span>
+                    {simulationResult.usingFallbackCost && (
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        ⚠ Usando estimado (15.000 COP/día) — registra costos reales para mayor precisión
+                      </p>
+                    )}
+                  </div>
                   <span className="text-xl font-bold text-red-600">
                     {formatCurrency(simulationResult.projectedCosts)}
                   </span>

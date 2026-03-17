@@ -24,7 +24,14 @@ export function useImportMilk() {
       .select('id, tag_id')
       .eq('organization_id', profile.organization_id);
 
-    const animalMap = new Map((animals || []).map(a => [a.tag_id.toLowerCase().trim(), a.id]));
+    const normalizeTag = (tag: string) =>
+      tag.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/^0+/, '');
+
+    const animalMap = new Map<string, string>();
+    for (const a of animals || []) {
+      animalMap.set(a.tag_id.toLowerCase().trim(), a.id);
+      animalMap.set(normalizeTag(a.tag_id), a.id);
+    }
 
     const recordsToInsert = [];
     const errors: string[] = [];
@@ -37,7 +44,7 @@ export function useImportMilk() {
         continue;
       }
 
-      const animalId = animalMap.get(animalTag);
+      const animalId = animalMap.get(animalTag) ?? animalMap.get(normalizeTag(animalTag));
 
       if (!animalId) {
         errors.push(`Animal "${row.animal_tag}" no encontrado en el sistema`);
@@ -66,12 +73,15 @@ export function useImportMilk() {
         continue;
       }
 
+      const total = parseNum(row.total_liters) ?? ((morning ?? 0) + (afternoon ?? 0) + (evening ?? 0));
+
       recordsToInsert.push({
         animal_id: animalId,
         production_date: row.production_date,
         morning_liters: morning,
         afternoon_liters: afternoon,
         evening_liters: evening,
+        total_liters: total,
         fat_percentage: parseNum(row.fat_percentage),
         protein_percentage: parseNum(row.protein_percentage),
         somatic_cell_count: row.somatic_cell_count ? parseInt(String(row.somatic_cell_count)) : null,

@@ -267,8 +267,11 @@ const ProduccionLeche = () => {
         config={milkImportConfig}
         existingData={records}
         onImport={async (data) => {
-          await importData(data);
-          fetchRecords();
+          try {
+            await importData(data);
+          } finally {
+            fetchRecords();
+          }
         }}
       />
 

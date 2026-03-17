@@ -7,11 +7,46 @@ export interface UserModulePermission {
   permission: string;
 }
 
+/**
+ * Pre-defined module access per role.
+ * Ganadero (owner) and admin always get full access — not listed here.
+ */
+const ROLE_MODULE_ACCESS: Record<string, string[]> = {
+  veterinario: [
+    'dashboard',
+    'animales',
+    'reproduccion',
+    'produccion-leche',
+    'produccion-carne',
+    'salud',
+    'alimentacion',
+    'praderas',
+    'genetica',
+    'reportes',
+    'app-movil',
+    'ayuda',
+  ],
+  tecnico: [
+    'dashboard',
+    'animales',
+    'reproduccion',
+    'produccion-leche',
+    'produccion-carne',
+    'salud',
+    'alimentacion',
+    'praderas',
+    'insumos',
+    'app-movil',
+    'ayuda',
+  ],
+};
+
 export function useUserPermissions() {
   const { user } = useAuth();
   const [permissions, setPermissions] = useState<UserModulePermission[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTeamMember, setIsTeamMember] = useState(false);
+  const [roleModules, setRoleModules] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,7 +68,35 @@ export function useUserPermissions() {
         const userIsAdmin = !!adminRole;
         setIsAdmin(userIsAdmin);
 
-        // Check if team member
+        // If admin, no need to check further — they see everything
+        if (userIsAdmin) {
+          setRoleModules(null);
+          setPermissions([]);
+          setLoading(false);
+          return;
+        }
+
+        // Check for role-specific access (veterinario, tecnico)
+        const { data: userRoles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
+
+        const roles = (userRoles || []).map(r => r.role);
+
+        if (roles.includes('veterinario')) {
+          setRoleModules(ROLE_MODULE_ACCESS.veterinario);
+          setLoading(false);
+          return;
+        }
+
+        if (roles.includes('tecnico')) {
+          setRoleModules(ROLE_MODULE_ACCESS.tecnico);
+          setLoading(false);
+          return;
+        }
+
+        // Ganadero and others: check is_team_member for granular permissions
         const { data: profile } = await supabase
           .from('profiles')
           .select('is_team_member')
@@ -43,14 +106,14 @@ export function useUserPermissions() {
         const teamMember = (profile as any)?.is_team_member === true;
         setIsTeamMember(teamMember);
 
-        // If admin, no need to fetch granular permissions - they see everything
-        if (userIsAdmin) {
-          setPermissions([]);
+        if (!teamMember) {
+          // Owner — full access, no need to fetch granular permissions
+          setRoleModules(null);
           setLoading(false);
           return;
         }
 
-        // Fetch user permissions
+        // Team member with explicit permissions
         const { data: perms } = await supabase
           .from('user_permissions')
           .select('module_name, permission')
@@ -68,8 +131,9 @@ export function useUserPermissions() {
   }, [user]);
 
   const hasModuleAccess = (moduleName: string): boolean => {
-    if (loading) return false; // Don't grant access while loading
+    if (loading) return false;
     if (isAdmin) return true;
+    if (roleModules !== null) return roleModules.includes(moduleName);
     if (!isTeamMember) return true; // Owner sees everything
     return permissions.some(p => p.module_name === moduleName && p.permission === 'read');
   };
@@ -77,6 +141,7 @@ export function useUserPermissions() {
   const hasWriteAccess = (moduleName: string): boolean => {
     if (loading) return false;
     if (isAdmin) return true;
+    if (roleModules !== null) return roleModules.includes(moduleName);
     if (!isTeamMember) return true;
     return permissions.some(p => p.module_name === moduleName && p.permission === 'write');
   };
@@ -84,6 +149,7 @@ export function useUserPermissions() {
   const hasDeleteAccess = (moduleName: string): boolean => {
     if (loading) return false;
     if (isAdmin) return true;
+    if (roleModules !== null) return false; // Role-based users can't delete by default
     if (!isTeamMember) return true;
     return permissions.some(p => p.module_name === moduleName && p.permission === 'delete');
   };
@@ -92,6 +158,7 @@ export function useUserPermissions() {
     permissions,
     isAdmin,
     isTeamMember,
+    roleModules,
     loading,
     hasModuleAccess,
     hasWriteAccess,

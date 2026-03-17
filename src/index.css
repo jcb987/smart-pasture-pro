@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,104 +6,98 @@
 
 @layer base {
   :root {
-    /* ── Organic Tech — Musgo / Arcilla / Crema / Carbón ── */
-
-    /* Crema #F2F0E9 */
-    --background: 45 29% 93%;
-    /* Carbón #1A1A1A */
-    --foreground: 0 0% 10%;
+    /* Agro Data - Agricultural Green Theme */
+    --background: 45 30% 98%;
+    --foreground: 150 25% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 150 25% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 150 25% 12%;
 
-    /* Musgo #2E4036 */
-    --primary: 147 16% 22%;
-    --primary-foreground: 45 29% 93%;
+    /* Deep forest green */
+    --primary: 152 45% 22%;
+    --primary-foreground: 45 30% 98%;
 
-    /* Crema oscuro */
-    --secondary: 45 20% 87%;
-    --secondary-foreground: 0 0% 10%;
+    /* Warm cream */
+    --secondary: 40 35% 94%;
+    --secondary-foreground: 150 25% 12%;
 
-    --muted: 45 15% 87%;
-    --muted-foreground: 0 0% 38%;
+    --muted: 45 20% 92%;
+    --muted-foreground: 150 15% 40%;
 
-    /* Arcilla #CC5833 */
-    --accent: 19 60% 50%;
-    --accent-foreground: 0 0% 100%;
+    /* Warm amber accent */
+    --accent: 38 92% 50%;
+    --accent-foreground: 150 25% 12%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 45 29% 93%;
+    --destructive-foreground: 45 30% 98%;
 
-    --border: 45 15% 84%;
-    --input: 45 15% 84%;
-    --ring: 147 16% 22%;
+    --border: 45 20% 88%;
+    --input: 45 20% 88%;
+    --ring: 152 45% 22%;
 
-    /* 16px radius (sube de 12px) */
-    --radius: 1rem;
+    --radius: 0.75rem;
 
-    /* Gradientes Organic Tech */
-    --gradient-hero: linear-gradient(135deg, hsl(147 16% 22%) 0%, hsl(147 12% 28%) 60%, hsl(19 60% 50% / 0.15) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(45 29% 97%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(19 60% 50%) 0%, hsl(19 65% 43%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(45 29% 93%) 0%, hsl(45 20% 89%) 100%);
-    --gradient-musgo: linear-gradient(135deg, hsl(147 16% 22%) 0%, hsl(147 18% 32%) 100%);
+    /* Custom tokens */
+    --gradient-hero: linear-gradient(135deg, hsl(152 45% 22%) 0%, hsl(152 35% 28%) 50%, hsl(38 92% 50% / 0.1) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(45 30% 98%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(28 90% 55%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(45 30% 98%) 0%, hsl(45 20% 95%) 100%);
+    
+    --shadow-sm: 0 1px 2px hsl(150 25% 12% / 0.05);
+    --shadow-md: 0 4px 12px hsl(150 25% 12% / 0.08);
+    --shadow-lg: 0 8px 30px hsl(150 25% 12% / 0.12);
+    --shadow-glow: 0 0 40px hsl(38 92% 50% / 0.2);
 
-    --shadow-sm: 0 1px 2px hsl(147 16% 22% / 0.06);
-    --shadow-md: 0 4px 16px hsl(147 16% 22% / 0.10);
-    --shadow-lg: 0 8px 40px hsl(147 16% 22% / 0.18);
-    --shadow-glow: 0 0 60px hsl(19 60% 50% / 0.25);
-
-    /* Sidebar Carbón oscuro */
-    --sidebar-background: 0 0% 10%;
-    --sidebar-foreground: 45 29% 90%;
-    --sidebar-primary: 147 16% 30%;
-    --sidebar-primary-foreground: 45 29% 93%;
-    --sidebar-accent: 0 0% 16%;
-    --sidebar-accent-foreground: 45 29% 90%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 19 60% 50%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 0 0% 10%;
-    --foreground: 45 29% 93%;
+    --background: 150 20% 8%;
+    --foreground: 45 30% 95%;
 
-    --card: 0 0% 14%;
-    --card-foreground: 45 29% 93%;
+    --card: 150 18% 12%;
+    --card-foreground: 45 30% 95%;
 
-    --popover: 0 0% 14%;
-    --popover-foreground: 45 29% 93%;
+    --popover: 150 18% 12%;
+    --popover-foreground: 45 30% 95%;
 
-    --primary: 147 20% 40%;
-    --primary-foreground: 0 0% 10%;
+    --primary: 152 40% 45%;
+    --primary-foreground: 150 20% 8%;
 
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 45 29% 93%;
+    --secondary: 150 15% 18%;
+    --secondary-foreground: 45 30% 95%;
 
-    --muted: 0 0% 18%;
+    --muted: 150 15% 18%;
     --muted-foreground: 45 15% 60%;
 
-    --accent: 19 60% 55%;
-    --accent-foreground: 0 0% 10%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 150 20% 8%;
 
     --destructive: 0 62.8% 50%;
-    --destructive-foreground: 45 29% 93%;
+    --destructive-foreground: 45 30% 95%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 147 20% 40%;
+    --border: 150 15% 20%;
+    --input: 150 15% 20%;
+    --ring: 152 40% 45%;
 
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 45 29% 90%;
-    --sidebar-primary: 147 20% 40%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 14%;
-    --sidebar-accent-foreground: 45 29% 90%;
-    --sidebar-border: 0 0% 16%;
-    --sidebar-ring: 19 60% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -113,45 +107,19 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     @apply font-bold tracking-tight;
   }
-}
-
-/* ── Textura de ruido sutil ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.028;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-size: 200px 200px;
-}
-
-/* ── Perspective para 3D transforms ── */
-.perspective-1000 {
-  perspective: 1000px;
-}
-
-.preserve-3d {
-  transform-style: preserve-3d;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
-  }
-
-  /* Fuente de datos */
-  .font-data {
-    font-family: 'IBM Plex Mono', monospace;
   }
 
   .animate-fade-in {
@@ -175,37 +143,46 @@ body::before {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-
+  
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-@keyframes orb-glow {
-  0%, 100% { box-shadow: 0 0 30px hsl(19 60% 50% / 0.3), 0 0 60px hsl(147 16% 22% / 0.2); }
-  50% { box-shadow: 0 0 50px hsl(19 60% 50% / 0.5), 0 0 100px hsl(147 16% 22% / 0.35); }
-}
-
-.orb-glow {
-  animation: orb-glow 4s ease-in-out infinite;
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }

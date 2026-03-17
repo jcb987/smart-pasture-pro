@@ -63,9 +63,27 @@ Campos esperados para la tabla "${safeTableName}":
 ${JSON.stringify(expectedColumns || [], null, 2)}
 
 Reglas CRÍTICAS:
+
+⚠️ TABLA PIVOT — REGLA MÁS IMPORTANTE:
+Si la imagen muestra una tabla donde las FECHAS están en las CABECERAS DE COLUMNAS (ej: "Enero 9", "enero 17", "Enero 21", "Febrero 7") y los ANIMALES/ARETES están en las FILAS, esto es una TABLA PIVOT de producción de leche.
+En este caso DEBES transformar a formato largo (una fila por cada animal+fecha+valor):
+- headers de salida: ["animal_tag", "production_date", "total_liters"]
+- rows de salida: una fila por cada celda NO VACÍA = [arete, "YYYY-MM-DD", valor_numérico]
+- mappings de salida:
+  [
+    {"excelColumn": "animal_tag", "dbColumn": "animal_tag", "confidence": 99, "suggestedBy": "ai"},
+    {"excelColumn": "production_date", "dbColumn": "production_date", "confidence": 99, "suggestedBy": "ai"},
+    {"excelColumn": "total_liters", "dbColumn": "total_liters", "confidence": 99, "suggestedBy": "ai"}
+  ]
+- Para convertir fechas de columnas: usa el año del título/encabezado del documento. Si no se especifica, usa el año actual (${today.substring(0,4)}).
+  Ejemplos: "Enero 9" → "YYYY-01-09", "enero 17" → "YYYY-01-17", "Febrero 7" → "YYYY-02-07"
+- OMITE las filas donde el animal no tiene NINGÚN valor de producción en ninguna fecha.
+- NO emitas filas con celdas vacías; solo emite filas donde hay un valor numérico real.
+
+OTRAS REGLAS:
 - FECHA GLOBAL: Si encuentras una fecha en el título o encabezado del documento (no en las columnas de la tabla), pon esa fecha en el campo "globalDate" del JSON. Esta fecha se aplicará a TODAS las filas que no tengan su propia fecha. Convierte la fecha al formato YYYY-MM-DD.
 - Si una fila de la tabla tiene su propia fecha, usa esa fecha en lugar de la global.
-- Si ves números que parecen chapetas/arete de animales, mapéalos a "tag_id"  
+- Si ves números que parecen chapetas/arete de animales, mapéalos a "tag_id"
 - Si ves estados como PRE, ABT, GES, mapéalos a reproductive_status
 - Si ves edades en años (ANOS), calcula birth_date restando esos años desde la fecha de hoy (${today})
 - Si ves condición corporal (1-5), mapéala a condition_score

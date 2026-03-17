@@ -225,6 +225,99 @@ export function SmartImportDialog({
     return null;
   };
 
+  // Pivot-table detection and unpivot for handwritten milk production sheets
+  // (dates as column headers: "Enero 9", "Febrero 7", etc.)
+  const detectAndUnpivotPivotTable = (
+    hdrs: string[],
+    rows: unknown[][],
+    mappings: ColumnMapping[],
+    detectedYear?: number,
+  ): { headers: string[]; rows: unknown[][]; mappings: ColumnMapping[]; wasPivot: boolean } => {
+    const MONTH_MAP: Record<string, number> = {
+      enero: 1, ene: 1, january: 1, jan: 1,
+      febrero: 2, feb: 2, february: 2,
+      marzo: 3, mar: 3, march: 3,
+      abril: 4, abr: 4, april: 4, apr: 4,
+      mayo: 5, may: 5,
+      junio: 6, jun: 6, june: 6,
+      julio: 7, jul: 7, july: 7,
+      agosto: 8, ago: 8, august: 8, aug: 8,
+      septiembre: 9, sep: 9, sept: 9, september: 9,
+      octubre: 10, oct: 10, october: 10,
+      noviembre: 11, nov: 11, november: 11,
+      diciembre: 12, dic: 12, december: 12, dec: 12,
+    };
+    const norm = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+    const parseHeaderDate = (header: string, year: number): string | null => {
+      const n = norm(header);
+      for (const [name, monthNum] of Object.entries(MONTH_MAP)) {
+        const m = n.match(new RegExp(`${name}\\s+(\\d{1,2})`)) ||
+                  n.match(new RegExp(`(\\d{1,2})\\s+${name}`));
+        if (m) {
+          const day = parseInt(m[1], 10);
+          if (day >= 1 && day <= 31)
+            return `${year}-${String(monthNum).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        }
+      }
+      const slash = n.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+      if (slash) {
+        const d = parseInt(slash[1], 10), mo = parseInt(slash[2], 10);
+        if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12)
+          return `${year}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(n)) return n;
+      return null;
+    };
+
+    const isDateHeader = (h: string): boolean => {
+      const n = norm(h);
+      for (const name of Object.keys(MONTH_MAP)) { if (n.includes(name)) return true; }
+      return /\d{1,2}[\/\-]\d{1,2}/.test(n) || /^\d{4}-\d{2}-\d{2}$/.test(n);
+    };
+
+    const dateColIdxs = hdrs.reduce<number[]>((acc, h, i) => { if (isDateHeader(h)) acc.push(i); return acc; }, []);
+    if (dateColIdxs.length < 2) return { headers: hdrs, rows, mappings, wasPivot: false };
+
+    let year = detectedYear ?? new Date().getFullYear();
+    for (const h of hdrs) {
+      const ym = h.match(/\b(20\d{2})\b/);
+      if (ym) { year = parseInt(ym[1], 10); break; }
+    }
+
+    const animalMapping = mappings.find(m => m.dbColumn === 'animal_tag');
+    let animalColIdx = animalMapping ? hdrs.findIndex(h => h === animalMapping.excelColumn) : -1;
+    if (animalColIdx === -1) animalColIdx = hdrs.findIndex((_, i) => !dateColIdxs.includes(i));
+
+    const unpivotedRows: unknown[][] = [];
+    for (const row of rows) {
+      const r = row as unknown[];
+      const tag = animalColIdx >= 0 ? String(r[animalColIdx] ?? '').trim() : '';
+      if (!tag) continue;
+      for (const ci of dateColIdxs) {
+        const val = r[ci];
+        if (val === null || val === undefined || String(val).trim() === '') continue;
+        const num = parseFloat(String(val));
+        if (isNaN(num)) continue;
+        const iso = parseHeaderDate(hdrs[ci], year);
+        if (!iso) continue;
+        unpivotedRows.push([tag, iso, num]);
+      }
+    }
+
+    return {
+      headers: ['animal_tag', 'production_date', 'total_liters'],
+      rows: unpivotedRows,
+      mappings: [
+        { excelColumn: 'animal_tag',      dbColumn: 'animal_tag',      confidence: 99, suggestedBy: 'ai' },
+        { excelColumn: 'production_date', dbColumn: 'production_date', confidence: 99, suggestedBy: 'ai' },
+        { excelColumn: 'total_liters',    dbColumn: 'total_liters',    confidence: 99, suggestedBy: 'ai' },
+      ],
+      wasPivot: true,
+    };
+  };
+
   // Parse image (JPEG/PNG) with AI vision
   const parseImageWithAI = async (file: File): Promise<{ headers: string[]; rows: unknown[][]; mappings: ColumnMapping[]; analysis: string; globalDate?: string | null } | null> => {
     try {
@@ -341,13 +434,25 @@ export function SmartImportDialog({
         const detectedMappings = (imageResult.mappings && imageResult.mappings.length > 0)
           ? imageResult.mappings
           : fallbackMapping(headers);
-        
-        setColumnMappings(detectedMappings);
-        const analysisText = imageResult.analysis + (imageResult.globalDate ? ` | Fecha global detectada: ${imageResult.globalDate}` : '');
+
+        // Detect and unpivot pivot-format sheets (dates as column headers)
+        const yearHint = imageResult.globalDate
+          ? parseInt(imageResult.globalDate.slice(0, 4), 10) || undefined
+          : undefined;
+        const unpivot = detectAndUnpivotPivotTable(headers, dataRows, detectedMappings, yearHint);
+        const finalHeaders  = unpivot.wasPivot ? unpivot.headers  : headers;
+        const finalRows     = unpivot.wasPivot ? unpivot.rows     : dataRows;
+        const finalMappings = unpivot.wasPivot ? unpivot.mappings : detectedMappings;
+        if (unpivot.wasPivot) { setRawHeaders(finalHeaders); setRawData(finalRows); }
+
+        setColumnMappings(finalMappings);
+        const analysisText = imageResult.analysis
+          + (imageResult.globalDate ? ` | Fecha global: ${imageResult.globalDate}` : '')
+          + (unpivot.wasPivot ? ` | Tabla pivot → ${unpivot.rows.length} registros` : '');
         setAiAnalysis(analysisText);
 
         // Skip mapping step - process directly
-        processWithMappings(headers, dataRows, detectedMappings, imageResult.globalDate || null);
+        processWithMappings(finalHeaders, finalRows, finalMappings, imageResult.globalDate || null);
         return;
       }
 

@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { ChevronsUpDown, Check } from 'lucide-react';
+import { ChevronsUpDown, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useTerminology } from '@/hooks/useTerminology';
 
 interface Animal {
   id: string;
@@ -55,6 +56,8 @@ export const AddHealthEventDialog = ({
   onPalpationSubmit,
   commonDiagnoses 
 }: AddHealthEventDialogProps) => {
+  const { isVet, t } = useTerminology();
+  const [showTreatmentDetails, setShowTreatmentDetails] = useState(false);
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(false);
   const [animalOpen, setAnimalOpen] = useState(false);
@@ -179,7 +182,7 @@ export const AddHealthEventDialog = ({
             <TabsTrigger value="tratamiento">Tratamiento</TabsTrigger>
             <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>
             <TabsTrigger value="vacuna">Vacuna</TabsTrigger>
-            <TabsTrigger value="palpacion">Palpación</TabsTrigger>
+            <TabsTrigger value="palpacion">{t('palpacion')}</TabsTrigger>
           </TabsList>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
@@ -253,54 +256,107 @@ export const AddHealthEventDialog = ({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Medicamento</Label>
-                  <Input
-                    placeholder="Nombre del medicamento"
-                    value={form.medication}
-                    onChange={(e) => setForm({ ...form, medication: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Dosis</Label>
-                  <Input
-                    placeholder="Ej: 10ml"
-                    value={form.dosage}
-                    onChange={(e) => setForm({ ...form, dosage: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>Medicamento</Label>
+                <Input
+                  placeholder="Nombre del medicamento"
+                  value={form.medication}
+                  onChange={(e) => setForm({ ...form, medication: e.target.value })}
+                />
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Duración (días)</Label>
-                  <Input
-                    type="number"
-                    placeholder="5"
-                    value={form.duration_days}
-                    onChange={(e) => setForm({ ...form, duration_days: e.target.value })}
-                  />
+
+              {/* Detalles avanzados — colapsables para no-vets */}
+              {isVet ? (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Dosis</Label>
+                    <Input
+                      placeholder="Ej: 10ml"
+                      value={form.dosage}
+                      onChange={(e) => setForm({ ...form, dosage: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Duración (días)</Label>
+                    <Input
+                      type="number"
+                      placeholder="5"
+                      value={form.duration_days}
+                      onChange={(e) => setForm({ ...form, duration_days: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('retiro')}</Label>
+                    <Input
+                      type="number"
+                      placeholder="7"
+                      value={form.withdrawal_days}
+                      onChange={(e) => setForm({ ...form, withdrawal_days: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Costo ($)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="50.00"
+                      value={form.cost}
+                      onChange={(e) => setForm({ ...form, cost: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Días Retiro</Label>
-                  <Input
-                    type="number"
-                    placeholder="7"
-                    value={form.withdrawal_days}
-                    onChange={(e) => setForm({ ...form, withdrawal_days: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Costo ($)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="50.00"
-                    value={form.cost}
-                    onChange={(e) => setForm({ ...form, cost: e.target.value })}
-                  />
-                </div>
-              </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowTreatmentDetails(v => !v)}
+                  >
+                    {showTreatmentDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {showTreatmentDetails ? 'Ocultar detalles' : 'Agregar dosis, duración y costo'}
+                  </button>
+                  {showTreatmentDetails && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Dosis</Label>
+                        <Input
+                          placeholder="Ej: 10ml"
+                          value={form.dosage}
+                          onChange={(e) => setForm({ ...form, dosage: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Duración (días)</Label>
+                        <Input
+                          type="number"
+                          placeholder="5"
+                          value={form.duration_days}
+                          onChange={(e) => setForm({ ...form, duration_days: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t('retiro')}</Label>
+                        <Input
+                          type="number"
+                          placeholder="7"
+                          value={form.withdrawal_days}
+                          onChange={(e) => setForm({ ...form, withdrawal_days: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Costo ($)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="50.00"
+                          value={form.cost}
+                          onChange={(e) => setForm({ ...form, cost: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </TabsContent>
 
             <TabsContent value="diagnostico" className="space-y-4 mt-0">
@@ -359,7 +415,7 @@ export const AddHealthEventDialog = ({
             {/* Palpación */}
             <TabsContent value="palpacion" className="space-y-4 mt-0">
               <div className="p-4 bg-muted/50 rounded-lg space-y-4">
-                <h4 className="font-medium">Resultado de Palpación</h4>
+                <h4 className="font-medium">{t('palpacion')}</h4>
                 <div className="space-y-2">
                   <Label>Resultado *</Label>
                   <Select value={palpationResult} onValueChange={(v) => setPalpationResult(v as 'positivo' | 'negativo')}>
@@ -386,14 +442,16 @@ export const AddHealthEventDialog = ({
               </div>
             </TabsContent>
 
-            <div className="space-y-2">
-              <Label>Veterinario</Label>
-              <Input
-                placeholder="Nombre del veterinario"
-                value={form.veterinarian}
-                onChange={(e) => setForm({ ...form, veterinarian: e.target.value })}
-              />
-            </div>
+            {isVet && (
+              <div className="space-y-2">
+                <Label>Veterinario</Label>
+                <Input
+                  placeholder="Nombre del veterinario"
+                  value={form.veterinarian}
+                  onChange={(e) => setForm({ ...form, veterinarian: e.target.value })}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Notas</Label>

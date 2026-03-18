@@ -76,21 +76,31 @@ export const MilkExportDialog = ({ open, onOpenChange, records }: MilkExportDial
       );
 
       const rows = filtered.map((r) => ({
-        Animal: r.animal?.name || r.animal?.tag_id || '-',
+        Arete: r.animal?.tag_id || '',
+        Nombre: r.animal?.name || '',
         Fecha: r.production_date,
-        'Litros Mañana': r.morning_liters || 0,
-        'Litros Tarde': r.afternoon_liters || 0,
-        'Total Litros': r.total_liters || 0,
+        'Litros Mañana': r.morning_liters ?? '',
+        'Litros Tarde': r.afternoon_liters ?? '',
+        'Litros Noche': r.evening_liters ?? '',
+        'Total Litros': r.total_liters ?? '',
+        'Grasa %': r.fat_percentage ?? '',
+        'Proteína %': r.protein_percentage ?? '',
+        CCS: r.somatic_cell_count ?? '',
         Observaciones: r.notes || '',
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
       ws['!cols'] = [
+        { wch: 14 },
         { wch: 18 },
         { wch: 12 },
         { wch: 14 },
         { wch: 14 },
         { wch: 14 },
+        { wch: 14 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 10 },
         { wch: 30 },
       ];
       const wb = XLSX.utils.book_new();

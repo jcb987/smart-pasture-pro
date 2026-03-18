@@ -97,6 +97,24 @@ export function useImportMilk() {
       throw new Error(`No hay registros válidos para importar. Errores: ${sampleErrors}${errors.length > 5 ? ` (+${errors.length - 5} más)` : ''}`);
     }
 
+    // Check which records already exist (duplicates) before inserting
+    const keys = recordsToInsert.map(r => `${r.animal_id}|${r.production_date}`);
+    const animalIds = [...new Set(recordsToInsert.map(r => r.animal_id))];
+    const dates = [...new Set(recordsToInsert.map(r => r.production_date))];
+
+    const { data: existingRecords } = await supabase
+      .from('milk_production')
+      .select('animal_id, production_date')
+      .in('animal_id', animalIds)
+      .in('production_date', dates)
+      .eq('organization_id', profile.organization_id);
+
+    const existingKeys = new Set(
+      (existingRecords || []).map(r => `${r.animal_id}|${r.production_date}`)
+    );
+    const duplicateCount = keys.filter(k => existingKeys.has(k)).length;
+    const newCount = keys.length - duplicateCount;
+
     // Insert in batches of 50 to avoid timeouts
     const batchSize = 50;
     let totalInserted = 0;
@@ -115,18 +133,21 @@ export function useImportMilk() {
       totalInserted += inserted?.length ?? 0;
     }
 
-    if (errors.length > 0) {
-      toast({
-        title: 'Importación parcial',
-        description: `${totalInserted} importados, ${errors.length} omitidos (ej: ${errors[0]})`,
-        variant: 'default',
-      });
-    } else {
-      toast({
-        title: 'Importación exitosa',
-        description: `${totalInserted} registros de leche importados`,
-      });
-    }
+    // Build descriptive message
+    const parts: string[] = [];
+    if (newCount > 0) parts.push(`${newCount} nuevos registros`);
+    if (duplicateCount > 0) parts.push(`${duplicateCount} actualizados (ya existían)`);
+    if (errors.length > 0) parts.push(`${errors.length} omitidos`);
+
+    toast({
+      title: errors.length > 0 && newCount === 0 && duplicateCount === 0
+        ? 'Importación con errores'
+        : duplicateCount > 0 && newCount === 0
+        ? 'Registros actualizados'
+        : 'Importación exitosa',
+      description: parts.join(', ') + (errors.length > 0 ? `. Ej: ${errors[0]}` : ''),
+      variant: errors.length > 0 && newCount === 0 && duplicateCount === 0 ? 'destructive' : 'default',
+    });
   };
 
   return { importData };

@@ -680,6 +680,7 @@ export function SmartImportDialog({
     // If a static template file exists for this config, download it directly
     const staticTemplates: Record<string, string> = {
       'plantilla_produccion_leche.xlsx': '/templates/plantilla_produccion_leche.xlsx',
+      'plantilla_produccion_carne.xlsx': '/templates/plantilla_produccion_carne.xlsx',
     };
     const staticPath = staticTemplates[config.templateFileName];
     if (staticPath) {

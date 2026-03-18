@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ReportData } from '@/hooks/useReports';
+import { ReportData, ReportSection } from '@/hooks/useReports';
 import {
   Table,
   TableBody,
@@ -131,7 +131,78 @@ export const ReportViewer = ({ reportData, onExportExcel, onExportPDF, onClose }
         </Card>
       )}
 
+      {/* Top Producers (milk report) */}
+      {reportData.topProducers && reportData.topProducers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Top 5 Productoras</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Animal</TableHead>
+                  <TableHead className="text-right">Total (L)</TableHead>
+                  <TableHead className="text-right">Prom. (L/día)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reportData.topProducers.map((p, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-bold text-muted-foreground">{i + 1}</TableCell>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell className="text-right">{p.total}</TableCell>
+                    <TableCell className="text-right">{p.avg}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Integral Report Sections */}
+      {reportData.sections && reportData.sections.length > 0 && (
+        <div className="space-y-4">
+          {reportData.sections.map((section: ReportSection, idx: number) => (
+            <Card key={idx}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{section.title}</CardTitle>
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {Object.entries(section.summary).map(([k, v]) => (
+                    <div key={k} className="px-3 py-1.5 rounded-md bg-muted/50 text-sm">
+                      <span className="text-muted-foreground">{k}: </span>
+                      <span className="font-semibold">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardHeader>
+              {section.rows.length > 0 && (
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {section.headers.map((h, i) => <TableHead key={i}>{h}</TableHead>)}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {section.rows.map((row, i) => (
+                        <TableRow key={i}>
+                          {row.map((cell, j) => <TableCell key={j}>{cell}</TableCell>)}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Data Table */}
+      {!reportData.sections && (
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -177,6 +248,7 @@ export const ReportViewer = ({ reportData, onExportExcel, onExportPDF, onClose }
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 };

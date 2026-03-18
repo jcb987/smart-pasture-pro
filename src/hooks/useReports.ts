@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type ReportType = 'produccion_leche' | 'produccion_carne' | 'reproduccion' | 'salud' | 'inventario' | 'costos' | 'alimentacion';
+export type ReportType = 'produccion_leche' | 'produccion_carne' | 'reproduccion' | 'salud' | 'inventario' | 'costos' | 'alimentacion' | 'terneros' | 'integral';
 
 export interface ReportFilters {
   dateFrom?: string;
@@ -24,6 +24,13 @@ export interface ReportConfig {
   category: 'produccion' | 'reproduccion' | 'salud' | 'economico';
 }
 
+export interface ReportSection {
+  title: string;
+  summary: Record<string, string | number>;
+  headers: string[];
+  rows: (string | number)[][];
+}
+
 export interface ReportData {
   title: string;
   subtitle: string;
@@ -34,6 +41,7 @@ export interface ReportData {
   rows: (string | number)[][];
   chartData?: { label: string; value: number }[];
   topProducers?: { name: string; total: string; avg: string }[];
+  sections?: ReportSection[];
 }
 
 export const REPORT_CONFIGS: ReportConfig[] = [
@@ -84,6 +92,20 @@ export const REPORT_CONFIGS: ReportConfig[] = [
     name: 'Alimentación',
     description: 'Consumo de alimento e inventario',
     icon: 'wheat',
+    category: 'economico',
+  },
+  {
+    id: 'terneros',
+    name: 'Terneros y Cría',
+    description: 'Estado de terneros, alertas de calostro y destete',
+    icon: 'baby',
+    category: 'produccion',
+  },
+  {
+    id: 'integral',
+    name: 'Informe Integral del Predio',
+    description: 'Resumen ejecutivo completo — todos los módulos en un documento',
+    icon: 'file-text',
     category: 'economico',
   },
 ];
@@ -151,6 +173,12 @@ export const useReports = () => {
           break;
         case 'alimentacion':
           reportData = await generateFeedingReport(orgId, dateFrom, dateTo);
+          break;
+        case 'terneros':
+          reportData = await generateTernerosReport(orgId, dateFrom, dateTo);
+          break;
+        case 'integral':
+          reportData = await generateIntegralReport(orgId, dateFrom, dateTo);
           break;
         default:
           throw new Error('Tipo de reporte no válido');
@@ -482,6 +510,242 @@ export const useReports = () => {
     };
   };
 
+  // Generate Terneros Report
+  const generateTernerosReport = async (orgId: string, dateFrom: string, dateTo: string): Promise<ReportData> => {
+    const { data: calves } = await supabase
+      .from('animals')
+      .select('*')
+      .in('category', ['ternero', 'ternera', 'becerro', 'becerra'])
+      .eq('status', 'activo')
+      .order('birth_date', { ascending: false });
+
+    const today = new Date();
+    const calvesMapped = (calves || []).map(c => {
+      const days = c.birth_date
+        ? Math.floor((today.getTime() - new Date(c.birth_date).getTime()) / 86400000)
+        : null;
+      return { ...c, daysOld: days };
+    });
+
+    const colostrumAlert = calvesMapped.filter(c => c.daysOld !== null && c.daysOld <= 3).length;
+    const weaningAlert = calvesMapped.filter(c => c.daysOld !== null && c.daysOld >= 60 && c.daysOld <= 120).length;
+    const avgDays = calvesMapped.filter(c => c.daysOld !== null).reduce((s, c) => s + (c.daysOld || 0), 0) / (calvesMapped.filter(c => c.daysOld !== null).length || 1);
+
+    const ageBuckets: Record<string, number> = { '0-30 días': 0, '31-60 días': 0, '61-90 días': 0, '91-120 días': 0, '>120 días': 0 };
+    calvesMapped.forEach(c => {
+      if (c.daysOld === null) return;
+      if (c.daysOld <= 30) ageBuckets['0-30 días']++;
+      else if (c.daysOld <= 60) ageBuckets['31-60 días']++;
+      else if (c.daysOld <= 90) ageBuckets['61-90 días']++;
+      else if (c.daysOld <= 120) ageBuckets['91-120 días']++;
+      else ageBuckets['>120 días']++;
+    });
+
+    return {
+      title: 'Reporte de Terneros y Cría',
+      subtitle: `Generado: ${formatDate(today.toISOString())}`,
+      generatedAt: today.toISOString(),
+      filters: { dateFrom, dateTo },
+      summary: {
+        'Total Terneros': calvesMapped.length,
+        'Alertas Calostro (≤3 días)': colostrumAlert,
+        'Próximos a Destetar (60-120 días)': weaningAlert,
+        'Promedio Días de Vida': formatNumber(avgDays, 0),
+      },
+      headers: ['Arete', 'Nombre', 'Categoría', 'Sexo', 'Fecha Nac.', 'Días de Vida', 'Peso Nac. (kg)', 'Peso Actual (kg)', 'Lote'],
+      rows: calvesMapped.map(c => [
+        c.tag_id,
+        c.name || '-',
+        c.category,
+        c.sex === 'macho' ? 'Macho' : 'Hembra',
+        formatDate(c.birth_date),
+        c.daysOld !== null ? c.daysOld : '-',
+        c.birth_weight ? formatNumber(c.birth_weight, 1) : '-',
+        c.current_weight ? formatNumber(c.current_weight, 1) : '-',
+        c.lot_name || '-',
+      ]),
+      chartData: Object.entries(ageBuckets).map(([label, value]) => ({ label, value })),
+    };
+  };
+
+  // Generate Integral (Comprehensive Farm) Report
+  const generateIntegralReport = async (orgId: string, dateFrom: string, dateTo: string): Promise<ReportData> => {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000).toISOString().split('T')[0];
+
+    const [
+      { data: animals },
+      { data: milkRecords },
+      { data: weightRecords },
+      { data: reproEvents },
+      { data: females },
+      { data: healthEvents },
+      { data: vaccinations },
+      { data: feedConsumption },
+    ] = await Promise.all([
+      supabase.from('animals').select('*').eq('status', 'activo'),
+      supabase.from('milk_production').select('animal_id, total_liters, fat_percentage, protein_percentage, production_date').gte('production_date', thirtyDaysAgo),
+      supabase.from('weight_records').select('animal_id, weight_kg, daily_gain, weight_date').gte('weight_date', dateFrom).lte('weight_date', dateTo),
+      supabase.from('reproductive_events').select('event_type, event_date, animal_id').gte('event_date', dateFrom).lte('event_date', dateTo),
+      supabase.from('animals').select('reproductive_status').eq('sex', 'hembra').eq('status', 'activo'),
+      supabase.from('health_events').select('event_type, status, cost, event_date').gte('event_date', dateFrom).lte('event_date', dateTo),
+      supabase.from('vaccination_schedule').select('is_applied, scheduled_date').gte('scheduled_date', dateFrom).lte('scheduled_date', dateTo),
+      supabase.from('feed_consumption').select('quantity_kg, cost, consumption_date').gte('consumption_date', dateFrom).lte('consumption_date', dateTo),
+    ]);
+
+    // --- Inventory ---
+    const totalAnimals = animals?.length || 0;
+    const hembras = animals?.filter(a => a.sex === 'hembra').length || 0;
+    const machos = animals?.filter(a => a.sex === 'macho').length || 0;
+    const byCategory: Record<string, number> = {};
+    animals?.forEach(a => { byCategory[a.category] = (byCategory[a.category] || 0) + 1; });
+
+    // --- Milk ---
+    const totalLiters = milkRecords?.reduce((s, r) => s + (r.total_liters || 0), 0) || 0;
+    const milkCows = new Set(milkRecords?.map(r => r.animal_id)).size;
+    const avgLitersPerCow = milkCows > 0 ? totalLiters / milkCows : 0;
+
+    // --- Weight ---
+    const avgWeight = weightRecords?.length
+      ? weightRecords.reduce((s, r) => s + (r.weight_kg || 0), 0) / weightRecords.length
+      : 0;
+    const avgGDP = weightRecords?.filter(r => r.daily_gain).length
+      ? weightRecords!.filter(r => r.daily_gain).reduce((s, r) => s + (r.daily_gain || 0), 0) / weightRecords!.filter(r => r.daily_gain).length
+      : 0;
+
+    // --- Reproduction ---
+    const pregnantCount = females?.filter(f => f.reproductive_status === 'preñada').length || 0;
+    const servicedCount = reproEvents?.filter(e => e.event_type === 'servicio' || e.event_type === 'inseminacion').length || 0;
+    const birthsCount = reproEvents?.filter(e => e.event_type === 'parto').length || 0;
+    const pregnancyRate = (females?.length || 0) > 0 ? (pregnantCount / (females?.length || 1)) * 100 : 0;
+
+    // --- Health ---
+    const activeHealth = healthEvents?.filter(e => e.status === 'activo').length || 0;
+    const healthCost = healthEvents?.reduce((s, e) => s + (e.cost || 0), 0) || 0;
+    const appliedVaccines = vaccinations?.filter(v => v.is_applied).length || 0;
+    const pendingVaccines = vaccinations?.filter(v => !v.is_applied).length || 0;
+
+    // --- Costs ---
+    const feedCost = feedConsumption?.reduce((s, c) => s + (c.cost || 0), 0) || 0;
+    const totalCost = feedCost + healthCost;
+
+    // --- Terneros ---
+    const calves = animals?.filter(a => ['ternero', 'ternera', 'becerro', 'becerra'].includes(a.category)) || [];
+    const colostrumNeeded = calves.filter(c => {
+      if (!c.birth_date) return false;
+      const days = Math.floor((today.getTime() - new Date(c.birth_date).getTime()) / 86400000);
+      return days <= 3;
+    }).length;
+
+    const sections: ReportSection[] = [
+      {
+        title: 'Inventario del Hato',
+        summary: { 'Total Animales': totalAnimals, Hembras: hembras, Machos: machos, ...byCategory },
+        headers: ['Categoría', 'Cantidad', '% del Hato'],
+        rows: Object.entries(byCategory).map(([cat, cnt]) => [
+          cat,
+          cnt,
+          formatNumber((cnt / totalAnimals) * 100, 1) + '%',
+        ]),
+      },
+      {
+        title: 'Producción de Leche (últimos 30 días)',
+        summary: {
+          'Total Litros': formatNumber(totalLiters, 0),
+          'Vacas en Ordeño': milkCows,
+          'Promedio/Vaca': formatNumber(avgLitersPerCow, 1) + ' L',
+        },
+        headers: ['Indicador', 'Valor'],
+        rows: [
+          ['Total Litros Producidos', formatNumber(totalLiters, 0)],
+          ['Vacas en Ordeño', milkCows],
+          ['Promedio por Vaca', formatNumber(avgLitersPerCow, 1) + ' L/día'],
+        ],
+      },
+      {
+        title: 'Reproducción',
+        summary: {
+          'Hembras Activas': females?.length || 0,
+          'Preñadas': pregnantCount,
+          'Tasa Preñez': formatNumber(pregnancyRate, 1) + '%',
+          'Partos en Período': birthsCount,
+          'Servicios/Inseminaciones': servicedCount,
+        },
+        headers: ['Indicador', 'Valor'],
+        rows: [
+          ['Hembras Activas', females?.length || 0],
+          ['Preñadas', pregnantCount],
+          ['Tasa de Preñez', formatNumber(pregnancyRate, 1) + '%'],
+          ['Partos en el Período', birthsCount],
+          ['Servicios/Inseminaciones', servicedCount],
+        ],
+      },
+      {
+        title: 'Sanidad',
+        summary: {
+          'Tratamientos Activos': activeHealth,
+          'Costo Médico': formatCurrency(healthCost),
+          'Vacunas Aplicadas': appliedVaccines,
+          'Vacunas Pendientes': pendingVaccines,
+        },
+        headers: ['Indicador', 'Valor'],
+        rows: [
+          ['Tratamientos Activos', activeHealth],
+          ['Costo Total Médico', formatCurrency(healthCost)],
+          ['Vacunas Aplicadas en Período', appliedVaccines],
+          ['Vacunas Pendientes', pendingVaccines],
+        ],
+      },
+      {
+        title: 'Costos del Período',
+        summary: {
+          'Costo Total': formatCurrency(totalCost),
+          'Alimentación': formatCurrency(feedCost),
+          'Salud': formatCurrency(healthCost),
+        },
+        headers: ['Categoría', 'Costo', '% del Total'],
+        rows: [
+          ['Alimentación', formatCurrency(feedCost), totalCost > 0 ? formatNumber((feedCost / totalCost) * 100, 1) + '%' : '-'],
+          ['Salud/Medicamentos', formatCurrency(healthCost), totalCost > 0 ? formatNumber((healthCost / totalCost) * 100, 1) + '%' : '-'],
+          ['TOTAL', formatCurrency(totalCost), '100%'],
+        ],
+      },
+      {
+        title: 'Terneros y Cría',
+        summary: {
+          'Total Terneros': calves.length,
+          'Alertas Calostro': colostrumNeeded,
+          'Peso Prom. Actual': avgWeight > 0 ? formatNumber(avgWeight, 1) + ' kg' : '-',
+        },
+        headers: ['Indicador', 'Valor'],
+        rows: [
+          ['Total Terneros', calves.length],
+          ['Alertas Calostro (≤3 días)', colostrumNeeded],
+          ['GDP Promedio Hato', avgGDP > 0 ? formatNumber(avgGDP * 1000, 0) + ' g/día' : '-'],
+        ],
+      },
+    ];
+
+    return {
+      title: 'Informe Integral del Predio',
+      subtitle: `Período: ${formatDate(dateFrom)} — ${formatDate(dateTo)}`,
+      generatedAt: today.toISOString(),
+      filters: { dateFrom, dateTo },
+      summary: {
+        'Total Animales': totalAnimals,
+        'Leche 30 días (L)': formatNumber(totalLiters, 0),
+        'Tasa Preñez': formatNumber(pregnancyRate, 1) + '%',
+        'Tratamientos Activos': activeHealth,
+        'Costo Total Período': formatCurrency(totalCost),
+        'Terneros': calves.length,
+      },
+      headers: ['Módulo', 'Indicador Principal', 'Valor'],
+      rows: sections.map(s => [s.title, Object.keys(s.summary)[0], String(Object.values(s.summary)[0])]),
+      chartData: Object.entries(byCategory).map(([label, value]) => ({ label, value })),
+      sections,
+    };
+  };
+
   // Helper: Aggregate data by date
   const aggregateByDate = (data: any[], dateField: string, valueField: string): { label: string; value: number }[] => {
     const byDate: Record<string, number> = {};
@@ -500,25 +764,142 @@ export const useReports = () => {
   // Export to Excel
   const exportToExcel = (reportData: ReportData, filename?: string) => {
     const wb = XLSX.utils.book_new();
+    const today = new Date().toISOString().split('T')[0];
 
-    // Summary sheet
-    const summaryRows = Object.entries(reportData.summary).map(([key, value]) => ({ Concepto: key, Valor: value }));
-    const summaryWs = XLSX.utils.json_to_sheet(summaryRows);
-    XLSX.utils.book_append_sheet(wb, summaryWs, 'Resumen');
+    if (reportData.sections && reportData.sections.length > 0) {
+      // Integral report: one sheet per section + executive summary
+      const execRows = Object.entries(reportData.summary).map(([key, value]) => ({ Concepto: key, Valor: value }));
+      const execWs = XLSX.utils.json_to_sheet(execRows);
+      XLSX.utils.book_append_sheet(wb, execWs, 'Resumen Ejecutivo');
 
-    // Data sheet
-    const dataWs = XLSX.utils.aoa_to_sheet([reportData.headers, ...reportData.rows]);
-    dataWs['!cols'] = reportData.headers.map(() => ({ wch: 18 }));
-    XLSX.utils.book_append_sheet(wb, dataWs, 'Datos');
+      reportData.sections.forEach(section => {
+        const sheetData = [
+          Object.entries(section.summary).map(([k]) => k),
+          Object.entries(section.summary).map(([, v]) => v),
+          [],
+          section.headers,
+          ...section.rows,
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        ws['!cols'] = section.headers.map(() => ({ wch: 20 }));
+        const sheetName = section.title.substring(0, 31);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      });
+    } else {
+      // Standard report: summary + data sheets
+      const summaryRows = Object.entries(reportData.summary).map(([key, value]) => ({ Concepto: key, Valor: value }));
+      const summaryWs = XLSX.utils.json_to_sheet(summaryRows);
+      XLSX.utils.book_append_sheet(wb, summaryWs, 'Resumen');
+
+      const dataWs = XLSX.utils.aoa_to_sheet([reportData.headers, ...reportData.rows]);
+      dataWs['!cols'] = reportData.headers.map(() => ({ wch: 18 }));
+      XLSX.utils.book_append_sheet(wb, dataWs, 'Datos');
+    }
+
+    XLSX.writeFile(wb, filename || `${reportData.title.replace(/\s+/g, '_')}_${today}.xlsx`);
+    toast({ title: 'Exportado', description: 'El reporte se ha descargado en formato Excel' });
+  };
+
+  // Export Integral PDF (multi-section)
+  const exportIntegralPDF = (reportData: ReportData, filename?: string) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Cover page
+    doc.setFillColor(26, 92, 46);
+    doc.rect(0, 0, pageWidth, 297, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(32);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Agro Data', pageWidth / 2, 80, { align: 'center' });
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Informe Integral del Predio', pageWidth / 2, 100, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(reportData.subtitle, pageWidth / 2, 115, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(`Generado: ${formatDate(reportData.generatedAt)}`, pageWidth / 2, 130, { align: 'center' });
+
+    // Executive summary on cover
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Resumen Ejecutivo', pageWidth / 2, 155, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const summaryEntries = Object.entries(reportData.summary);
+    summaryEntries.forEach(([key, value], i) => {
+      const col = i % 2 === 0 ? 30 : pageWidth / 2 + 10;
+      const row = Math.floor(i / 2);
+      doc.text(`${key}: ${value}`, col, 165 + row * 8);
+    });
+
+    const SECTION_COLORS: [number, number, number][] = [
+      [34, 87, 122], [52, 131, 79], [180, 100, 20], [150, 50, 50], [80, 60, 150], [60, 120, 130],
+    ];
+
+    (reportData.sections || []).forEach((section, idx) => {
+      doc.addPage();
+      const color = SECTION_COLORS[idx % SECTION_COLORS.length];
+      doc.setFillColor(...color);
+      doc.rect(0, 0, pageWidth, 18, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text(section.title, 14, 12);
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      let y = 28;
+      const summaryItems = Object.entries(section.summary);
+      summaryItems.forEach(([k, v], i) => {
+        const col = i % 2 === 0 ? 14 : pageWidth / 2 + 5;
+        const row = Math.floor(i / 2);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${k}:`, col, 28 + row * 6);
+        doc.setFont('helvetica', 'normal');
+        doc.text(` ${v}`, col + doc.getTextWidth(`${k}: `), 28 + row * 6);
+        y = 28 + row * 6 + 6;
+      });
+
+      if (section.rows.length > 0) {
+        autoTable(doc, {
+          head: [section.headers],
+          body: section.rows,
+          startY: y + 4,
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: color, textColor: 255 },
+          alternateRowStyles: { fillColor: [245, 245, 245] },
+          margin: { left: 14, right: 14 },
+        });
+      }
+    });
+
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      if (i === 1) {
+        doc.setTextColor(200, 200, 200);
+      } else {
+        doc.setTextColor(128, 128, 128);
+      }
+      doc.text('Agro Data — Informe Integral del Predio', 14, pageHeight - 10);
+      doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+    }
 
     const today = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, filename || `${reportData.title.replace(/\s+/g, '_')}_${today}.xlsx`);
-
-    toast({ title: 'Exportado', description: 'El reporte se ha descargado en formato Excel' });
+    doc.save(filename || `Informe_Integral_${today}.pdf`);
+    toast({ title: 'Exportado', description: 'El Informe Integral se ha descargado en PDF' });
   };
 
   // Export to PDF
   const exportToPDF = (reportData: ReportData, filename?: string) => {
+    if (reportData.sections && reportData.sections.length > 0) {
+      return exportIntegralPDF(reportData, filename);
+    }
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 

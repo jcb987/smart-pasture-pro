@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileBarChart, ArrowLeft, Sparkles, History, Clock } from 'lucide-react';
 import { useReports, ReportType, ReportFilters, ReportData } from '@/hooks/useReports';
 import { useAnimals } from '@/hooks/useAnimals';
+import { useAuth } from '@/contexts/AuthContext';
 import { ReportGrid } from '@/components/reportes/ReportCard';
 import { ReportFiltersDialog } from '@/components/reportes/ReportFiltersDialog';
 import { ReportViewer } from '@/components/reportes/ReportViewer';
@@ -14,11 +15,23 @@ import { AutomaticReportsConfig } from '@/components/reportes/AutomaticReportsCo
 const Reportes = () => {
   const { loading, generateReport, exportToExcel, exportToPDF, REPORT_CONFIGS } = useReports();
   const { getStats } = useAnimals();
+  const { user } = useAuth();
+
+  const RECENT_KEY = `agrodata_recent_reports_${user?.id || 'anon'}`;
 
   const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
   const [filtersDialogOpen, setFiltersDialogOpen] = useState(false);
   const [currentReport, setCurrentReport] = useState<ReportData | null>(null);
-  const [recentReports, setRecentReports] = useState<{ type: ReportType; title: string; date: string }[]>([]);
+  const [recentReports, setRecentReports] = useState<{ type: ReportType; title: string; date: string }[]>(() => {
+    try {
+      const saved = localStorage.getItem(`agrodata_recent_reports_${user?.id || 'anon'}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recentReports));
+  }, [recentReports]);
 
   const stats = getStats();
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,18 @@ const Documentos = () => {
   const selectedMobilityOption = MOBILITY_TYPE_OPTIONS.find(o => o.value === movForm.mobility_type);
 
   const handleMovementGuide = async () => {
+    const requiredFields = [
+      { field: movForm.farmName, label: 'Nombre del Predio' },
+      { field: movForm.ownerName, label: 'Nombre del Propietario' },
+      { field: movForm.origin, label: 'Origen' },
+      { field: movForm.destination, label: 'Destino' },
+      { field: movForm.transport, label: 'Transportador' },
+    ];
+    const missing = requiredFields.find(f => !f.field.trim());
+    if (missing) {
+      toast.error(`Campo requerido: ${missing.label}`);
+      return;
+    }
     const chosenAnimals = activeAnimals.filter(a => selectedAnimals.includes(a.id));
     const docId = await generateMovementGuide({ ...movForm, animals: chosenAnimals });
     if (docId) {

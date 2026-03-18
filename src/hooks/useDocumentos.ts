@@ -145,16 +145,16 @@ export const useDocumentos = () => {
       doc.setFontSize(9);
 
       const col1 = 14, col2 = 105;
-      doc.text(`Nombre del Predio: ${params.farmName}`, col1, 47);
-      doc.text(`Municipio: ${params.municipio}`, col2, 47);
-      doc.text(`Propietario: ${params.ownerName}`, col1, 53);
-      doc.text(`Departamento: ${params.departamento}`, col2, 53);
-      doc.text(`Origen: ${params.origin}`, col1, 59);
-      doc.text(`Destino: ${params.destination}`, col2, 59);
+      doc.text(`Nombre del Predio: ${params.farmName || 'Sin especificar'}`, col1, 47);
+      doc.text(`Municipio: ${params.municipio || 'Sin especificar'}`, col2, 47);
+      doc.text(`Propietario: ${params.ownerName || 'Sin especificar'}`, col1, 53);
+      doc.text(`Departamento: ${params.departamento || 'Sin especificar'}`, col2, 53);
+      doc.text(`Origen: ${params.origin || 'Sin especificar'}`, col1, 59);
+      doc.text(`Destino: ${params.destination || 'Sin especificar'}`, col2, 59);
       doc.text(`Fecha de Movilización: ${params.date}`, col1, 65);
-      doc.text(`Motivo: ${params.reason}`, col2, 65);
-      doc.text(`Transportador: ${params.transport}`, col1, 71);
-      doc.text(`ID/Placa: ${params.transportId}`, col2, 71);
+      doc.text(`Motivo: ${params.reason || '-'}`, col2, 65);
+      doc.text(`Transportador: ${params.transport || 'Sin especificar'}`, col1, 71);
+      doc.text(`ID/Placa: ${params.transportId || '-'}`, col2, 71);
 
       doc.setDrawColor(200, 200, 200);
       doc.line(14, 75, 196, 75);
@@ -181,7 +181,7 @@ export const useDocumentos = () => {
         margin: { left: 14, right: 14 },
       });
 
-      const finalY = (doc as any).lastAutoTable.finalY || 150;
+      const finalY = (doc as any).lastAutoTable?.finalY ?? 150;
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);

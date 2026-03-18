@@ -38,6 +38,15 @@ export const ExportLifeSheet = () => {
 
     const doc = new jsPDF();
     const animal = lifeSheet.animal;
+    const PAGE_HEIGHT = 270;
+
+    const checkBreak = (currentY: number, needed = 12): number => {
+      if (currentY + needed > PAGE_HEIGHT) {
+        doc.addPage();
+        return 20;
+      }
+      return currentY;
+    };
 
     // Título
     doc.setFontSize(20);
@@ -65,7 +74,7 @@ export const ExportLifeSheet = () => {
     doc.text(`Peso Actual: ${animal.current_weight || 'N/A'} kg`, 100, y);
 
     // Pedigrí
-    y += 15;
+    y = checkBreak(y + 15, 20);
     doc.setFontSize(14);
     doc.text('Pedigrí', 20, y);
     doc.setFontSize(10);
@@ -74,47 +83,53 @@ export const ExportLifeSheet = () => {
     doc.text(`Padre: ${lifeSheet.pedigree.father?.tag_id || 'Desconocido'}`, 100, y);
 
     // Historial de peso
-    y += 15;
+    y = checkBreak(y + 15, 25);
     doc.setFontSize(14);
     doc.text(`Historial de Peso (${lifeSheet.weightHistory.length} registros)`, 20, y);
     doc.setFontSize(10);
     y += 10;
 
     lifeSheet.weightHistory.slice(-5).forEach((w) => {
+      y = checkBreak(y, 6);
       doc.text(`${w.date}: ${w.weight} kg${w.daily_gain ? ` (GDP: ${w.daily_gain} g/día)` : ''}`, 25, y);
       y += 5;
     });
 
     // Eventos de salud
-    y += 10;
+    y = checkBreak(y + 10, 25);
     doc.setFontSize(14);
     doc.text(`Eventos de Salud (${lifeSheet.healthEvents.length} registros)`, 20, y);
     doc.setFontSize(10);
     y += 10;
 
     lifeSheet.healthEvents.slice(-5).forEach((h) => {
+      y = checkBreak(y, 6);
       doc.text(`${h.date}: ${h.type}${h.diagnosis ? ` - ${h.diagnosis}` : ''}`, 25, y);
       y += 5;
     });
 
     // Eventos reproductivos
     if (lifeSheet.reproductiveEvents.length > 0) {
-      y += 10;
+      y = checkBreak(y + 10, 25);
       doc.setFontSize(14);
       doc.text(`Eventos Reproductivos (${lifeSheet.reproductiveEvents.length} registros)`, 20, y);
       doc.setFontSize(10);
       y += 10;
 
       lifeSheet.reproductiveEvents.slice(-5).forEach((r) => {
+        y = checkBreak(y, 6);
         doc.text(`${r.date}: ${r.type}${r.result ? ` - ${r.result}` : ''}`, 25, y);
         y += 5;
       });
     }
 
-    // Pie de página
+    // Pie de página (última página)
+    const totalPages = doc.getNumberOfPages();
+    doc.setPage(totalPages);
+    const pageH = doc.internal.pageSize.getHeight();
     doc.setFontSize(8);
-    doc.text(`Generado: ${new Date(lifeSheet.generatedAt).toLocaleString()}`, 20, 280);
-    doc.text('Sistema de Gestión Ganadera', 190, 280, { align: 'right' });
+    doc.text(`Generado: ${new Date(lifeSheet.generatedAt).toLocaleString()}`, 20, pageH - 10);
+    doc.text('Sistema de Gestión Ganadera', 190, pageH - 10, { align: 'right' });
 
     doc.save(`hoja_vida_${animal.tag_id}.pdf`);
 

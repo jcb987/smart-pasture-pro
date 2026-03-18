@@ -957,6 +957,7 @@ export const useReports = () => {
 
     // Top producers (for milk reports)
     if (reportData.topProducers && reportData.topProducers.length > 0) {
+      if (yPos > 220) { doc.addPage(); yPos = 20; }
       yPos += 4;
       doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
@@ -980,7 +981,7 @@ export const useReports = () => {
         margin: { left: 14, right: 14 },
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 8;
+      yPos = ((doc as any).lastAutoTable?.finalY ?? yPos) + 8;
     }
 
     // Production curve chart placeholder (textual summary)

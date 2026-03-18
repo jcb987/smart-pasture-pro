@@ -75,8 +75,8 @@ export function useImportMilk() {
       }
 
       // Pivot table images only provide total_liters — store as morning_liters so data is not lost
+      // total_liters is a generated column in the DB (morning + afternoon + evening), never insert it
       const effectiveMorning = morning ?? (afternoon === null && evening === null ? totalOnly : null);
-      const total = totalOnly ?? ((morning ?? 0) + (afternoon ?? 0) + (evening ?? 0));
 
       recordsToInsert.push({
         animal_id: animalId,
@@ -84,7 +84,6 @@ export function useImportMilk() {
         morning_liters: effectiveMorning,
         afternoon_liters: afternoon,
         evening_liters: evening,
-        total_liters: total,
         fat_percentage: parseNum(row.fat_percentage),
         protein_percentage: parseNum(row.protein_percentage),
         somatic_cell_count: row.somatic_cell_count ? parseInt(String(row.somatic_cell_count)) : null,

@@ -160,15 +160,16 @@ export const meatImportConfig: ImportConfig = {
     { db: 'weight_kg', labels: ['peso', 'weight', 'kg', 'peso_kg', 'peso_vivo', 'peso_actual'] },
   ],
   optionalColumns: [
-    { db: 'weight_type', labels: ['tipo', 'type', 'tipo_pesaje', 'motivo'] },
-    { db: 'condition_score', labels: ['condicion', 'cc', 'score', 'condicion_corporal'] },
+    { db: 'weight_type', labels: ['tipo', 'type', 'tipo_pesaje', 'motivo', 'tipo pesaje'] },
+    { db: 'condition_score', labels: ['condicion', 'cc', 'score', 'condicion_corporal', 'condición corporal'] },
+    { db: 'daily_gain', labels: ['ganancia', 'gmd', 'daily_gain', 'ganancia diaria', 'ganancia diaria (kg)'] },
     { db: 'notes', labels: ['notas', 'observaciones', 'notes', 'comentarios'] },
   ],
   templateData: [
-    ['Arete', 'Fecha', 'Peso_Kg', 'Tipo_Pesaje', 'Condicion_Corporal', 'Notas'],
-    ['001', '2025-01-15', '350', 'control', '3.5', ''],
-    ['002', '2025-01-15', '420', 'control', '4.0', 'Buen estado'],
-    ['003', '2025-01-15', '280', 'ingreso', '3.0', 'Nuevo animal'],
+    ['Arete *', 'Fecha *', 'Peso Kg *', 'Tipo Pesaje', 'Condición Corporal', 'Ganancia Diaria (kg)', 'Notas'],
+    ['001', '2025-03-08', '350.5', 'ingreso', '3.5', '', 'Primer pesaje al ingreso'],
+    ['001', '2025-04-08', '382.0', 'control', '3.5', '1.06', 'Buen ritmo de engorde'],
+    ['113-112', '2025-03-08', '420', 'control', '4.0', '', ''],
   ],
   templateFileName: 'plantilla_produccion_carne.xlsx',
   validateRow: (row, existingData) => {
@@ -203,6 +204,7 @@ export const meatImportConfig: ImportConfig = {
       weight_kg: parseFloat(String(row.weight_kg)),
       weight_type: row.weight_type || 'control',
       condition_score: row.condition_score ? parseFloat(String(row.condition_score)) : null,
+      daily_gain: row.daily_gain ? parseFloat(String(row.daily_gain)) : null,
       notes: row.notes || null,
       organization_id: organizationId,
     };

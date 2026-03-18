@@ -112,7 +112,7 @@ export function useImportMilk() {
         console.error('Batch insert error:', error);
         throw new Error(`Error al insertar lote ${Math.floor(i / batchSize) + 1}: ${error.message}`);
       }
-      totalInserted += inserted?.length || batch.length;
+      totalInserted += inserted?.length ?? batch.length;
     }
 
     if (errors.length > 0) {

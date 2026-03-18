@@ -270,7 +270,7 @@ const ProduccionLeche = () => {
           try {
             await importData(data);
           } finally {
-            fetchRecords();
+            await fetchRecords();
           }
         }}
       />

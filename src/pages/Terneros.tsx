@@ -159,6 +159,7 @@ const Terneros = () => {
                         <TableHead className="text-right">Peso Actual</TableHead>
                         <TableHead className="text-right">GDP</TableHead>
                         <TableHead>Estado</TableHead>
+                        <TableHead>Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -186,6 +187,32 @@ const Terneros = () => {
                               {hasColostrumAlert && <Badge className="bg-amber-500 text-white text-xs mr-1">Calostro</Badge>}
                               {hasWeaningAlert && <Badge className="bg-blue-500 text-white text-xs">Destete</Badge>}
                               {!hasColostrumAlert && !hasWeaningAlert && <Badge variant="outline" className="text-xs">OK</Badge>}
+                            </TableCell>
+                            <TableCell>
+                              {hasColostrumAlert && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-amber-600 border-amber-300 hover:bg-amber-50 text-xs h-7 px-2"
+                                  onClick={() => handleRegisterColostrum(t.id)}
+                                >
+                                  <Milk className="h-3 w-3 mr-1" />
+                                  Calostro
+                                </Button>
+                              )}
+                              {hasWeaningAlert && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-blue-600 border-blue-300 hover:bg-blue-50 text-xs h-7 px-2"
+                                  onClick={() => handleRegisterWeaning(t.id, t.current_weight)}
+                                  disabled={!t.current_weight}
+                                  title={!t.current_weight ? 'Registra un peso actual primero' : ''}
+                                >
+                                  <Scale className="h-3 w-3 mr-1" />
+                                  Destete
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
                         );

@@ -4,14 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileCheck, Truck, Syringe, FileText, Download, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { FileCheck, Truck, Syringe, Download, Loader2, Trash2, MapPin, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useDocumentos } from '@/hooks/useDocumentos';
 import { useAnimals } from '@/hooks/useAnimals';
 import { useHealth } from '@/hooks/useHealth';
+import { useMobilityTracking, MOBILITY_LABELS, MobilityType } from '@/hooks/useMobilityTracking';
 
 const DOCUMENT_TYPES = [
   {
@@ -32,21 +33,31 @@ const DOCUMENT_TYPES = [
   },
 ];
 
+const MOBILITY_TYPE_OPTIONS: { value: MobilityType; label: string; isTemporary: boolean }[] = [
+  { value: 'feria', label: 'Feria / Exposición (con retorno)', isTemporary: true },
+  { value: 'traslado_temporal', label: 'Traslado Temporal', isTemporary: true },
+  { value: 'venta', label: 'Venta Definitiva', isTemporary: false },
+  { value: 'sacrificio', label: 'Sacrificio / Faena', isTemporary: false },
+];
+
 const Documentos = () => {
-  const { generateMovementGuide, generateVaccinationCertificate, generating } = useDocumentos();
-  const { animals } = useAnimals();
+  const { generateMovementGuide, generateVaccinationCertificate, generating, documentHistory, deleteDocumentRecord } = useDocumentos();
+  const { animals, updateAnimal } = useAnimals();
   const { vaccinations } = useHealth();
+  const { activeEvents, addMobilityEvents, resolveEvent, extendReturnDate, isExpired } = useMobilityTracking();
+
   const [openDialog, setOpenDialog] = useState<string | null>(null);
   const [selectedAnimals, setSelectedAnimals] = useState<string[]>([]);
+  const [resolveDialogEvent, setResolveDialogEvent] = useState<string | null>(null);
+  const [extendDate, setExtendDate] = useState('');
 
-  // Movement guide form
   const [movForm, setMovForm] = useState({
     farmName: '', ownerName: '', origin: '', destination: '',
     transport: '', transportId: '', date: new Date().toISOString().split('T')[0],
     reason: 'venta', municipio: '', departamento: '',
+    mobility_type: 'feria' as MobilityType, return_date: '',
   });
 
-  // Vaccination certificate form
   const [vacForm, setVacForm] = useState({
     animalId: '', vaccineName: '', applicationDate: new Date().toISOString().split('T')[0],
     dose: '1 dosis', lot: '', veterinarian: '', farmName: '', municipio: '',
@@ -54,9 +65,20 @@ const Documentos = () => {
 
   const activeAnimals = animals.filter(a => a.status === 'activo');
 
+  const selectedMobilityOption = MOBILITY_TYPE_OPTIONS.find(o => o.value === movForm.mobility_type);
+
   const handleMovementGuide = async () => {
     const chosenAnimals = activeAnimals.filter(a => selectedAnimals.includes(a.id));
-    await generateMovementGuide({ ...movForm, animals: chosenAnimals });
+    const docId = await generateMovementGuide({ ...movForm, animals: chosenAnimals });
+    if (docId) {
+      await addMobilityEvents(chosenAnimals, {
+        mobility_type: movForm.mobility_type,
+        destination: movForm.destination,
+        start_date: movForm.date,
+        return_date: selectedMobilityOption?.isTemporary && movForm.return_date ? movForm.return_date : undefined,
+        document_id: docId,
+      });
+    }
     setOpenDialog(null);
   };
 
@@ -75,6 +97,26 @@ const Documentos = () => {
 
   const selectAll = () => setSelectedAnimals(activeAnimals.map(a => a.id));
   const selectNone = () => setSelectedAnimals([]);
+
+  const resolveEventObj = activeEvents.find(e => e.id === resolveDialogEvent);
+
+  const handleResolve = async (resolution: 'returned' | 'sold' | 'dead') => {
+    if (!resolveDialogEvent || !resolveEventObj) return;
+    await resolveEvent(resolveDialogEvent, resolution);
+    if (resolution === 'sold') {
+      await updateAnimal(resolveEventObj.animal_id, { status: 'vendido', status_reason: 'Vendido en movilización' });
+    } else if (resolution === 'dead') {
+      await updateAnimal(resolveEventObj.animal_id, { status: 'muerto', status_reason: 'Sacrificio en movilización' });
+    }
+    setResolveDialogEvent(null);
+  };
+
+  const handleExtend = async () => {
+    if (!resolveDialogEvent || !extendDate) return;
+    await extendReturnDate(resolveDialogEvent, extendDate);
+    setResolveDialogEvent(null);
+    setExtendDate('');
+  };
 
   return (
     <DashboardLayout>
@@ -108,6 +150,63 @@ const Documentos = () => {
             </Card>
           ))}
         </div>
+
+        {/* Animales en Tránsito */}
+        {activeEvents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-700">
+                <MapPin className="h-5 w-5" />
+                Animales en Tránsito ({activeEvents.length})
+              </CardTitle>
+              <CardDescription>Animales con guía de movilización activa</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {activeEvents.map(ev => {
+                  const expired = isExpired(ev);
+                  return (
+                    <div
+                      key={ev.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        expired
+                          ? 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
+                          : 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{ev.tag_id}</span>
+                          {ev.name && <span className="text-muted-foreground text-sm">({ev.name})</span>}
+                          <Badge variant="outline" className="text-xs">
+                            {MOBILITY_LABELS[ev.mobility_type]}
+                          </Badge>
+                          {expired && (
+                            <Badge className="bg-red-500 text-white text-xs">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Vencida
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Destino: {ev.destination} | Salida: {ev.start_date}
+                          {ev.return_date && ` | Retorno: ${ev.return_date}`}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setResolveDialogEvent(ev.id)}
+                      >
+                        Resolver
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Movement Guide Dialog */}
         <Dialog open={openDialog === 'guia_movilizacion'} onOpenChange={() => setOpenDialog(null)}>
@@ -172,6 +271,43 @@ const Documentos = () => {
                 </div>
               </div>
 
+              {/* Mobility tracking section */}
+              <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  Tipo de Movilización (para rastreo)
+                </Label>
+                <Select value={movForm.mobility_type} onValueChange={v => setMovForm(p => ({ ...p, mobility_type: v as MobilityType }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MOBILITY_TYPE_OPTIONS.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedMobilityOption?.isTemporary && (
+                  <div className="space-y-1">
+                    <Label className="text-sm">Fecha de Retorno Estimada</Label>
+                    <Input
+                      type="date"
+                      value={movForm.return_date}
+                      min={movForm.date}
+                      onChange={e => setMovForm(p => ({ ...p, return_date: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Recibirás una alerta si el animal no retorna antes de esta fecha
+                    </p>
+                  </div>
+                )}
+                {!selectedMobilityOption?.isTemporary && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    El animal quedará marcado para dar de baja. Confirma en ConsultarAnimal.
+                  </p>
+                )}
+              </div>
+
+              {/* Animal selection */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label>Animales a movilizar ({selectedAnimals.length} seleccionados)</Label>
@@ -277,6 +413,118 @@ const Documentos = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Resolve Mobility Dialog */}
+        <Dialog open={!!resolveDialogEvent} onOpenChange={() => { setResolveDialogEvent(null); setExtendDate(''); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Resolver Movilización</DialogTitle>
+            </DialogHeader>
+            {resolveEventObj && (
+              <div className="space-y-4">
+                <div className="p-3 rounded-lg bg-muted text-sm">
+                  <p><strong>{resolveEventObj.tag_id}</strong>{resolveEventObj.name ? ` (${resolveEventObj.name})` : ''}</p>
+                  <p className="text-muted-foreground">{MOBILITY_LABELS[resolveEventObj.mobility_type]} → {resolveEventObj.destination}</p>
+                  {resolveEventObj.return_date && (
+                    <p className={`text-xs mt-1 ${isExpired(resolveEventObj) ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                      Retorno: {resolveEventObj.return_date}
+                      {isExpired(resolveEventObj) && ' (VENCIDA)'}
+                    </p>
+                  )}
+                </div>
+                <p className="text-sm font-medium">¿Qué ocurrió con el animal?</p>
+                <div className="space-y-2">
+                  <Button
+                    className="w-full justify-start gap-2"
+                    variant="outline"
+                    onClick={() => handleResolve('returned')}
+                  >
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    Retornó a la finca
+                  </Button>
+                  <Button
+                    className="w-full justify-start gap-2"
+                    variant="outline"
+                    onClick={() => handleResolve('sold')}
+                  >
+                    <FileCheck className="h-4 w-4 text-blue-600" />
+                    Se vendió — dar de baja (vendido)
+                  </Button>
+                  <Button
+                    className="w-full justify-start gap-2"
+                    variant="outline"
+                    onClick={() => handleResolve('dead')}
+                  >
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    Fue sacrificado — dar de baja
+                  </Button>
+                  {resolveEventObj.return_date && (
+                    <div className="space-y-1 pt-2 border-t">
+                      <p className="text-xs text-muted-foreground">Ampliar fecha de retorno:</p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="date"
+                          value={extendDate}
+                          min={new Date().toISOString().split('T')[0]}
+                          onChange={e => setExtendDate(e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                        <Button size="sm" variant="outline" onClick={handleExtend} disabled={!extendDate}>
+                          <Clock className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Document History */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Historial de Documentos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {documentHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Aún no has generado documentos. Los PDFs generados aparecerán aquí.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {documentHistory.slice(0, 20).map(rec => (
+                  <div key={rec.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      {rec.type === 'guia_movilizacion'
+                        ? <Truck className="h-4 w-4 text-blue-500 shrink-0" />
+                        : <Syringe className="h-4 w-4 text-green-500 shrink-0" />
+                      }
+                      <div>
+                        <p className="text-sm font-medium">{rec.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(rec.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {rec.mobility_type && ` · ${MOBILITY_LABELS[rec.mobility_type as keyof typeof MOBILITY_LABELS] || rec.mobility_type}`}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteDocumentRecord(rec.id)}
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

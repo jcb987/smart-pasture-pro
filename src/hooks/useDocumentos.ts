@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface MovementGuideParams {
   animals: {
+    id: string;
     tag_id: string;
     name?: string | null;
     category: string;
@@ -21,6 +24,8 @@ export interface MovementGuideParams {
   reason: string;
   municipio: string;
   departamento: string;
+  mobility_type?: 'feria' | 'traslado_temporal' | 'venta' | 'sacrificio';
+  return_date?: string;
 }
 
 export interface VaccinationCertParams {
@@ -41,12 +46,81 @@ export interface VaccinationCertParams {
   municipio: string;
 }
 
+export interface DocumentRecord {
+  id: string;
+  type: 'guia_movilizacion' | 'cert_vacunacion';
+  created_at: string;
+  label: string;
+  animal_count?: number;
+  animal_tag?: string;
+  destination?: string;
+  date: string;
+  mobility_type?: string;
+  return_date?: string;
+  animal_ids?: string[];
+}
+
+const getHistoryKey = (orgId: string) => `agrodata_docs_${orgId}`;
+const MAX_HISTORY = 50;
+
 export const useDocumentos = () => {
   const [generating, setGenerating] = useState(false);
+  const [documentHistory, setDocumentHistory] = useState<DocumentRecord[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const getOrganizationId = useCallback(async () => {
+    if (!user) return null;
+    const { data } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    return data?.organization_id || null;
+  }, [user]);
+
+  const loadHistory = useCallback(async () => {
+    const orgId = await getOrganizationId();
+    if (!orgId) return;
+    try {
+      const raw = localStorage.getItem(getHistoryKey(orgId));
+      setDocumentHistory(raw ? JSON.parse(raw) : []);
+    } catch {
+      setDocumentHistory([]);
+    }
+  }, [getOrganizationId]);
+
+  useEffect(() => {
+    if (user) loadHistory();
+  }, [user, loadHistory]);
+
+  const saveDocumentRecord = useCallback(async (record: DocumentRecord) => {
+    const orgId = await getOrganizationId();
+    if (!orgId) return;
+    const key = getHistoryKey(orgId);
+    const existing: DocumentRecord[] = (() => {
+      try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+    })();
+    const updated = [record, ...existing].slice(0, MAX_HISTORY);
+    localStorage.setItem(key, JSON.stringify(updated));
+    setDocumentHistory(updated);
+  }, [getOrganizationId]);
+
+  const deleteDocumentRecord = async (id: string) => {
+    const orgId = await getOrganizationId();
+    if (!orgId) return;
+    const key = getHistoryKey(orgId);
+    const existing: DocumentRecord[] = (() => {
+      try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+    })();
+    const updated = existing.filter(r => r.id !== id);
+    localStorage.setItem(key, JSON.stringify(updated));
+    setDocumentHistory(updated);
+  };
 
   const generateMovementGuide = async (params: MovementGuideParams) => {
     setGenerating(true);
+    const docId = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     try {
       const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
@@ -60,7 +134,7 @@ export const useDocumentos = () => {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.text('Sistema AgroData — República de Colombia', 105, 21, { align: 'center' });
-      doc.text(`No. ${Date.now().toString().slice(-8)}`, 105, 27, { align: 'center' });
+      doc.text(`No. ${docId.slice(-8).toUpperCase()}`, 105, 27, { align: 'center' });
 
       // Predio data
       doc.setTextColor(0, 0, 0);
@@ -109,12 +183,10 @@ export const useDocumentos = () => {
 
       const finalY = (doc as any).lastAutoTable.finalY || 150;
 
-      // Summary
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.text(`Total animales: ${params.animals.length}`, 14, finalY + 10);
 
-      // Signatures
       const sigY = finalY + 35;
       doc.setFont('helvetica', 'normal');
       doc.line(14, sigY, 90, sigY);
@@ -122,7 +194,6 @@ export const useDocumentos = () => {
       doc.text('Firma del Propietario / Autorizado', 14, sigY + 5);
       doc.text('Firma del Transportador', 120, sigY + 5);
 
-      // Footer
       doc.setFillColor(240, 240, 240);
       doc.rect(0, 285, 210, 12, 'F');
       doc.setTextColor(100, 100, 100);
@@ -131,9 +202,25 @@ export const useDocumentos = () => {
       doc.text('Documento de referencia — Verificar requisitos ICA/SENASA vigentes', 105, 296, { align: 'center' });
 
       doc.save(`Guia_Movilizacion_${params.date.replace(/-/g, '')}.pdf`);
+
+      await saveDocumentRecord({
+        id: docId,
+        type: 'guia_movilizacion',
+        created_at: new Date().toISOString(),
+        label: `${params.animals.length} animal(es) → ${params.destination}`,
+        animal_count: params.animals.length,
+        destination: params.destination,
+        date: params.date,
+        mobility_type: params.mobility_type,
+        return_date: params.return_date,
+        animal_ids: params.animals.map(a => a.id),
+      });
+
       toast({ title: 'PDF generado', description: `Guía de movilización para ${params.animals.length} animales` });
+      return docId;
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      return null;
     } finally {
       setGenerating(false);
     }
@@ -141,10 +228,10 @@ export const useDocumentos = () => {
 
   const generateVaccinationCertificate = async (params: VaccinationCertParams) => {
     setGenerating(true);
+    const docId = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     try {
       const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
-      // Header
       doc.setFillColor(26, 92, 46);
       doc.rect(0, 0, 210, 30, 'F');
       doc.setTextColor(255, 255, 255);
@@ -157,7 +244,6 @@ export const useDocumentos = () => {
 
       doc.setTextColor(0, 0, 0);
 
-      // Animal data box
       doc.setFillColor(245, 250, 245);
       doc.rect(14, 40, 182, 55, 'F');
       doc.setDrawColor(26, 92, 46);
@@ -179,7 +265,6 @@ export const useDocumentos = () => {
       doc.text(`Municipio: ${params.municipio}`, 110, 79);
       doc.text(`Fecha Vacunación: ${params.applicationDate}`, 20, 86);
 
-      // Vaccine data
       doc.setFillColor(230, 245, 230);
       doc.rect(14, 105, 182, 50, 'F');
       doc.setDrawColor(26, 92, 46);
@@ -199,7 +284,6 @@ export const useDocumentos = () => {
       doc.text(`Próxima aplicación: Según protocolo ICA`, 110, 137);
       doc.text(`Municipio: ${params.municipio}`, 20, 144);
 
-      // Signatures
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.line(20, 190, 90, 190);
@@ -208,7 +292,6 @@ export const useDocumentos = () => {
       doc.text('Firma del Propietario', 120, 196);
       doc.text(`${params.veterinarian}`, 20, 200);
 
-      // Footer
       doc.setFillColor(240, 240, 240);
       doc.rect(0, 285, 210, 12, 'F');
       doc.setTextColor(100, 100, 100);
@@ -216,13 +299,25 @@ export const useDocumentos = () => {
       doc.text(`Generado por AgroData el ${new Date().toLocaleDateString('es-ES')}`, 105, 292, { align: 'center' });
 
       doc.save(`Cert_Vacunacion_${params.animal.tag_id}_${params.applicationDate.replace(/-/g, '')}.pdf`);
+
+      await saveDocumentRecord({
+        id: docId,
+        type: 'cert_vacunacion',
+        created_at: new Date().toISOString(),
+        label: `${params.vaccineName} — ${params.animal.tag_id}`,
+        animal_tag: params.animal.tag_id,
+        date: params.applicationDate,
+      });
+
       toast({ title: 'Certificado generado', description: `${params.vaccineName} — ${params.animal.tag_id}` });
+      return docId;
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      return null;
     } finally {
       setGenerating(false);
     }
   };
 
-  return { generateMovementGuide, generateVaccinationCertificate, generating };
+  return { generateMovementGuide, generateVaccinationCertificate, generating, documentHistory, deleteDocumentRecord, loadHistory };
 };

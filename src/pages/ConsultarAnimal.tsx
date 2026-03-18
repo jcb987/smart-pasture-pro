@@ -36,6 +36,8 @@ import {
 import { AnimalQuickEventDialog } from '@/components/animales/AnimalQuickEventDialog';
 import { AnimalQRDialog } from '@/components/animales/AnimalQRDialog';
 import { IdentificationEditConfirmDialog } from '@/components/animales/IdentificationEditConfirmDialog';
+import { useMobilityTracking, MOBILITY_LABELS } from '@/hooks/useMobilityTracking';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { type Animal, type AnimalEvent, type AnimalCategory, type AnimalStatus } from '@/hooks/useAnimals';
 import { useHealth } from '@/hooks/useHealth';
 import { useReproduction } from '@/hooks/useReproduction';
@@ -44,7 +46,7 @@ import { useWeightRecords } from '@/hooks/useWeightRecords';
 import { useAnimals } from '@/hooks/useAnimals';
 import { useOffline } from '@/contexts/OfflineContext';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -105,6 +107,10 @@ const ConsultarAnimal = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [mobilityExtendDate, setMobilityExtendDate] = useState('');
+  const [showExtendDialog, setShowExtendDialog] = useState(false);
+
+  const { getAnimalMobility, resolveEvent, extendReturnDate, isExpired } = useMobilityTracking();
 
   // Edit states
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -608,6 +614,114 @@ const ConsultarAnimal = () => {
         {/* Información del animal */}
         {selectedAnimal && animalData && (
           <div className="space-y-4">
+            {/* Mobility Banner */}
+            {(() => {
+              const mob = getAnimalMobility(selectedAnimal.id);
+              if (!mob) return null;
+              const expired = isExpired(mob);
+              const daysOverdue = mob.return_date ? differenceInDays(new Date(), new Date(mob.return_date)) : 0;
+              const isPermanent = mob.mobility_type === 'venta' || mob.mobility_type === 'sacrificio';
+
+              return (
+                <div className={`rounded-lg border p-4 space-y-3 ${
+                  expired ? 'bg-red-50 border-red-300 dark:bg-red-950 dark:border-red-700'
+                  : isPermanent ? 'bg-orange-50 border-orange-300 dark:bg-orange-950 dark:border-orange-700'
+                  : 'bg-amber-50 border-amber-300 dark:bg-amber-950 dark:border-amber-700'
+                }`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className={`font-semibold text-sm flex items-center gap-2 ${expired ? 'text-red-700' : isPermanent ? 'text-orange-700' : 'text-amber-700'}`}>
+                        {expired ? <AlertTriangle className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+                        {expired
+                          ? `⚠️ Fecha de retorno superada (hace ${daysOverdue} día${daysOverdue !== 1 ? 's' : ''})`
+                          : isPermanent
+                          ? `📋 Movilizado para ${MOBILITY_LABELS[mob.mobility_type]}`
+                          : `🚌 ${MOBILITY_LABELS[mob.mobility_type]} — en tránsito`
+                        }
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Destino: <strong>{mob.destination}</strong> | Salida: {mob.start_date}
+                        {mob.return_date && !isPermanent && ` | Retorno estimado: ${mob.return_date}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {!isPermanent && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs border-green-400 text-green-700 hover:bg-green-100"
+                        onClick={async () => { await resolveEvent(mob.id, 'returned'); }}
+                      >
+                        ✓ Registrar Retorno
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-blue-400 text-blue-700 hover:bg-blue-100"
+                      onClick={async () => {
+                        await resolveEvent(mob.id, 'sold');
+                        await updateAnimal(selectedAnimal.id, { status: 'vendido', status_reason: 'Vendido en movilización' });
+                      }}
+                    >
+                      Marcar como Vendido
+                    </Button>
+                    {(mob.mobility_type === 'sacrificio' || isPermanent) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs border-red-400 text-red-700 hover:bg-red-100"
+                        onClick={async () => {
+                          await resolveEvent(mob.id, 'dead');
+                          await updateAnimal(selectedAnimal.id, { status: 'muerto', status_reason: 'Sacrificado en movilización' });
+                        }}
+                      >
+                        Confirmar Sacrificio
+                      </Button>
+                    )}
+                    {mob.return_date && !isPermanent && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => { setMobilityExtendDate(mob.return_date!); setShowExtendDialog(true); }}
+                      >
+                        Ampliar Fecha
+                      </Button>
+                    )}
+                  </div>
+                  {/* Extend date dialog inline */}
+                  {showExtendDialog && (
+                    <div className="flex gap-2 items-center pt-1 border-t">
+                      <span className="text-xs text-muted-foreground">Nueva fecha:</span>
+                      <Input
+                        type="date"
+                        className="h-7 text-xs w-36"
+                        value={mobilityExtendDate}
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={e => setMobilityExtendDate(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={async () => {
+                          await extendReturnDate(mob.id, mobilityExtendDate);
+                          setShowExtendDialog(false);
+                        }}
+                        disabled={!mobilityExtendDate}
+                      >
+                        Guardar
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowExtendDialog(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Identificación - Con confirmación */}
             <Collapsible open={openSections.identificacion} onOpenChange={() => toggleSection('identificacion')}>
               <Card>

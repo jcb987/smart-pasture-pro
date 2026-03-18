@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,9 +23,22 @@ import { toast } from 'sonner';
 
 const Salud = () => {
   const { canWrite, canDelete } = useModulePermissions('salud');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showVaccinationDialog, setShowVaccinationDialog] = useState(false);
   const [showPalpationDialog, setShowPalpationDialog] = useState(false);
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (!canWrite) return;
+    if (action === 'new') {
+      setShowEventDialog(true);
+      setSearchParams({}, { replace: true });
+    } else if (action === 'vaccine') {
+      setShowVaccinationDialog(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
   const {
     healthEvents,
     vaccinations,

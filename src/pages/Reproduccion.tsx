@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +48,14 @@ const Reproduccion = () => {
   const { inventory: semenInventory, addLot: addSemenLot, deleteLot: deleteSemenLot, expirationAlerts: semenExpiring, lowStockAlerts: semenLowStock, totalDoses, loading: semenLoading } = useSemenInventory();
   const [showSemenDialog, setShowSemenDialog] = useState(false);
   const [semenForm, setSemenForm] = useState({ bull_name: '', bull_registration: '', breed: '', doses_available: '', doses_total: '', cost_per_dose: '', expiration_date: '', storage_location: '', notes: '' });
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('action') === 'new' && canWrite) {
+      setShowEventDialog(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
 
   const selectedAnimal = selectedAnimalId 
     ? females.find(f => f.id === selectedAnimalId) || null

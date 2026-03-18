@@ -1,9 +1,11 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState, useCallback } from 'react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
+import { FloatingActionButton } from '@/components/layout/FloatingActionButton';
+import { CommandPalette } from '@/components/layout/CommandPalette';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
@@ -16,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, User, Settings } from 'lucide-react';
+import { LogOut, User, Settings, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface DashboardLayoutProps {
@@ -27,6 +29,20 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, signOut } = useAuth();
   const { preferences } = useSettings();
   const navigate = useNavigate();
+  const [commandOpen, setCommandOpen] = useState(false);
+
+  // Global Ctrl+K / Cmd+K shortcut
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      setCommandOpen(prev => !prev);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   // Listen for system theme changes
   useEffect(() => {
@@ -63,6 +79,18 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
 
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden sm:flex items-center gap-2 text-muted-foreground h-8 px-3 text-xs"
+                onClick={() => setCommandOpen(true)}
+              >
+                <Search className="h-3 w-3" />
+                <span>Buscar...</span>
+                <kbd className="ml-1 pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border bg-muted px-1 font-mono text-[10px] font-medium text-muted-foreground">
+                  <span>⌘</span>K
+                </kbd>
+              </Button>
               <OfflineIndicator />
               <NotificationBell />
               
@@ -104,12 +132,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
           </header>
 
-          <main className="flex-1 p-6 pb-20">
+          <main className="flex-1 p-6 pb-24">
             {children}
           </main>
           <OfflineBanner />
         </SidebarInset>
       </div>
+      <FloatingActionButton />
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </SidebarProvider>
   );
 };

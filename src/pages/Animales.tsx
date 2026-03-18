@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +53,18 @@ const Animales = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
   
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'new' && canWrite) {
+      setCreateDialogOpen(true);
+      setSearchParams({}, { replace: true });
+    } else if (action === 'weight') {
+      setWeightDialogOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
+
   const [filters, setFilters] = useState<AnimalFilters>({
     search: '',
     category: 'all',

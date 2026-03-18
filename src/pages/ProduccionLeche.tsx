@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +25,15 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const ProduccionLeche = () => {
   const { canWrite, canDelete } = useModulePermissions('produccion-leche');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new' && canWrite) {
+      setShowAddDialog(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');

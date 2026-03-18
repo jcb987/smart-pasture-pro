@@ -4,14 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export interface MarketPrice {
-  id: string;
-  organization_id: string;
   price_type: 'leche' | 'ganado_pie' | 'novillo' | 'ternero';
   value: number;
   effective_date: string;
-  currency: string;
-  notes: string | null;
-  created_at: string;
 }
 
 export const PRICE_LABELS: Record<string, string> = {
@@ -20,6 +15,10 @@ export const PRICE_LABELS: Record<string, string> = {
   novillo: 'Novillo gordo (COP/kg)',
   ternero: 'Ternero desteto (COP/kg)',
 };
+
+const PRICE_TYPES = ['leche', 'ganado_pie', 'novillo', 'ternero'] as const;
+
+const getStorageKey = (orgId: string) => `agrodata_prices_${orgId}`;
 
 export const useMarketPrices = () => {
   const [prices, setPrices] = useState<MarketPrice[]>([]);
@@ -42,15 +41,12 @@ export const useMarketPrices = () => {
     try {
       const orgId = await getOrganizationId();
       if (!orgId) return;
-      const { data, error } = await supabase
-        .from('market_prices')
-        .select('*')
-        .eq('organization_id', orgId)
-        .order('effective_date', { ascending: false });
-      if (error) throw error;
-      setPrices((data as MarketPrice[]) || []);
-    } catch (err) {
-      console.error('Error fetching market prices:', err);
+      const raw = localStorage.getItem(getStorageKey(orgId));
+      if (raw) {
+        setPrices(JSON.parse(raw));
+      } else {
+        setPrices([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -65,32 +61,18 @@ export const useMarketPrices = () => {
     return found ? found.value : 0;
   };
 
-  const updatePrice = async (type: string, value: number, notes?: string) => {
+  const updatePrice = async (type: string, value: number) => {
     try {
       const orgId = await getOrganizationId();
       if (!orgId) return;
-
-      // Delete existing price of same type and insert new one
-      await supabase
-        .from('market_prices')
-        .delete()
-        .eq('organization_id', orgId)
-        .eq('price_type', type);
-
-      const { error } = await supabase
-        .from('market_prices')
-        .insert({
-          organization_id: orgId,
-          price_type: type,
-          value,
-          effective_date: new Date().toISOString().split('T')[0],
-          notes: notes || null,
-        });
-
-      if (error) throw error;
-
+      const existing = prices.filter(p => p.price_type !== type);
+      const updated: MarketPrice[] = [
+        ...existing,
+        { price_type: type as MarketPrice['price_type'], value, effective_date: new Date().toISOString().split('T')[0] },
+      ];
+      localStorage.setItem(getStorageKey(orgId), JSON.stringify(updated));
+      setPrices(updated);
       toast({ title: 'Precio actualizado', description: `${PRICE_LABELS[type] || type}: ${value.toLocaleString('es-CO')} COP` });
-      await fetchPrices();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     }

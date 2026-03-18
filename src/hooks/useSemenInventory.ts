@@ -6,18 +6,19 @@ import { differenceInDays, parseISO } from 'date-fns';
 
 export interface SemenLot {
   id: string;
-  organization_id: string;
   bull_name: string;
-  bull_registration: string | null;
-  breed: string | null;
+  bull_registration?: string;
+  breed?: string;
   doses_available: number;
   doses_total: number;
-  cost_per_dose: number | null;
-  expiration_date: string | null;
-  storage_location: string | null;
-  notes: string | null;
+  cost_per_dose?: number;
+  expiration_date?: string;
+  storage_location?: string;
+  notes?: string;
   created_at: string;
 }
+
+const getStorageKey = (orgId: string) => `agrodata_semen_${orgId}`;
 
 export const useSemenInventory = () => {
   const [inventory, setInventory] = useState<SemenLot[]>([]);
@@ -35,39 +36,50 @@ export const useSemenInventory = () => {
     return data?.organization_id || null;
   }, [user]);
 
-  const fetchInventory = useCallback(async () => {
+  const loadInventory = useCallback(async () => {
     setLoading(true);
     try {
       const orgId = await getOrganizationId();
       if (!orgId) return;
-      const { data, error } = await supabase
-        .from('semen_inventory')
-        .select('*')
-        .eq('organization_id', orgId)
-        .order('expiration_date', { ascending: true, nullsFirst: false });
-      if (error) throw error;
-      setInventory((data as SemenLot[]) || []);
-    } catch (err) {
-      console.error('Error fetching semen inventory:', err);
+      const raw = localStorage.getItem(getStorageKey(orgId));
+      if (raw) {
+        const parsed: SemenLot[] = JSON.parse(raw);
+        // Sort by expiration date
+        parsed.sort((a, b) => {
+          if (!a.expiration_date) return 1;
+          if (!b.expiration_date) return -1;
+          return a.expiration_date.localeCompare(b.expiration_date);
+        });
+        setInventory(parsed);
+      } else {
+        setInventory([]);
+      }
     } finally {
       setLoading(false);
     }
   }, [getOrganizationId]);
 
-  useEffect(() => {
-    if (user) fetchInventory();
-  }, [user, fetchInventory]);
+  const saveInventory = useCallback(async (lots: SemenLot[]) => {
+    const orgId = await getOrganizationId();
+    if (!orgId) return;
+    localStorage.setItem(getStorageKey(orgId), JSON.stringify(lots));
+    setInventory(lots);
+  }, [getOrganizationId]);
 
-  const addLot = async (lot: Omit<SemenLot, 'id' | 'organization_id' | 'created_at'>) => {
+  useEffect(() => {
+    if (user) loadInventory();
+  }, [user, loadInventory]);
+
+  const addLot = async (lot: Omit<SemenLot, 'id' | 'created_at'>) => {
     try {
-      const orgId = await getOrganizationId();
-      if (!orgId) throw new Error('No organization');
-      const { error } = await supabase
-        .from('semen_inventory')
-        .insert({ ...lot, organization_id: orgId });
-      if (error) throw error;
+      const newLot: SemenLot = {
+        ...lot,
+        id: `semen_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        created_at: new Date().toISOString(),
+      };
+      const updated = [...inventory, newLot];
+      await saveInventory(updated);
       toast({ title: 'Lote agregado', description: `${lot.bull_name}: ${lot.doses_available} dosis` });
-      await fetchInventory();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     }
@@ -77,23 +89,14 @@ export const useSemenInventory = () => {
     const lot = inventory.find(l => l.id === id);
     if (!lot) return;
     const newQty = Math.max(0, lot.doses_available + change);
-    try {
-      const { error } = await supabase
-        .from('semen_inventory')
-        .update({ doses_available: newQty })
-        .eq('id', id);
-      if (error) throw error;
-      setInventory(prev => prev.map(l => l.id === id ? { ...l, doses_available: newQty } : l));
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
-    }
+    const updated = inventory.map(l => l.id === id ? { ...l, doses_available: newQty } : l);
+    await saveInventory(updated);
   };
 
   const deleteLot = async (id: string) => {
     try {
-      const { error } = await supabase.from('semen_inventory').delete().eq('id', id);
-      if (error) throw error;
-      setInventory(prev => prev.filter(l => l.id !== id));
+      const updated = inventory.filter(l => l.id !== id);
+      await saveInventory(updated);
       toast({ title: 'Lote eliminado' });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
@@ -109,5 +112,5 @@ export const useSemenInventory = () => {
   const lowStockAlerts = inventory.filter(l => l.doses_available < 5 && l.doses_available > 0);
   const totalDoses = inventory.reduce((s, l) => s + l.doses_available, 0);
 
-  return { inventory, loading, addLot, updateDoses, deleteLot, expirationAlerts, lowStockAlerts, totalDoses, fetchInventory };
+  return { inventory, loading, addLot, updateDoses, deleteLot, expirationAlerts, lowStockAlerts, totalDoses, fetchInventory: loadInventory };
 };

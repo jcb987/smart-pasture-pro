@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useFarmSettings } from '@/hooks/useFarmSettings';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,7 @@ const Documentos = () => {
   const { animals, updateAnimal } = useAnimals();
   const { vaccinations } = useHealth();
   const { activeEvents, addMobilityEvents, resolveEvent, extendReturnDate, isExpired } = useMobilityTracking();
+  const { settings: farmSettings } = useFarmSettings();
 
   const [openDialog, setOpenDialog] = useState<string | null>(null);
   const [selectedAnimals, setSelectedAnimals] = useState<string[]>([]);
@@ -63,6 +65,25 @@ const Documentos = () => {
     animalId: '', vaccineName: '', applicationDate: new Date().toISOString().split('T')[0],
     dose: '1 dosis', lot: '', veterinarian: '', farmName: '', municipio: '',
   });
+
+  // Pre-fill forms when farm settings load
+  useEffect(() => {
+    if (!farmSettings) return;
+    setMovForm(prev => ({
+      ...prev,
+      farmName: prev.farmName || farmSettings.farmName,
+      ownerName: prev.ownerName || farmSettings.ownerName,
+      municipio: prev.municipio || farmSettings.municipio,
+      departamento: prev.departamento || farmSettings.departamento,
+      origin: prev.origin || farmSettings.municipio,
+    }));
+    setVacForm(prev => ({
+      ...prev,
+      farmName: prev.farmName || farmSettings.farmName,
+      municipio: prev.municipio || farmSettings.municipio,
+      veterinarian: prev.veterinarian || farmSettings.ownerName,
+    }));
+  }, [farmSettings]);
 
   const activeAnimals = animals.filter(a => a.status === 'activo');
 

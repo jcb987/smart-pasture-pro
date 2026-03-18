@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useFarmSettings } from '@/hooks/useFarmSettings';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -95,6 +96,7 @@ const statusLabels: Record<AnimalStatus, string> = {
 const ConsultarAnimal = () => {
   const { animals, loading: animalsLoading, fetchAnimals, updateAnimal, getAnimalEvents, addAnimalEvent } = useAnimals();
   const { isOnline } = useOffline();
+  const { settings: farmSettings } = useFarmSettings();
   const { healthEvents, vaccinations, addHealthEvent, addVaccination } = useHealth();
   const { events: reproductiveEvents, addEvent: addReproEvent } = useReproduction();
   const { records: milkRecords } = useMilkProduction();
@@ -1039,6 +1041,7 @@ const ConsultarAnimal = () => {
           open={qrDialogOpen}
           onClose={() => setQrDialogOpen(false)}
           animal={selectedAnimal}
+          farmName={farmSettings?.farmName || 'AgroData'}
         />
       )}
 

@@ -6,6 +6,7 @@ import { Loader2, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { OnboardingSurvey } from '@/components/onboarding/OnboardingSurvey';
 import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog';
+import { FarmSetupWizard } from '@/components/onboarding/FarmSetupWizard';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading, hasOfflineSession } = useAuth();
   const { isOnline } = useOffline();
+  const [showFarmSetup, setShowFarmSetup] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
@@ -38,7 +40,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('organization_id, is_blocked, is_team_member')
+          .select('organization_id, is_blocked, is_team_member, farm_name')
           .eq('user_id', user.id)
           .single();
 
@@ -51,6 +53,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
         setOrganizationId(profile?.organization_id || null);
         const isTeamMember = (profile as any)?.is_team_member === true;
+
+        // Show farm setup wizard if farm_name is not set yet
+        if (!profile?.farm_name) {
+          setShowFarmSetup(true);
+        }
 
         const { data: onboarding } = await supabase
           .from('user_onboarding')
@@ -122,14 +129,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     <>
       {isOnline && (
         <>
+          <FarmSetupWizard
+            open={showFarmSetup}
+            onComplete={() => setShowFarmSetup(false)}
+            userId={user?.id || ''}
+            organizationId={organizationId}
+          />
           <OnboardingSurvey
-            open={showOnboarding}
+            open={!showFarmSetup && showOnboarding}
             onComplete={() => setShowOnboarding(false)}
             userId={user?.id || ''}
             organizationId={organizationId}
           />
           <WelcomeDialog
-            open={showWelcome}
+            open={!showFarmSetup && showWelcome}
             onComplete={() => setShowWelcome(false)}
             userId={user?.id || ''}
             organizationId={organizationId}

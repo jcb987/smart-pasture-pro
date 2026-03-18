@@ -33,11 +33,11 @@ const moduleTutorials: ModuleTutorial[] = [
   {
     id: 'inicio',
     title: 'Primeros Pasos en el Sistema',
-    description: 'Configura tu finca y empieza a usar GanaderoPro',
+    description: 'Configura tu finca y empieza a usar AgroData',
     duration: '10 min',
     difficulty: 'básico',
     videoPlaceholder: true,
-    introduction: 'Bienvenido a GanaderoPro. Esta guía te llevará paso a paso por la configuración inicial de tu cuenta y tu primera experiencia con el sistema. Al finalizar, tendrás tu finca configurada y lista para comenzar a registrar información.',
+    introduction: 'Bienvenido a AgroData. Esta guía te llevará paso a paso por la configuración inicial de tu cuenta y tu primera experiencia con el sistema. Al finalizar, tendrás tu finca configurada y lista para comenzar a registrar información.',
     steps: [
       {
         title: 'Acceder al sistema',
@@ -74,7 +74,7 @@ const moduleTutorials: ModuleTutorial[] = [
     duration: '15 min',
     difficulty: 'básico',
     videoPlaceholder: true,
-    introduction: 'El módulo de Animales es el corazón de GanaderoPro. Aquí registrarás cada animal de tu finca con toda su información: identificación, genealogía, estado reproductivo y más. Un buen registro de animales es la base para todas las demás funciones del sistema.',
+    introduction: 'El módulo de Animales es el corazón de AgroData. Aquí registrarás cada animal de tu finca con toda su información: identificación, genealogía, estado reproductivo y más. Un buen registro de animales es la base para todas las demás funciones del sistema.',
     steps: [
       {
         title: 'Acceder al módulo de Animales',
@@ -670,7 +670,7 @@ const moduleTutorials: ModuleTutorial[] = [
     duration: '8 min',
     difficulty: 'básico',
     videoPlaceholder: true,
-    introduction: 'La aplicación móvil te permite usar GanaderoPro desde tu celular o tablet, incluso sin conexión a internet. Registra datos en el campo y se sincronizarán automáticamente cuando tengas conexión.',
+    introduction: 'La aplicación móvil te permite usar AgroData desde tu celular o tablet, incluso sin conexión a internet. Registra datos en el campo y se sincronizarán automáticamente cuando tengas conexión.',
     steps: [
       {
         title: 'Instalar la aplicación',
@@ -712,7 +712,7 @@ const moduleTutorials: ModuleTutorial[] = [
     duration: '10 min',
     difficulty: 'básico',
     videoPlaceholder: true,
-    introduction: 'El módulo de Configuración te permite personalizar GanaderoPro según tus necesidades. Configura alertas, preferencias de visualización, datos de tu finca y opciones de respaldo.',
+    introduction: 'El módulo de Configuración te permite personalizar AgroData según tus necesidades. Configura alertas, preferencias de visualización, datos de tu finca y opciones de respaldo.',
     steps: [
       {
         title: 'Acceder a Configuración',
@@ -748,7 +748,128 @@ const moduleTutorials: ModuleTutorial[] = [
       { question: '¿Puedo cambiar el idioma?', answer: 'Actualmente el sistema está en español. Próximamente estará disponible en otros idiomas.' },
       { question: '¿Cómo cambio mi contraseña?', answer: 'Ve a Configuración → Seguridad → Cambiar Contraseña.' }
     ]
-  }
+  },
+  {
+    id: 'documentos',
+    title: 'Documentos Oficiales',
+    description: 'Guías de movilización y certificados de vacunación',
+    duration: '8 min',
+    difficulty: 'básico',
+    videoPlaceholder: true,
+    introduction: 'El módulo Documentos te permite generar documentos oficiales requeridos por el ICA y las autoridades agropecuarias de Colombia: la Guía de Movilización Animal y el Certificado de Vacunación. Los datos de tu finca se pre-llenan automáticamente desde tu configuración.',
+    steps: [
+      {
+        title: 'Acceder al módulo',
+        content: 'En el menú lateral, haz clic en "Documentos". Verás dos tipos de documentos disponibles: Guía de Movilización y Certificado de Vacunación.',
+        tip: 'Si ya configuraste tu finca en el asistente inicial, los campos de predio se llenarán automáticamente.',
+      },
+      {
+        title: 'Generar Guía de Movilización',
+        content: 'Haz clic en "Guía de Movilización". Completa:\n• Nombre del predio y propietario\n• Origen y destino del traslado\n• Datos del transportador (nombre y placa)\n• Tipo de movilización (venta, feria, sacrificio, traslado temporal)\n• Fecha del traslado',
+      },
+      {
+        title: 'Seleccionar animales',
+        content: 'Marca los animales que serán movilizados. Puedes buscarlos por arete o filtrar por categoría. El sistema mostrará peso actual, sexo y categoría de cada uno.',
+        tip: 'Para ferias o traslados temporales, indica la fecha de retorno. El sistema creará un registro de movilidad activa.',
+      },
+      {
+        title: 'Generar el PDF',
+        content: 'Haz clic en "Generar PDF". El documento se descargará automáticamente con:\n• Encabezado oficial\n• Datos del predio\n• Tabla de animales con ID, nombre, peso y sexo\n• Espacio para firmas\n• Número de documento único',
+        warning: 'Este documento es de referencia. Verifica los requisitos vigentes del ICA/SENASA para tu municipio.',
+      },
+      {
+        title: 'Generar Certificado de Vacunación',
+        content: 'Para el certificado, selecciona "Certificado de Vacunación". Elige:\n• El animal vacunado\n• Nombre de la vacuna\n• Fecha de aplicación\n• Dosis y número de lote\n• Nombre del veterinario',
+      },
+      {
+        title: 'Revisar historial',
+        content: 'En la parte inferior de la página, verás el historial de los últimos documentos generados con fecha, tipo y destino. Puedes eliminar registros del historial si ya no los necesitas.',
+      },
+    ],
+    commonQuestions: [
+      { question: '¿Los documentos son válidos oficialmente?', answer: 'Son documentos de referencia para uso interno y de apoyo. Para validez oficial, debe estar firmado por el propietario y el veterinario competente según los requisitos del ICA de tu municipio.' },
+      { question: '¿Puedo editar los campos antes de imprimir?', answer: 'Sí. Todos los campos del formulario son editables antes de generar el PDF. Los datos pre-llenados son solo una guía.' },
+      { question: '¿Qué significa "movilización temporal"?', answer: 'Es un traslado con fecha de retorno esperada (como ferias o exposiciones). El sistema activa un seguimiento para recordarte cuando deben regresar los animales.' },
+    ],
+  },
+  {
+    id: 'terneros',
+    title: 'Gestión de Terneros',
+    description: 'Control de lactancia, destete y crecimiento',
+    duration: '7 min',
+    difficulty: 'básico',
+    videoPlaceholder: true,
+    introduction: 'El módulo Terneros te ayuda a hacer seguimiento de los animales jóvenes desde el nacimiento hasta el destete. Controla alertas de calostro, fechas de destete, peso y crecimiento de cada ternero.',
+    steps: [
+      {
+        title: 'Acceder al módulo Terneros',
+        content: 'En el menú lateral, ve a "Terneros". Verás una lista de todos los terneros activos con su estado (lactancia activa, próximo a destetar, destetado) y días de vida.',
+      },
+      {
+        title: 'Entender los indicadores',
+        content: 'Cada ternero muestra:\n• Días de vida\n• Alerta de calostro (primeras 6 horas)\n• Fecha estimada de destete (basada en fecha de nacimiento)\n• Peso actual\n• Estado de lactancia',
+        tip: 'Los terneros con alerta roja necesitan atención inmediata (calostro o destete próximo).',
+      },
+      {
+        title: 'Registrar el nacimiento',
+        content: 'Los terneros se registran automáticamente cuando creas un evento de "Parto" en el módulo Reproducción. El sistema los agrega al inventario de animales y al listado de terneros.',
+      },
+      {
+        title: 'Registrar el destete',
+        content: 'Cuando un ternero es destetado, ve al módulo Terneros y marca el evento de destete. Esto actualiza el estado del animal y genera un registro en su historial.',
+        tip: 'El destete recomendado es entre 60 y 90 días de vida, dependiendo del sistema de producción.',
+      },
+      {
+        title: 'Ver estadísticas',
+        content: 'En la parte superior del módulo encontrarás estadísticas del grupo:\n• Total de terneros activos\n• Terneros en lactancia\n• Con destete próximo\n• Promedio de días de vida',
+      },
+    ],
+    commonQuestions: [
+      { question: '¿Qué es la alerta de calostro?', answer: 'El calostro es la primera leche que produce la madre tras el parto. Debe darse al ternero en las primeras 6 horas para su inmunidad. El sistema alerta cuando hay un recién nacido sin registro de calostro.' },
+      { question: '¿Cómo se calcula la fecha de destete?', answer: 'Se estima según la fecha de nacimiento más los días configurados para el destete (por defecto 60 días). Puedes ajustar esto en la configuración.' },
+    ],
+  },
+  {
+    id: 'intercambio',
+    title: 'Trazabilidad e Intercambio',
+    description: 'Hojas de vida, exportación y transferencia de animales',
+    duration: '10 min',
+    difficulty: 'intermedio',
+    videoPlaceholder: true,
+    introduction: 'El módulo Intercambio y Trazabilidad te permite exportar la historia completa de un animal (Hoja de Vida) para transferirla a compradores, entidades o ferias. Incluye toda la información: pedigrí, pesajes, eventos de salud y reproductivos.',
+    steps: [
+      {
+        title: 'Acceder a Intercambio / Trazabilidad',
+        content: 'En el menú lateral, ve a "Intercambio". Verás opciones para generar Hojas de Vida, ver el historial de exportaciones y consultar el registro de movilidad activa.',
+      },
+      {
+        title: 'Generar una Hoja de Vida',
+        content: 'En la sección "Exportar Hoja de Vida":\n1. Selecciona el animal del menú desplegable\n2. Escribe el destino (nombre de la finca o comprador) — opcional\n3. Haz clic en "Generar Hoja de Vida"',
+      },
+      {
+        title: 'Vista previa de la Hoja de Vida',
+        content: 'Antes de exportar verás un resumen con:\n• Código de verificación único\n• Datos del animal (ID, raza, peso, estado)\n• Pedigrí (madre y padre)\n• Contadores: pesajes, eventos de salud, eventos reproductivos',
+        tip: 'Copia el código de verificación para que el comprador pueda validar el documento.',
+      },
+      {
+        title: 'Exportar como PDF o JSON',
+        content: 'Desde la vista previa puedes:\n• PDF: Documento imprimible con toda la historia del animal\n• JSON: Archivo de datos para sistemas informáticos del comprador\n\nElige según lo que necesite el destinatario.',
+      },
+      {
+        title: 'Consultar historial de exportaciones',
+        content: 'En la pestaña "Historial de Exportaciones" verás todos los documentos generados con fecha, animal, destino y código de verificación.',
+      },
+      {
+        title: 'Registro de movilidad activa',
+        content: 'Cuando generas una Guía de Movilización para un traslado temporal, el animal aparece en "Movilidad Activa" hasta que marques su retorno. Esto te permite saber en todo momento qué animales están fuera de la finca.',
+      },
+    ],
+    commonQuestions: [
+      { question: '¿Qué contiene la Hoja de Vida?', answer: 'Contiene todos los registros del animal: identificación, pedigrí (madre/padre), historial de pesajes con GDP, eventos de salud (enfermedades, tratamientos), eventos reproductivos y un código de verificación único.' },
+      { question: '¿El comprador puede verificar el documento?', answer: 'Sí. El código de verificación en el PDF permite al comprador confirmar la autenticidad del documento. En versiones futuras habrá un portal público de verificación.' },
+      { question: '¿Puedo exportar varios animales a la vez?', answer: 'Por ahora se genera una Hoja de Vida por animal. Para movilizaciones en grupo, usa la Guía de Movilización desde el módulo Documentos.' },
+    ],
+  },
 ];
 
 interface TutorialContentProps {

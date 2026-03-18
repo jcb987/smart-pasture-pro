@@ -23,6 +23,7 @@ const ProduccionLeche = () => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const [activeTab, setActiveTab] = useState('overview');
   const { importData } = useImportMilk();
   
   const { 
@@ -142,7 +143,7 @@ const ProduccionLeche = () => {
         </div>
 
         {/* Tabs for different views */}
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Resumen</TabsTrigger>
             <TabsTrigger value="lactation">
@@ -269,6 +270,7 @@ const ProduccionLeche = () => {
         onImport={async (data) => {
           try {
             await importData(data);
+            setActiveTab('records');
           } finally {
             await fetchRecords();
           }

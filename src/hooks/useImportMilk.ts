@@ -105,14 +105,14 @@ export function useImportMilk() {
       const batch = recordsToInsert.slice(i, i + batchSize);
       const { error, data: inserted } = await supabase
         .from('milk_production')
-        .upsert(batch, { onConflict: 'animal_id,production_date', ignoreDuplicates: true })
+        .upsert(batch, { onConflict: 'animal_id,production_date' })
         .select();
 
       if (error) {
         console.error('Batch insert error:', error);
         throw new Error(`Error al insertar lote ${Math.floor(i / batchSize) + 1}: ${error.message}`);
       }
-      totalInserted += inserted?.length ?? batch.length;
+      totalInserted += inserted?.length ?? 0;
     }
 
     if (errors.length > 0) {

@@ -65,7 +65,7 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
               </TableRow>
             </TableHeader>
             <TableBody>
-              {milkRecords.slice(0, 15).map((record) => (
+              {milkRecords.slice(0, 100).map((record) => (
                 <TableRow key={record.id}>
                   <TableCell>{formatDateStr(record.production_date)}</TableCell>
                   <TableCell>
@@ -97,6 +97,11 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
               )}
             </TableBody>
           </Table>
+          {milkRecords.length > 100 && (
+            <p className="text-xs text-muted-foreground text-center pt-2">
+              Mostrando 100 de {milkRecords.length} registros
+            </p>
+          )}
         </CardContent>
       </Card>
     );

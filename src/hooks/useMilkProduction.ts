@@ -80,12 +80,19 @@ export const useMilkProduction = () => {
       await initDB();
 
       if (isOnline) {
+        const orgId = organizationId || await getOrganizationId();
+        if (!orgId) {
+          setLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('milk_production')
           .select(`
             *,
             animal:animals(id, tag_id, name)
           `)
+          .eq('organization_id', orgId)
           .order('production_date', { ascending: false })
           .limit(500);
 
@@ -131,7 +138,7 @@ export const useMilkProduction = () => {
     } finally {
       setLoading(false);
     }
-  }, [isOnline, toast]);
+  }, [isOnline, toast, organizationId, getOrganizationId]);
 
   const addRecord = async (record: {
     animal_id: string;

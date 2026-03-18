@@ -106,12 +106,16 @@ export const useHealth = () => {
       await initDB();
 
       if (isOnline) {
+        const orgId = organizationId || await getOrgId(isOnline);
+        if (!orgId) return;
+
         const { data, error } = await supabase
           .from('health_events')
           .select(`
             *,
             animal:animals(id, tag_id, name)
           `)
+          .eq('organization_id', orgId)
           .order('event_date', { ascending: false })
           .limit(500);
 
@@ -147,13 +151,16 @@ export const useHealth = () => {
   const fetchVaccinations = async () => {
     try {
       if (!isOnline) return;
-      
+      const orgId = organizationId || await getOrgId(isOnline);
+      if (!orgId) return;
+
       const { data, error } = await supabase
         .from('vaccination_schedule')
         .select(`
           *,
           animal:animals(id, tag_id, name)
         `)
+        .eq('organization_id', orgId)
         .order('scheduled_date', { ascending: true })
         .limit(500);
 

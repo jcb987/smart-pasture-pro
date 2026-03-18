@@ -99,11 +99,14 @@ export const usePaddocks = () => {
     return data?.organization_id || null;
   };
 
-  const fetchPaddocks = async () => {
+  const fetchPaddocks = async (orgId?: string) => {
+    const resolvedId = orgId || organizationId;
+    if (!resolvedId) return;
     try {
       const { data, error } = await supabase
         .from('paddocks')
         .select('*')
+        .eq('organization_id', resolvedId)
         .order('name');
 
       if (error) throw error;
@@ -113,11 +116,14 @@ export const usePaddocks = () => {
     }
   };
 
-  const fetchRotations = async () => {
+  const fetchRotations = async (orgId?: string) => {
+    const resolvedId = orgId || organizationId;
+    if (!resolvedId) return;
     try {
       const { data, error } = await supabase
         .from('paddock_rotations')
         .select(`*, paddock:paddocks(*)`)
+        .eq('organization_id', resolvedId)
         .order('entry_date', { ascending: false })
         .limit(100);
 
@@ -128,11 +134,14 @@ export const usePaddocks = () => {
     }
   };
 
-  const fetchMeasurements = async () => {
+  const fetchMeasurements = async (orgId?: string) => {
+    const resolvedId = orgId || organizationId;
+    if (!resolvedId) return;
     try {
       const { data, error } = await supabase
         .from('forage_measurements')
         .select(`*, paddock:paddocks(*)`)
+        .eq('organization_id', resolvedId)
         .order('measurement_date', { ascending: false })
         .limit(100);
 
@@ -143,9 +152,11 @@ export const usePaddocks = () => {
     }
   };
 
-  const fetchAll = async () => {
+  const fetchAll = async (orgId?: string) => {
+    const resolvedId = orgId || organizationId || await getOrganizationId();
+    if (!resolvedId) return;
     setLoading(true);
-    await Promise.all([fetchPaddocks(), fetchRotations(), fetchMeasurements()]);
+    await Promise.all([fetchPaddocks(resolvedId), fetchRotations(resolvedId), fetchMeasurements(resolvedId)]);
     setLoading(false);
   };
 
@@ -397,7 +408,7 @@ export const usePaddocks = () => {
       const orgId = await getOrganizationId();
       setOrganizationId(orgId);
       if (orgId) {
-        await fetchAll();
+        await fetchAll(orgId);
       }
     };
     init();

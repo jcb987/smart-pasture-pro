@@ -67,6 +67,7 @@ export const useDashboardData = () => {
       const { data: animals, error: animalsError } = await supabase
         .from('animals')
         .select('id, sex, reproductive_status, last_calving_date, last_service_date, expected_calving_date')
+        .eq('organization_id', orgId)
         .eq('status', 'activo');
 
       if (animalsError) throw animalsError;
@@ -91,6 +92,7 @@ export const useDashboardData = () => {
       const { data: services } = await supabase
         .from('reproductive_events')
         .select('id, event_type, pregnancy_result')
+        .eq('organization_id', orgId)
         .in('event_type', ['servicio', 'inseminacion']);
 
       const totalServices = services?.length || 0;
@@ -102,6 +104,7 @@ export const useDashboardData = () => {
       const { data: milkToday } = await supabase
         .from('milk_production')
         .select('total_liters')
+        .eq('organization_id', orgId)
         .eq('production_date', todayStr);
 
       const produccionDiaria = milkToday?.reduce((sum, r) => sum + (r.total_liters || 0), 0) || 0;
@@ -129,6 +132,7 @@ export const useDashboardData = () => {
       const { data: animalsLastMonth } = await supabase
         .from('animals')
         .select('id')
+        .eq('organization_id', orgId)
         .eq('status', 'activo')
         .gte('created_at', format(lastMonth, 'yyyy-MM-dd'));
 
@@ -166,6 +170,7 @@ export const useDashboardData = () => {
       const { data: milkRecords } = await supabase
         .from('milk_production')
         .select('animal_id, total_liters')
+        .eq('organization_id', orgId)
         .eq('production_date', today);
 
       const lowProductionCount = milkRecords?.filter(r => (r.total_liters || 0) < 10).length || 0;
@@ -198,6 +203,7 @@ export const useDashboardData = () => {
       const { data: recentWeights } = await supabase
         .from('weight_records')
         .select('animal_id')
+        .eq('organization_id', orgId)
         .gte('weight_date', thirtyDaysAgo);
 
       const animalsWithRecentWeight = new Set(recentWeights?.map(w => w.animal_id) || []);
@@ -216,6 +222,7 @@ export const useDashboardData = () => {
       const { data: pendingVaccinations } = await supabase
         .from('vaccination_schedule')
         .select('id')
+        .eq('organization_id', orgId)
         .eq('is_applied', false)
         .lte('scheduled_date', format(new Date(), 'yyyy-MM-dd'));
 
@@ -232,6 +239,7 @@ export const useDashboardData = () => {
       const { data: activeHealth } = await supabase
         .from('health_events')
         .select('id')
+        .eq('organization_id', orgId)
         .eq('status', 'activo');
 
       if (activeHealth && activeHealth.length > 0) {
@@ -261,6 +269,7 @@ export const useDashboardData = () => {
       const { data: reproEvents } = await supabase
         .from('reproductive_events')
         .select('id, event_type, event_date, animal_id, animals(tag_id)')
+        .eq('organization_id', orgId)
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -283,6 +292,7 @@ export const useDashboardData = () => {
       const { data: healthEvents } = await supabase
         .from('health_events')
         .select('id, event_type, event_date, animal_id, animals(tag_id)')
+        .eq('organization_id', orgId)
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -304,8 +314,9 @@ export const useDashboardData = () => {
       const { data: weightRecords } = await supabase
         .from('weight_records')
         .select('id, weight_date, animal_id, animals(tag_id)')
+        .eq('organization_id', orgId)
         .order('created_at', { ascending: false })
-        .limit(3);
+        .limit(5);
 
       weightRecords?.forEach(e => {
         events.push({

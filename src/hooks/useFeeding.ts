@@ -103,11 +103,14 @@ export const useFeeding = () => {
     return data?.organization_id || null;
   };
 
-  const fetchInventory = async () => {
+  const fetchInventory = async (orgId?: string) => {
+    const resolvedId = orgId || organizationId;
+    if (!resolvedId) return;
     try {
       const { data, error } = await supabase
         .from('feed_inventory')
         .select('*')
+        .eq('organization_id', resolvedId)
         .order('name');
 
       if (error) throw error;
@@ -117,11 +120,14 @@ export const useFeeding = () => {
     }
   };
 
-  const fetchDiets = async () => {
+  const fetchDiets = async (orgId?: string) => {
+    const resolvedId = orgId || organizationId;
+    if (!resolvedId) return;
     try {
       const { data, error } = await supabase
         .from('feed_diets')
         .select('*')
+        .eq('organization_id', resolvedId)
         .order('name');
 
       if (error) throw error;
@@ -131,11 +137,14 @@ export const useFeeding = () => {
     }
   };
 
-  const fetchConsumption = async () => {
+  const fetchConsumption = async (orgId?: string) => {
+    const resolvedId = orgId || organizationId;
+    if (!resolvedId) return;
     try {
       const { data, error } = await supabase
         .from('feed_consumption')
         .select(`*, feed:feed_inventory(*)`)
+        .eq('organization_id', resolvedId)
         .order('consumption_date', { ascending: false })
         .limit(200);
 
@@ -146,9 +155,11 @@ export const useFeeding = () => {
     }
   };
 
-  const fetchAll = async () => {
+  const fetchAll = async (orgId?: string) => {
+    const resolvedId = orgId || organizationId || await getOrganizationId();
+    if (!resolvedId) return;
     setLoading(true);
-    await Promise.all([fetchInventory(), fetchDiets(), fetchConsumption()]);
+    await Promise.all([fetchInventory(resolvedId), fetchDiets(resolvedId), fetchConsumption(resolvedId)]);
     setLoading(false);
   };
 
@@ -366,7 +377,7 @@ export const useFeeding = () => {
       const orgId = await getOrganizationId();
       setOrganizationId(orgId);
       if (orgId) {
-        await fetchAll();
+        await fetchAll(orgId);
       }
     };
     init();

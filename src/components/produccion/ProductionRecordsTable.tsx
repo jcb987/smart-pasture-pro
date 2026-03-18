@@ -126,7 +126,7 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
             </TableRow>
           </TableHeader>
           <TableBody>
-            {weightRecords.slice(0, 15).map((record) => (
+            {weightRecords.slice(0, 100).map((record) => (
               <TableRow key={record.id}>
                 <TableCell>{formatDateStr(record.weight_date)}</TableCell>
                 <TableCell>
@@ -162,6 +162,11 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
             )}
           </TableBody>
         </Table>
+        {weightRecords.length > 100 && (
+          <p className="text-xs text-muted-foreground text-center pt-2">
+            Mostrando 100 de {weightRecords.length} registros
+          </p>
+        )}
       </CardContent>
     </Card>
   );

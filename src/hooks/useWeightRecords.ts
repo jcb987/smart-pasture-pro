@@ -79,12 +79,16 @@ export const useWeightRecords = () => {
       await initDB();
 
       if (isOnline) {
+        const orgId = organizationId || await getOrganizationId();
+        if (!orgId) { setLoading(false); return; }
+
         const { data, error } = await supabase
           .from('weight_records')
           .select(`
             *,
             animal:animals(id, tag_id, name, category)
           `)
+          .eq('organization_id', orgId)
           .order('weight_date', { ascending: false })
           .limit(500);
 

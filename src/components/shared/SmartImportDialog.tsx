@@ -681,6 +681,7 @@ export function SmartImportDialog({
     const staticTemplates: Record<string, string> = {
       'plantilla_produccion_leche.xlsx': '/templates/plantilla_produccion_leche.xlsx',
       'plantilla_produccion_carne.xlsx': '/templates/plantilla_produccion_carne.xlsx',
+      'plantilla_reproduccion.xlsx': '/templates/plantilla_reproduccion.xlsx',
     };
     const staticPath = staticTemplates[config.templateFileName];
     if (staticPath) {

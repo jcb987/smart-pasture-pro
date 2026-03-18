@@ -61,7 +61,7 @@ export const HealthEventsTable = ({ events, onDelete, onComplete }: HealthEvents
             </TableRow>
           </TableHeader>
           <TableBody>
-            {events.slice(0, 15).map((event) => (
+            {events.slice(0, 100).map((event) => (
               <TableRow key={event.id}>
                 <TableCell>{formatDateStr(event.event_date)}</TableCell>
                 <TableCell>
@@ -107,6 +107,11 @@ export const HealthEventsTable = ({ events, onDelete, onComplete }: HealthEvents
             )}
           </TableBody>
         </Table>
+        {events.length > 100 && (
+          <p className="text-xs text-muted-foreground text-center pt-2">
+            Mostrando 100 de {events.length} registros
+          </p>
+        )}
       </CardContent>
     </Card>
   );
@@ -154,7 +159,7 @@ export const VaccinationTable = ({ vaccinations, onApply, onDelete }: Vaccinatio
             </TableRow>
           </TableHeader>
           <TableBody>
-            {vaccinations.slice(0, 15).map((vac) => (
+            {vaccinations.slice(0, 100).map((vac) => (
               <TableRow key={vac.id} className={!vac.is_applied && vac.scheduled_date < today ? 'bg-destructive/10' : ''}>
                 <TableCell>{formatDateStr(vac.scheduled_date)}</TableCell>
                 <TableCell>
@@ -197,6 +202,11 @@ export const VaccinationTable = ({ vaccinations, onApply, onDelete }: Vaccinatio
             )}
           </TableBody>
         </Table>
+        {vaccinations.length > 100 && (
+          <p className="text-xs text-muted-foreground text-center pt-2">
+            Mostrando 100 de {vaccinations.length} registros
+          </p>
+        )}
       </CardContent>
     </Card>
   );

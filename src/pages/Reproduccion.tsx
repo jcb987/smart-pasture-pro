@@ -303,7 +303,7 @@ const Reproduccion = () => {
                       </div>
                     ) : (
                       <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                        {events.slice(0, 20).map((event) => {
+                        {events.slice(0, 100).map((event) => {
                           const animal = females.find(f => f.id === event.animal_id);
                           return (
                             <div 

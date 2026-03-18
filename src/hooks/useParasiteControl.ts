@@ -69,16 +69,20 @@ export function useParasiteControl() {
   // Cargar datos
   const fetchData = async () => {
     setLoading(true);
+    const orgId = organizationId || await getOrganizationId();
+    if (!orgId) { setLoading(false); return; }
     try {
       const [healthResult, animalsResult] = await Promise.all([
         supabase
           .from('health_events')
           .select('*')
+          .eq('organization_id', orgId)
           .ilike('diagnosis', '%parásito%')
           .order('event_date', { ascending: false }),
         supabase
           .from('animals')
           .select('id, tag_id, name, category, status')
+          .eq('organization_id', orgId)
           .eq('status', 'activo')
       ]);
 

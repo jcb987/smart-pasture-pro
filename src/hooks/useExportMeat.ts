@@ -23,9 +23,12 @@ export function useExportMeat() {
     setExporting(true);
     try {
       // Get organization ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
       const { data: profile } = await supabase
         .from('profiles')
         .select('organization_id')
+        .eq('user_id', user.id)
         .single();
 
       if (!profile?.organization_id) {

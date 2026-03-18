@@ -86,9 +86,13 @@ export function useAnimals() {
 
       if (isOnline) {
         // Try to fetch from server
+        const orgId = await getOrgId(isOnline);
+        if (!orgId) { setLoading(false); return; }
+
         const { data, error } = await supabase
           .from('animals')
           .select('*')
+          .eq('organization_id', orgId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;

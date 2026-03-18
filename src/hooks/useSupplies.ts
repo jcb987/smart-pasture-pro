@@ -139,6 +139,7 @@ export const useSupplies = () => {
       const { data, error } = await supabase
         .from('supplies')
         .select('*')
+        .eq('organization_id', organizationId!)
         .order('name');
       if (error) throw error;
       return data as Supply[];
@@ -153,6 +154,7 @@ export const useSupplies = () => {
       const { data, error } = await supabase
         .from('supply_lots')
         .select('*, supply:supplies(*)')
+        .eq('organization_id', organizationId!)
         .eq('is_depleted', false)
         .order('expiration_date', { ascending: true });
       if (error) throw error;
@@ -168,6 +170,7 @@ export const useSupplies = () => {
       const { data, error } = await supabase
         .from('supply_movements')
         .select('*, supply:supplies(*), supply_lot:supply_lots(*), animals(tag_id, name)')
+        .eq('organization_id', organizationId!)
         .order('movement_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(500);

@@ -6,9 +6,12 @@ export function useImportMeat() {
 
   const importData = async (data: Record<string, unknown>[]) => {
     // Get organization ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No authenticated user');
     const { data: profile } = await supabase
       .from('profiles')
       .select('organization_id')
+      .eq('user_id', user.id)
       .single();
 
     if (!profile?.organization_id) {
@@ -73,13 +76,29 @@ export function useImportMeat() {
     }
 
     if (recordsToInsert.length === 0) {
-      throw new Error('No hay registros válidos para importar');
+      const sampleErrors = errors.slice(0, 3).join('; ');
+      throw new Error(`No hay registros válidos para importar. Errores: ${sampleErrors}${errors.length > 3 ? ` (+${errors.length - 3} más)` : ''}`);
     }
 
-    // Insert weight records
+    // Pre-check duplicates (animal_id + weight_date)
+    const animalIds = [...new Set(recordsToInsert.map(r => r.animal_id))];
+    const dates = [...new Set(recordsToInsert.map(r => r.weight_date))];
+    const { data: existingRecords } = await supabase
+      .from('weight_records')
+      .select('animal_id, weight_date')
+      .in('animal_id', animalIds)
+      .in('weight_date', dates)
+      .eq('organization_id', profile.organization_id);
+
+    const existingKeys = new Set((existingRecords || []).map(r => `${r.animal_id}|${r.weight_date}`));
+    const keys = recordsToInsert.map(r => `${r.animal_id}|${r.weight_date}`);
+    const duplicateCount = keys.filter(k => existingKeys.has(k)).length;
+    const newCount = keys.length - duplicateCount;
+
+    // Insert weight records (upsert to handle duplicates gracefully)
     const { error: insertError } = await supabase
       .from('weight_records')
-      .insert(recordsToInsert);
+      .upsert(recordsToInsert, { onConflict: 'animal_id,weight_date' });
 
     if (insertError) throw insertError;
 
@@ -94,18 +113,20 @@ export function useImportMeat() {
         .eq('id', update.id);
     }
 
-    if (errors.length > 0) {
-      toast({
-        title: 'Importación parcial',
-        description: `${recordsToInsert.length} importados, ${errors.length} errores`,
-        variant: 'default',
-      });
-    } else {
-      toast({
-        title: 'Importación exitosa',
-        description: `${recordsToInsert.length} pesajes importados`,
-      });
-    }
+    const parts: string[] = [];
+    if (newCount > 0) parts.push(`${newCount} nuevos registros`);
+    if (duplicateCount > 0) parts.push(`${duplicateCount} actualizados (ya existían)`);
+    if (errors.length > 0) parts.push(`${errors.length} omitidos`);
+
+    toast({
+      title: errors.length > 0 && newCount === 0 && duplicateCount === 0
+        ? 'Importación con errores'
+        : duplicateCount > 0 && newCount === 0
+        ? 'Registros actualizados'
+        : 'Importación exitosa',
+      description: parts.join(', ') + (errors.length > 0 ? `. Ej: ${errors[0]}` : ''),
+      variant: errors.length > 0 && newCount === 0 && duplicateCount === 0 ? 'destructive' : 'default',
+    });
   };
 
   return { importData };

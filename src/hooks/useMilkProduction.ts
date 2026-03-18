@@ -4,6 +4,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import { offlineDB, initDB } from '@/lib/offlineDB';
+import { addDays, differenceInDays, parseISO, subDays } from 'date-fns';
+
+interface AnimalForDryCow {
+  id: string;
+  tag_id: string;
+  name?: string | null;
+  sex: string;
+  expected_calving_date?: string | null;
+  reproductive_status?: string | null;
+}
 
 export interface MilkRecord {
   id: string;
@@ -316,6 +326,72 @@ export const useMilkProduction = () => {
       .sort((a, b) => b.total_liters - a.total_liters);
   };
 
+  // F2: Período seco automático — calcula cuándo secar vacas preñadas (60 días antes del parto)
+  const getDryCowAlerts = (animals: AnimalForDryCow[]) => {
+    const today = new Date();
+    return animals
+      .filter(a => a.sex === 'hembra' && a.expected_calving_date && a.reproductive_status === 'preñada')
+      .map(animal => {
+        const calvingDate = parseISO(animal.expected_calving_date!);
+        const dryDate = addDays(calvingDate, -60);
+        const daysUntilDry = differenceInDays(dryDate, today);
+        const daysUntilCalving = differenceInDays(calvingDate, today);
+        return {
+          animal_id: animal.id,
+          tag_id: animal.tag_id,
+          name: animal.name,
+          expected_calving_date: animal.expected_calving_date!,
+          dry_date: dryDate.toISOString().split('T')[0],
+          daysUntilDry,
+          daysUntilCalving,
+          status: daysUntilDry < 0 ? 'vencido' : daysUntilDry <= 7 ? 'urgente' : 'programado',
+        };
+      })
+      .sort((a, b) => a.daysUntilDry - b.daysUntilDry);
+  };
+
+  // F5: Calidad de leche — estadísticas de CCS, grasa y proteína
+  const getQualityStats = () => {
+    const last30Days = subDays(new Date(), 30).toISOString().split('T')[0];
+    const recentRecords = records.filter(r => r.production_date >= last30Days);
+
+    const withCCS = recentRecords.filter(r => r.somatic_cell_count != null);
+    const avgCCS = withCCS.length ? withCCS.reduce((s, r) => s + (r.somatic_cell_count || 0), 0) / withCCS.length : 0;
+    const ccsHighRecords = withCCS.filter(r => (r.somatic_cell_count || 0) > 400000);
+
+    const withFat = recentRecords.filter(r => r.fat_percentage != null);
+    const avgFat = withFat.length ? withFat.reduce((s, r) => s + (r.fat_percentage || 0), 0) / withFat.length : 0;
+
+    const withProtein = recentRecords.filter(r => r.protein_percentage != null);
+    const avgProtein = withProtein.length ? withProtein.reduce((s, r) => s + (r.protein_percentage || 0), 0) / withProtein.length : 0;
+
+    const highCCSAnimalIds = [...new Set(ccsHighRecords.map(r => r.animal_id))];
+    const highCCSAnimals = highCCSAnimalIds.map(id => {
+      const latestRecord = ccsHighRecords
+        .filter(r => r.animal_id === id)
+        .sort((a, b) => new Date(b.production_date).getTime() - new Date(a.production_date).getTime())[0];
+      return {
+        animal_id: id,
+        tag_id: latestRecord?.animal?.tag_id || '',
+        name: latestRecord?.animal?.name || null,
+        ccs: latestRecord?.somatic_cell_count || 0,
+        date: latestRecord?.production_date || '',
+      };
+    });
+
+    // Trend: daily avg CCS for last 30 days
+    const ccsTrend = [];
+    for (let i = 29; i >= 0; i--) {
+      const dd = subDays(new Date(), i);
+      const date = dd.toISOString().split('T')[0];
+      const dayRecs = withCCS.filter(r => r.production_date === date);
+      const avgDay = dayRecs.length ? dayRecs.reduce((s, r) => s + (r.somatic_cell_count || 0), 0) / dayRecs.length : null;
+      ccsTrend.push({ date, avgCCS: avgDay });
+    }
+
+    return { avgCCS, avgFat, avgProtein, ccsAlertCount: ccsHighRecords.length, highCCSAnimals, ccsTrend };
+  };
+
   const getProductionCurve = (animalId?: string, days: number = 30) => {
     const result: { date: string; total: number }[] = [];
 
@@ -360,6 +436,8 @@ export const useMilkProduction = () => {
     getStats,
     getRankings,
     getProductionCurve,
+    getDryCowAlerts,
+    getQualityStats,
     fetchRecords,
   };
 };

@@ -408,6 +408,35 @@ export const useReproduction = () => {
     return events.filter(e => e.animal_id === animalId);
   };
 
+  // F1: Predicción de inseminación óptima basada en ciclo de celo
+  const getInseminationAlerts = () => {
+    const today = new Date();
+    return females
+      .filter(f => f.reproductive_status === 'vacia' || f.reproductive_status === 'lactando')
+      .map(female => {
+        const celoEvents = events
+          .filter(e => e.animal_id === female.id && e.event_type === 'celo')
+          .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime());
+        if (!celoEvents.length) return null;
+        const lastCelo = celoEvents[0];
+        const lastCeloDate = parseISO(lastCelo.event_date);
+        const nextCeloDate = addDays(lastCeloDate, HEAT_CYCLE_DAYS);
+        const daysUntilNextCelo = differenceInDays(nextCeloDate, today);
+        return {
+          animal_id: female.id,
+          tag_id: female.tag_id,
+          name: female.name,
+          lastCeloDate: lastCelo.event_date,
+          nextCeloDate: nextCeloDate.toISOString().split('T')[0],
+          daysUntilNextCelo,
+          optimalWindow: `${nextCeloDate.toLocaleDateString('es-ES')} (10-14h después)`,
+          status: daysUntilNextCelo <= 0 ? 'en_celo' : daysUntilNextCelo <= 3 ? 'proximo' : 'normal',
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a!.daysUntilNextCelo - b!.daysUntilNextCelo);
+  };
+
   const getPedigree = async (animalId: string) => {
     if (!isOnline) {
       // Return basic info from cached animals
@@ -434,6 +463,7 @@ export const useReproduction = () => {
     deleteEvent,
     getAnimalHistory,
     getPedigree,
+    getInseminationAlerts,
     GESTATION_DAYS,
     HEAT_CYCLE_DAYS,
   };

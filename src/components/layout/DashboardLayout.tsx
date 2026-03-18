@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from 'react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
-import { NotificationsDropdown } from '@/components/layout/NotificationsDropdown';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -64,7 +64,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
             <div className="flex items-center gap-2">
               <OfflineIndicator />
-              <NotificationsDropdown />
+              <NotificationBell />
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

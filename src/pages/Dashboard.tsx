@@ -2,11 +2,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Beef, 
-  Milk, 
-  Heart, 
-  AlertTriangle, 
+import {
+  Beef,
+  Milk,
+  Heart,
+  AlertTriangle,
   TrendingUp,
   Calendar,
   Activity,
@@ -15,19 +15,30 @@ import {
   Stethoscope,
   ArrowRight,
   RefreshCw,
-  Loader2
+  Loader2,
+  DollarSign
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import { WeatherWidget } from '@/components/dashboard/WeatherWidget';
 import { AIChatWidget } from '@/components/ai/AIChatWidget';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useMarketPrices } from '@/hooks/useMarketPrices';
+import { useAnimals } from '@/hooks/useAnimals';
+import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { kpis, alerts, recentEvents, loading, lastUpdated, refresh } = useDashboardData();
+  const { calculateHerdValue, estimateMilkRevenue, getCurrentPrice, prices } = useMarketPrices();
+  const { animals } = useAnimals();
+  const { getStats: getMilkStats } = useMilkProduction();
+  const milkStats = getMilkStats();
+  const herdValue = calculateHerdValue(animals);
+  const milkRevenue = estimateMilkRevenue(milkStats.monthTotal);
+  const hasMarketPrices = prices.length > 0;
 
   const aiContext = {
     totalAnimals: kpis.totalAnimales,
@@ -175,6 +186,86 @@ const Dashboard = () => {
                 )}
               </div>
               <Progress value={kpis.diasAbiertosPromedio > 0 ? 100 - (kpis.diasAbiertosPromedio / 200) * 100 : 0} className="mt-2" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* F9: Valorización del Hato */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className={hasMarketPrices ? 'border-l-4 border-l-emerald-500' : ''}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-emerald-600" />
+                Valor Estimado del Hato
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {hasMarketPrices ? (
+                <>
+                  <div className="text-2xl font-bold text-emerald-600">
+                    {herdValue > 0 ? `$${herdValue.toLocaleString('es-CO', { maximumFractionDigits: 0 })}` : '–'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{animals.filter(a => a.status === 'activo' && a.current_weight).length} animales × ${getCurrentPrice('ganado_pie').toLocaleString('es-CO')}/kg</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-lg font-medium text-muted-foreground">Sin precios</div>
+                  <Button variant="link" className="h-auto p-0 text-xs" onClick={() => navigate('/configuracion')}>
+                    Configurar precios →
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className={hasMarketPrices ? 'border-l-4 border-l-blue-500' : ''}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Milk className="h-4 w-4 text-blue-600" />
+                Ingresos Leche (Mes)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {hasMarketPrices ? (
+                <>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {milkRevenue > 0 ? `$${milkRevenue.toLocaleString('es-CO', { maximumFractionDigits: 0 })}` : '–'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{milkStats.monthTotal.toFixed(0)}L × ${getCurrentPrice('leche').toLocaleString('es-CO')}/L</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-lg font-medium text-muted-foreground">Sin precios</div>
+                  <Button variant="link" className="h-auto p-0 text-xs" onClick={() => navigate('/configuracion')}>
+                    Configurar precios →
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-orange-500" />
+                Precios de Mercado
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {hasMarketPrices ? (
+                <div className="space-y-1 text-sm">
+                  {getCurrentPrice('leche') > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Leche</span><span className="font-medium">${getCurrentPrice('leche').toLocaleString('es-CO')}/L</span></div>}
+                  {getCurrentPrice('ganado_pie') > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Ganado pie</span><span className="font-medium">${getCurrentPrice('ganado_pie').toLocaleString('es-CO')}/kg</span></div>}
+                  {getCurrentPrice('novillo') > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Novillo</span><span className="font-medium">${getCurrentPrice('novillo').toLocaleString('es-CO')}/kg</span></div>}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  <p>Configure los precios de mercado para ver la valorización del hato.</p>
+                  <Button variant="link" className="h-auto p-0 text-xs mt-1" onClick={() => navigate('/configuracion')}>
+                    Ir a Configuración →
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

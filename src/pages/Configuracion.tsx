@@ -10,14 +10,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-  Settings, Save, User, Bell, Database, Globe, Shield, 
-  Download, Upload, RotateCcw, CheckCircle, Loader2, AlertTriangle, Cloud, Heart
+import {
+  Settings, Save, User, Bell, Database, Globe, Shield,
+  Download, Upload, RotateCcw, CheckCircle, Loader2, AlertTriangle, Cloud, Heart, DollarSign, Syringe
 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { CloudBackupSettings } from '@/components/configuracion/CloudBackupSettings';
+import { useMarketPrices, PRICE_LABELS } from '@/hooks/useMarketPrices';
+import { SanitaryPlanConfig } from '@/components/configuracion/SanitaryPlanConfig';
 
 const Configuracion = () => {
   const { settings, preferences, saveSettings, savePreferences, exportData, resetSettings, loading } = useSettings();
@@ -25,6 +27,9 @@ const Configuracion = () => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const { prices, getCurrentPrice, updatePrice } = useMarketPrices();
+  const [priceValues, setPriceValues] = useState<Record<string, string>>({});
+  const [savingPrices, setSavingPrices] = useState(false);
 
   const [localSettings, setLocalSettings] = useState(settings);
   const [localPreferences, setLocalPreferences] = useState(preferences);
@@ -78,10 +83,18 @@ const Configuracion = () => {
         </div>
 
         <Tabs defaultValue="general" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="flex flex-wrap h-auto gap-0.5">
             <TabsTrigger value="general">
               <Globe className="mr-2 h-4 w-4" />
               General
+            </TabsTrigger>
+            <TabsTrigger value="precios">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Precios
+            </TabsTrigger>
+            <TabsTrigger value="sanitario">
+              <Syringe className="mr-2 h-4 w-4" />
+              Plan Sanitario
             </TabsTrigger>
             <TabsTrigger value="alerts">
               <Bell className="mr-2 h-4 w-4" />
@@ -282,6 +295,77 @@ const Configuracion = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Precios de Mercado - F9 */}
+          <TabsContent value="precios" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-emerald-600" />
+                  Precios de Mercado
+                </CardTitle>
+                <CardDescription>
+                  Configura los precios actuales para calcular la valorización del hato y los ingresos estimados
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {(['leche', 'ganado_pie', 'novillo', 'ternero'] as const).map(type => (
+                    <div key={type} className="space-y-2">
+                      <Label>{PRICE_LABELS[type]}</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder={`Actual: ${getCurrentPrice(type).toLocaleString('es-CO') || 'No configurado'}`}
+                          value={priceValues[type] || ''}
+                          onChange={e => setPriceValues(prev => ({ ...prev, [type]: e.target.value }))}
+                        />
+                        <Button
+                          size="sm"
+                          disabled={savingPrices || !priceValues[type]}
+                          onClick={async () => {
+                            const val = parseFloat(priceValues[type]);
+                            if (!val || isNaN(val)) return;
+                            setSavingPrices(true);
+                            await updatePrice(type, val);
+                            setPriceValues(prev => ({ ...prev, [type]: '' }));
+                            setSavingPrices(false);
+                          }}
+                        >
+                          {savingPrices ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      {getCurrentPrice(type) > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Vigente: <span className="font-medium">${getCurrentPrice(type).toLocaleString('es-CO')}</span> COP
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {prices.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Historial de Precios</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {prices.slice(0, 10).map(p => (
+                        <div key={p.id} className="flex justify-between items-center text-sm py-1 border-b border-border/40">
+                          <span className="text-muted-foreground">{PRICE_LABELS[p.price_type] || p.price_type}</span>
+                          <span className="font-medium">${p.value.toLocaleString('es-CO')} COP</span>
+                          <span className="text-xs text-muted-foreground">{p.effective_date}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Plan Sanitario - F6 */}
+          <TabsContent value="sanitario" className="space-y-4">
+            <SanitaryPlanConfig />
           </TabsContent>
 
           {/* Alertas */}

@@ -14,10 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Search, 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
   Tag,
   Heart,
@@ -30,9 +30,11 @@ import {
   Edit2,
   Save,
   X,
-  Loader2
+  Loader2,
+  QrCode
 } from 'lucide-react';
 import { AnimalQuickEventDialog } from '@/components/animales/AnimalQuickEventDialog';
+import { AnimalQRDialog } from '@/components/animales/AnimalQRDialog';
 import { IdentificationEditConfirmDialog } from '@/components/animales/IdentificationEditConfirmDialog';
 import { type Animal, type AnimalEvent, type AnimalCategory, type AnimalStatus } from '@/hooks/useAnimals';
 import { useHealth } from '@/hooks/useHealth';
@@ -102,7 +104,8 @@ const ConsultarAnimal = () => {
   const [filteredAnimals, setFilteredAnimals] = useState<AnimalComplete[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
-  
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+
   // Edit states
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [showIdentificationConfirm, setShowIdentificationConfirm] = useState(false);
@@ -546,14 +549,24 @@ const ConsultarAnimal = () => {
               
               {selectedAnimal && (
                 <div className="flex gap-1">
-                  <Button 
-                    variant="default" 
-                    size="sm" 
+                  <Button
+                    variant="default"
+                    size="sm"
                     onClick={() => setEventDialogOpen(true)}
                     className="gap-1"
                   >
                     <Plus className="h-4 w-4" />
                     Evento
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQrDialogOpen(true)}
+                    className="gap-1"
+                    title="Ver código QR"
+                  >
+                    <QrCode className="h-4 w-4" />
+                    QR
                   </Button>
                   <Button variant="outline" size="icon" onClick={() => navigateAnimal('prev')}>
                     <ChevronLeft className="h-4 w-4" />
@@ -903,6 +916,15 @@ const ConsultarAnimal = () => {
           onVaccination={handleVaccination}
           onHealthEvent={handleHealthEvent}
           onReproductiveEvent={handleReproductiveEvent}
+        />
+      )}
+
+      {/* QR Dialog */}
+      {selectedAnimal && (
+        <AnimalQRDialog
+          open={qrDialogOpen}
+          onClose={() => setQrDialogOpen(false)}
+          animal={selectedAnimal}
         />
       )}
 

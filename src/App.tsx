@@ -42,6 +42,8 @@ import AppMovil from "./pages/AppMovil";
 import Configuracion from "./pages/Configuracion";
 import Ayuda from "./pages/Ayuda";
 import Herramientas from "./pages/Herramientas";
+import Terneros from "./pages/Terneros";
+import Documentos from "./pages/Documentos";
 
 // Founder pages
 import FounderDashboard from "./pages/FounderDashboard";
@@ -126,6 +128,8 @@ const App = () => (
                   <Route path="/ayuda" element={<ProtectedRoute><PermissionGuard moduleName="ayuda"><ErrorBoundary moduleName="Ayuda"><Ayuda /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
                   <Route path="/herramientas" element={<ProtectedRoute><PermissionGuard moduleName="herramientas"><ErrorBoundary moduleName="Herramientas"><Herramientas /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
                   <Route path="/inteligencia" element={<ProtectedRoute><ErrorBoundary moduleName="Inteligencia"><Inteligencia /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/terneros" element={<ProtectedRoute><PermissionGuard moduleName="produccion-carne"><ErrorBoundary moduleName="Terneros"><Terneros /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
+                  <Route path="/documentos" element={<ProtectedRoute><PermissionGuard moduleName="reportes"><ErrorBoundary moduleName="Documentos"><Documentos /></ErrorBoundary></PermissionGuard></ProtectedRoute>} />
 
                   {/* Catch-all route */}
                   <Route path="*" element={<NotFound />} />

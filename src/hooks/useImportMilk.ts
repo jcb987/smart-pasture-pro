@@ -66,19 +66,22 @@ export function useImportMilk() {
       const morning = parseNum(row.morning_liters);
       const afternoon = parseNum(row.afternoon_liters);
       const evening = parseNum(row.evening_liters);
+      const totalOnly = parseNum(row.total_liters);
 
       // Skip rows with no production data at all
-      if (morning === null && afternoon === null && evening === null) {
+      if (morning === null && afternoon === null && evening === null && totalOnly === null) {
         errors.push(`Animal "${row.animal_tag}" fecha ${row.production_date} sin datos de producción`);
         continue;
       }
 
-      const total = parseNum(row.total_liters) ?? ((morning ?? 0) + (afternoon ?? 0) + (evening ?? 0));
+      // Pivot table images only provide total_liters — store as morning_liters so data is not lost
+      const effectiveMorning = morning ?? (afternoon === null && evening === null ? totalOnly : null);
+      const total = totalOnly ?? ((morning ?? 0) + (afternoon ?? 0) + (evening ?? 0));
 
       recordsToInsert.push({
         animal_id: animalId,
         production_date: row.production_date,
-        morning_liters: morning,
+        morning_liters: effectiveMorning,
         afternoon_liters: afternoon,
         evening_liters: evening,
         total_liters: total,

@@ -24,6 +24,7 @@ const ProduccionLeche = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [rankingPeriod, setRankingPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [activeTab, setActiveTab] = useState('overview');
+  const [curveDays, setCurveDays] = useState<30 | 60 | 90>(30);
   const { importData } = useImportMilk();
   
   const { 
@@ -39,7 +40,7 @@ const ProduccionLeche = () => {
 
   const stats = getStats();
   const rankings = getRankings(rankingPeriod);
-  const productionCurve = getProductionCurve();
+  const productionCurve = getProductionCurve(undefined, curveDays);
 
   // Análisis de lactancia y CCS
   const { 
@@ -156,12 +157,29 @@ const ProduccionLeche = () => {
           <TabsContent value="overview" className="space-y-6">
             {/* Charts and Rankings */}
             <div className="grid gap-6 lg:grid-cols-2">
-              <ProductionChart 
-                data={productionCurve} 
-                title="Curva de Producción (30 días)" 
-                unit=" L"
-                color="hsl(var(--primary))"
-              />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-sm font-medium">Curva de Producción</span>
+                  <div className="flex gap-1">
+                    {([30, 60, 90] as const).map(d => (
+                      <Button
+                        key={d}
+                        variant={curveDays === d ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurveDays(d)}
+                      >
+                        {d}d
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <ProductionChart
+                  data={productionCurve}
+                  title={`Últimos ${curveDays} días`}
+                  unit=" L"
+                  color="hsl(var(--primary))"
+                />
+              </div>
               
               <div className="space-y-4">
                 <div className="flex items-center gap-2">

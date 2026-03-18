@@ -316,21 +316,21 @@ export const useMilkProduction = () => {
       .sort((a, b) => b.total_liters - a.total_liters);
   };
 
-  const getProductionCurve = (animalId?: string) => {
-    const last30Days: { date: string; total: number }[] = [];
-    
-    for (let i = 29; i >= 0; i--) {
+  const getProductionCurve = (animalId?: string, days: number = 30) => {
+    const result: { date: string; total: number }[] = [];
+
+    for (let i = days - 1; i >= 0; i--) {
       const dd = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       const date = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
-      const dayRecords = records.filter(r => 
-        r.production_date === date && 
+      const dayRecords = records.filter(r =>
+        r.production_date === date &&
         (!animalId || r.animal_id === animalId)
       );
       const total = dayRecords.reduce((sum, r) => sum + (r.total_liters || 0), 0);
-      last30Days.push({ date, total });
+      result.push({ date, total });
     }
 
-    return last30Days;
+    return result;
   };
 
   useEffect(() => {

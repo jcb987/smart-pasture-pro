@@ -115,6 +115,22 @@ export function FarmSetupWizard({ open, onComplete, userId, organizationId }: Fa
         );
       }
 
+      // Auto-create onboarding record so the survey never appears
+      const productionMap: Record<string, string> = {
+        leche: 'lecheria',
+        carne: 'carne',
+        doble_proposito: 'doble_proposito',
+      };
+      await supabase.from('user_onboarding').upsert({
+        user_id: userId,
+        organization_id: organizationId,
+        primary_role: 'ganadero',
+        production_type: productionMap[formData.productionType] || 'doble_proposito',
+        species: ['bovinos'],
+        herd_size: '1-50',
+        main_challenge: 'organizacion',
+      }, { onConflict: 'user_id' });
+
       toast({
         title: '¡Finca configurada!',
         description: `${formData.farmName} está lista para usar AgroData`,

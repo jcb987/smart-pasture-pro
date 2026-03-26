@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import { Loader2, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { OnboardingSurvey } from '@/components/onboarding/OnboardingSurvey';
+
 import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog';
 import { FarmSetupWizard } from '@/components/onboarding/FarmSetupWizard';
 
@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading, hasOfflineSession } = useAuth();
   const { isOnline } = useOffline();
   const [showFarmSetup, setShowFarmSetup] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  
   const [showWelcome, setShowWelcome] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
@@ -26,7 +26,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       if (!isOnline && (user || hasOfflineSession)) {
-        setShowOnboarding(false);
         setShowWelcome(false);
         setCheckingOnboarding(false);
         return;
@@ -67,7 +66,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
         if (!onboarding) {
           if (isTeamMember) {
-            // Fetch org name and role for welcome dialog
             if (profile?.organization_id) {
               const { data: org } = await supabase
                 .from('organizations')
@@ -83,14 +81,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
               .maybeSingle();
             setUserRole(roleData?.role || null);
             setShowWelcome(true);
-          } else {
-            setShowOnboarding(true);
           }
+          // Non-team users: no survey, farm setup wizard handles onboarding record
         }
       } catch (error) {
         console.error('Error checking onboarding:', error);
         if (!isOnline) {
-          setShowOnboarding(false);
           setShowWelcome(false);
         }
       } finally {
@@ -132,12 +128,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           <FarmSetupWizard
             open={showFarmSetup}
             onComplete={() => setShowFarmSetup(false)}
-            userId={user?.id || ''}
-            organizationId={organizationId}
-          />
-          <OnboardingSurvey
-            open={!showFarmSetup && showOnboarding}
-            onComplete={() => setShowOnboarding(false)}
             userId={user?.id || ''}
             organizationId={organizationId}
           />

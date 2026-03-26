@@ -67,7 +67,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
         if (!onboarding) {
           if (isTeamMember) {
-            // Fetch org name and role for welcome dialog
             if (profile?.organization_id) {
               const { data: org } = await supabase
                 .from('organizations')
@@ -83,9 +82,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
               .maybeSingle();
             setUserRole(roleData?.role || null);
             setShowWelcome(true);
-          } else {
-            setShowOnboarding(true);
           }
+          // Non-team users: no survey, farm setup wizard handles onboarding record
         }
       } catch (error) {
         console.error('Error checking onboarding:', error);

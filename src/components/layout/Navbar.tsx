@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Presentation } from "lucide-react";
 import { Menu, X } from "lucide-react";
 // @ts-ignore
 import logoImage from "@/assets/logo.png?v=5";
@@ -58,6 +59,15 @@ const Navbar = () => {
 
           <div className="hidden md:flex items-center gap-3">
             <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/agrodata')}
+              className={`gap-1.5 text-sm ${isScrolled ? 'text-foreground' : 'text-primary-foreground/90'}`}
+            >
+              <Presentation className="h-4 w-4" />
+              Presentación
+            </Button>
+            <Button
               variant={isScrolled ? "outline" : "heroOutline"}
               size="sm"
               onClick={() => navigate('/auth')}
@@ -99,6 +109,10 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-4">
+                <Button variant="outline" size="sm" onClick={() => { navigate('/agrodata'); setIsMobileMenuOpen(false); }}>
+                  <Presentation className="h-4 w-4 mr-1.5" />
+                  Ver Presentación
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
                   Iniciar Sesión
                 </Button>

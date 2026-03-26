@@ -87,7 +87,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       } catch (error) {
         console.error('Error checking onboarding:', error);
         if (!isOnline) {
-          setShowOnboarding(false);
           setShowWelcome(false);
         }
       } finally {

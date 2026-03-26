@@ -15,6 +15,7 @@ import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import AgroDataLanding from "./pages/AgroDataLanding";
 
 // Legal pages
 import Terminos from "./pages/legal/Terminos";
@@ -79,6 +80,7 @@ const App = () => (
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<Index />} />
+                  <Route path="/agrodata" element={<AgroDataLanding />} />
                   <Route path="/auth" element={<Auth />} />
 
                   {/* Legal routes */}

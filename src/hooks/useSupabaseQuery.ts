@@ -93,7 +93,7 @@ export function useSupabaseQuery<T>({
           await offlineDB.setMetadata(`lastSync_${cacheKey}`, new Date().toISOString());
         }
       } else if (offlineEnabled) {
-        const cached = await offlineDB.getAllRecords<T>(cacheKey);
+        const cached = await offlineDB.getAllRecords<T>(cacheKey as any);
         if (!mountedRef.current) return;
         setData(cached);
         if (cached.length > 0) {

@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading, hasOfflineSession } = useAuth();
   const { isOnline } = useOffline();
   const [showFarmSetup, setShowFarmSetup] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  
   const [showWelcome, setShowWelcome] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [organizationId, setOrganizationId] = useState<string | null>(null);

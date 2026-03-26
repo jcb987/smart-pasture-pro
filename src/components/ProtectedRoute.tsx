@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import { Loader2, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { OnboardingSurvey } from '@/components/onboarding/OnboardingSurvey';
+
 import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog';
 import { FarmSetupWizard } from '@/components/onboarding/FarmSetupWizard';
 

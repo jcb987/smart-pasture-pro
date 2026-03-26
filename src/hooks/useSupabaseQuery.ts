@@ -108,7 +108,7 @@ export function useSupabaseQuery<T>({
       // Intento fallback offline
       if (offlineEnabled) {
         try {
-          const cached = await offlineDB.getAllRecords<T>(cacheKey);
+          const cached = await offlineDB.getAllRecords<T>(cacheKey as any);
           if (cached.length > 0) {
             setData(cached);
             toast({ title: 'Usando datos offline', description: `Mostrando datos guardados localmente` });

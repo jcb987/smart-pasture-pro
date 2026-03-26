@@ -560,7 +560,7 @@ export const useReports = () => {
         c.sex === 'macho' ? 'Macho' : 'Hembra',
         formatDate(c.birth_date),
         c.daysOld !== null ? c.daysOld : '-',
-        c.birth_weight ? formatNumber(c.birth_weight, 1) : '-',
+        (c as any).birth_weight ? formatNumber((c as any).birth_weight, 1) : '-',
         c.current_weight ? formatNumber(c.current_weight, 1) : '-',
         c.lot_name || '-',
       ]),

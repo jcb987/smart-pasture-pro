@@ -84,7 +84,7 @@ export function useSupabaseQuery<T>({
 
         if (offlineEnabled && result.length > 0) {
           await offlineDB.bulkSave(
-            cacheKey,
+            cacheKey as any,
             result.map((item: T) => ({
               id: (item as Record<string, unknown>).id as string,
               data: item as Record<string, unknown>,

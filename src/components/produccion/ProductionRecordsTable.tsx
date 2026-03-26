@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Trash2, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -38,19 +40,42 @@ interface ProductionRecordsTableProps {
 }
 
 export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRecordsTableProps) => {
+  const [search, setSearch] = useState('');
+
   const formatDateStr = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-').map(Number);
     return format(new Date(year, month - 1, day), 'dd MMM yyyy', { locale: es });
   };
 
+  const matchesSearch = (animal?: { tag_id: string; name: string | null }) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      animal?.tag_id?.toLowerCase().includes(q) ||
+      (animal?.name?.toLowerCase().includes(q) ?? false)
+    );
+  };
+
   if (type === 'milk') {
-    const milkRecords = records as MilkRecord[];
+    const milkRecords = (records as MilkRecord[]).filter(r => matchesSearch(r.animal));
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Últimos Registros de Producción</CardTitle>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle className="text-base">Últimos Registros de Producción</CardTitle>
+            <div className="relative w-48">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar animal..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -91,12 +116,13 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
               {milkRecords.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    No hay registros de producción
+                    {search ? 'Sin resultados para esta búsqueda' : 'No hay registros de producción'}
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+          </div>
           {milkRecords.length > 100 && (
             <p className="text-xs text-muted-foreground text-center pt-2">
               Mostrando 100 de {milkRecords.length} registros
@@ -107,13 +133,25 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
     );
   }
 
-  const weightRecords = records as WeightRecord[];
+  const weightRecords = (records as WeightRecord[]).filter(r => matchesSearch(r.animal));
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Últimos Registros de Peso</CardTitle>
+        <div className="flex items-center justify-between gap-4">
+          <CardTitle className="text-base">Últimos Registros de Peso</CardTitle>
+          <div className="relative w-48">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar animal..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-8 h-8 text-sm"
+            />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -156,12 +194,13 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
             {weightRecords.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  No hay registros de peso
+                  {search ? 'Sin resultados para esta búsqueda' : 'No hay registros de peso'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        </div>
         {weightRecords.length > 100 && (
           <p className="text-xs text-muted-foreground text-center pt-2">
             Mostrando 100 de {weightRecords.length} registros

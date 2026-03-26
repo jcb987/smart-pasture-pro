@@ -146,6 +146,7 @@ export const VaccinationTable = ({ vaccinations, onApply, onDelete }: Vaccinatio
         <CardTitle className="text-base">Calendario de Vacunación</CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -155,7 +156,7 @@ export const VaccinationTable = ({ vaccinations, onApply, onDelete }: Vaccinatio
               <TableHead>Dosis #</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Próxima</TableHead>
-              <TableHead className="w-20"></TableHead>
+              <TableHead className="w-20 sticky right-0 bg-background"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -172,7 +173,7 @@ export const VaccinationTable = ({ vaccinations, onApply, onDelete }: Vaccinatio
                 <TableCell>
                   {vac.next_application_date ? formatDateStr(vac.next_application_date) : '-'}
                 </TableCell>
-                <TableCell>
+                <TableCell className="sticky right-0 bg-background">
                   <div className="flex gap-1">
                     {onApply && !vac.is_applied && (
                       <Button 
@@ -202,6 +203,7 @@ export const VaccinationTable = ({ vaccinations, onApply, onDelete }: Vaccinatio
             )}
           </TableBody>
         </Table>
+        </div>
         {vaccinations.length > 100 && (
           <p className="text-xs text-muted-foreground text-center pt-2">
             Mostrando 100 de {vaccinations.length} registros

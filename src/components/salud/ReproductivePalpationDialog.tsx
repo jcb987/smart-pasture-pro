@@ -5,6 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { ChevronsUpDown, Check as CheckIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,7 +60,8 @@ export const ReproductivePalpationDialog = ({
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
-  
+  const [animalOpen, setAnimalOpen] = useState(false);
+
   // Form state
   const [selectedAnimal, setSelectedAnimal] = useState<string>('');
   const [palpationDate, setPalpationDate] = useState(new Date().toISOString().split('T')[0]);
@@ -201,9 +206,9 @@ export const ReproductivePalpationDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid w-full grid-cols-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <TabsList className="grid w-full grid-cols-4 shrink-0">
               <TabsTrigger value="basic" className="flex items-center gap-1">
                 <Info className="h-3 w-3" />
                 Básico
@@ -222,31 +227,51 @@ export const ReproductivePalpationDialog = ({
               </TabsTrigger>
             </TabsList>
             
-            <ScrollArea className="flex-1 pr-4">
+            <ScrollArea className="flex-1 min-h-0 pr-4">
               {/* Tab: Básico */}
               <TabsContent value="basic" className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Animal *</Label>
-                    <Select value={selectedAnimal} onValueChange={setSelectedAnimal}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar hembra" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {animals.map((animal) => (
-                          <SelectItem key={animal.id} value={animal.id}>
-                            <span className="flex items-center gap-2">
-                              {animal.tag_id} {animal.name && `- ${animal.name}`}
-                              {animal.reproductive_status && (
-                                <Badge variant="outline" className="text-xs">
-                                  {animal.reproductive_status}
-                                </Badge>
-                              )}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={animalOpen} onOpenChange={setAnimalOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={animalOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          {selectedAnimal
+                            ? (() => { const a = animals.find(x => x.id === selectedAnimal); return a ? `${a.tag_id}${a.name ? ` - ${a.name}` : ''}` : 'Seleccionar hembra'; })()
+                            : 'Seleccionar hembra'}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar por arete o nombre..." />
+                          <CommandList>
+                            <CommandEmpty>No se encontró ningún animal.</CommandEmpty>
+                            <CommandGroup>
+                              {animals.map((animal) => (
+                                <CommandItem
+                                  key={animal.id}
+                                  value={`${animal.tag_id} ${animal.name || ''}`}
+                                  onSelect={() => { setSelectedAnimal(animal.id); setAnimalOpen(false); }}
+                                >
+                                  <CheckIcon className={cn('mr-2 h-4 w-4', selectedAnimal === animal.id ? 'opacity-100' : 'opacity-0')} />
+                                  <span>{animal.tag_id}</span>
+                                  {animal.name && <span className="text-muted-foreground ml-1">({animal.name})</span>}
+                                  {animal.reproductive_status && (
+                                    <Badge variant="outline" className="text-xs ml-auto">{animal.reproductive_status}</Badge>
+                                  )}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   
                   <div className="space-y-2">
@@ -392,6 +417,19 @@ export const ReproductivePalpationDialog = ({
               
               {/* Tab: Ovarios */}
               <TabsContent value="ovaries" className="space-y-4 mt-4">
+                {/* Animal context header */}
+                {selectedAnimal ? (
+                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg text-sm">
+                    <span className="font-medium">{animals.find(a => a.id === selectedAnimal)?.tag_id || '...'}</span>
+                    {isPregnant === null ? (
+                      <Badge variant="outline" className="text-amber-600 border-amber-400">→ Ir a Básico para registrar resultado</Badge>
+                    ) : (
+                      <Badge variant={isPregnant ? 'default' : 'secondary'}>{isPregnant ? '🤰 Preñada' : '⭕ Vacía'}</Badge>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground p-2 bg-muted/30 rounded">Selecciona un animal en la pestaña Básico</p>
+                )}
                 {isPregnant === false ? (
                   <>
                     <Alert>
@@ -510,6 +548,19 @@ export const ReproductivePalpationDialog = ({
               
               {/* Tab: Útero */}
               <TabsContent value="uterus" className="space-y-4 mt-4">
+                {/* Animal context header */}
+                {selectedAnimal ? (
+                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg text-sm">
+                    <span className="font-medium">{animals.find(a => a.id === selectedAnimal)?.tag_id || '...'}</span>
+                    {isPregnant === null ? (
+                      <Badge variant="outline" className="text-amber-600 border-amber-400">→ Ir a Básico para registrar resultado</Badge>
+                    ) : (
+                      <Badge variant={isPregnant ? 'default' : 'secondary'}>{isPregnant ? '🤰 Preñada' : '⭕ Vacía'}</Badge>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground p-2 bg-muted/30 rounded">Selecciona un animal en la pestaña Básico</p>
+                )}
                 {isPregnant === false ? (
                   <>
                     <Alert>
@@ -587,6 +638,19 @@ export const ReproductivePalpationDialog = ({
               
               {/* Tab: Condición */}
               <TabsContent value="condition" className="space-y-4 mt-4">
+                {/* Animal context header */}
+                {selectedAnimal ? (
+                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg text-sm">
+                    <span className="font-medium">{animals.find(a => a.id === selectedAnimal)?.tag_id || '...'}</span>
+                    {isPregnant === null ? (
+                      <Badge variant="outline" className="text-amber-600 border-amber-400">→ Ir a Básico para registrar resultado</Badge>
+                    ) : (
+                      <Badge variant={isPregnant ? 'default' : 'secondary'}>{isPregnant ? '🤰 Preñada' : '⭕ Vacía'}</Badge>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground p-2 bg-muted/30 rounded">Selecciona un animal en la pestaña Básico</p>
+                )}
                 {isPregnant === false ? (
                   <>
                     <Alert>

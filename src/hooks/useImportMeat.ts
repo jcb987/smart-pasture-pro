@@ -95,12 +95,22 @@ export function useImportMeat() {
     const duplicateCount = keys.filter(k => existingKeys.has(k)).length;
     const newCount = keys.length - duplicateCount;
 
-    // Insert weight records (upsert to handle duplicates gracefully)
-    const { error: insertError } = await supabase
-      .from('weight_records')
-      .upsert(recordsToInsert, { onConflict: 'animal_id,weight_date' });
+    // Insert new records and update existing ones (avoid upsert — no unique constraint)
+    const newRecords = recordsToInsert.filter((_, i) => !existingKeys.has(keys[i]));
+    const updateRecords = recordsToInsert.filter((_, i) => existingKeys.has(keys[i]));
 
-    if (insertError) throw insertError;
+    if (newRecords.length > 0) {
+      const { error: insertError } = await supabase.from('weight_records').insert(newRecords);
+      if (insertError) throw insertError;
+    }
+
+    for (const rec of updateRecords) {
+      await supabase.from('weight_records')
+        .update({ weight_kg: rec.weight_kg, condition_score: rec.condition_score, daily_gain: rec.daily_gain, notes: rec.notes })
+        .eq('animal_id', rec.animal_id)
+        .eq('weight_date', rec.weight_date)
+        .eq('organization_id', rec.organization_id);
+    }
 
     // Update animal current weights
     for (const update of animalsToUpdate) {

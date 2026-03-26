@@ -1,4 +1,10 @@
 import { useState, useEffect } from 'react';
+
+const VACCINE_OPTIONS = [
+  'Fiebre Aftosa', 'Brucelosis', 'Carbón Sintomático', 'Rabia', 'IBR',
+  'DVB', 'Leptospirosis', 'Clostridiosis', 'Edema Maligno', 'Ántrax',
+];
+const DOSE_OPTIONS = ['1ml', '2ml', '5ml', '10ml', '20ml'];
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -386,8 +392,21 @@ export const AddHealthEventDialog = ({
             <TabsContent value="vacuna" className="space-y-4 mt-0">
               <div className="space-y-2">
                 <Label>Vacuna Aplicada</Label>
+                <Select
+                  value=""
+                  onValueChange={(v) => setForm({ ...form, medication: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selección rápida..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VACCINE_OPTIONS.map(v => (
+                      <SelectItem key={v} value={v}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
-                  placeholder="Nombre de la vacuna"
+                  placeholder="Nombre de la vacuna (editar o escribir)"
                   value={form.medication}
                   onChange={(e) => setForm({ ...form, medication: e.target.value })}
                 />
@@ -395,6 +414,19 @@ export const AddHealthEventDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Dosis</Label>
+                  <Select
+                    value=""
+                    onValueChange={(v) => setForm({ ...form, dosage: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Dosis rápida..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOSE_OPTIONS.map(d => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Input
                     placeholder="Ej: 5ml"
                     value={form.dosage}
@@ -414,22 +446,37 @@ export const AddHealthEventDialog = ({
 
             {/* Palpación */}
             <TabsContent value="palpacion" className="space-y-4 mt-0">
-              <div className="p-4 bg-muted/50 rounded-lg space-y-4">
-                <h4 className="font-medium">{t('palpacion')}</h4>
-                <div className="space-y-2">
-                  <Label>Resultado *</Label>
-                  <Select value={palpationResult} onValueChange={(v) => setPalpationResult(v as 'positivo' | 'negativo')}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar resultado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="negativo">Vacía (Negativo)</SelectItem>
-                      <SelectItem value="positivo">Preñada (Positivo)</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPalpationResult('negativo')}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${palpationResult === 'negativo' ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'border-border hover:border-muted-foreground/50'}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">⭕</span>
+                      <div>
+                        <p className="font-medium text-sm">Vacía</p>
+                        <p className="text-xs text-muted-foreground">No preñada</p>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPalpationResult('positivo')}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${palpationResult === 'positivo' ? 'border-green-500 bg-green-50 dark:bg-green-950/30' : 'border-border hover:border-muted-foreground/50'}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🤰</span>
+                      <div>
+                        <p className="font-medium text-sm">Preñada</p>
+                        <p className="text-xs text-muted-foreground">Gestación confirmada</p>
+                      </div>
+                    </div>
+                  </button>
                 </div>
                 {palpationResult === 'positivo' && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
                     <Label>Días de Gestación Estimados</Label>
                     <Input
                       type="number"
@@ -437,6 +484,11 @@ export const AddHealthEventDialog = ({
                       value={gestationDays}
                       onChange={(e) => setGestationDays(e.target.value)}
                     />
+                    {gestationDays && (
+                      <p className="text-xs text-muted-foreground">
+                        ≈ {Math.round(Number(gestationDays) / 30)} meses de gestación
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

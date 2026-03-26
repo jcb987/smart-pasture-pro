@@ -131,12 +131,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             userId={user?.id || ''}
             organizationId={organizationId}
           />
-          <OnboardingSurvey
-            open={!showFarmSetup && showOnboarding}
-            onComplete={() => setShowOnboarding(false)}
-            userId={user?.id || ''}
-            organizationId={organizationId}
-          />
           <WelcomeDialog
             open={!showFarmSetup && showWelcome}
             onComplete={() => setShowWelcome(false)}

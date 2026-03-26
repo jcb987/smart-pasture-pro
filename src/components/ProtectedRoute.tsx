@@ -26,7 +26,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       if (!isOnline && (user || hasOfflineSession)) {
-        setShowOnboarding(false);
         setShowWelcome(false);
         setCheckingOnboarding(false);
         return;

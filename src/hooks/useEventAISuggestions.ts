@@ -128,7 +128,7 @@ export function useEventAISuggestions({ animalId, open }: UseEventAISuggestionsP
             .from('animals')
             .select('current_weight')
             .eq('organization_id', profileData.organization_id)
-            .eq('category', animalResult.data.category)
+            .eq('category', (animalResult as any).value?.data?.category)
             .eq('status', 'activo')
             .not('current_weight', 'is', null);
 

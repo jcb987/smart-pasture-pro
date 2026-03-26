@@ -84,7 +84,7 @@ export function useSupabaseQuery<T>({
 
         if (offlineEnabled && result.length > 0) {
           await offlineDB.bulkSave(
-            cacheKey,
+            cacheKey as any,
             result.map((item: T) => ({
               id: (item as Record<string, unknown>).id as string,
               data: item as Record<string, unknown>,
@@ -93,7 +93,7 @@ export function useSupabaseQuery<T>({
           await offlineDB.setMetadata(`lastSync_${cacheKey}`, new Date().toISOString());
         }
       } else if (offlineEnabled) {
-        const cached = await offlineDB.getAllRecords<T>(cacheKey);
+        const cached = await offlineDB.getAllRecords<T>(cacheKey as any);
         if (!mountedRef.current) return;
         setData(cached);
         if (cached.length > 0) {
@@ -108,7 +108,7 @@ export function useSupabaseQuery<T>({
       // Intento fallback offline
       if (offlineEnabled) {
         try {
-          const cached = await offlineDB.getAllRecords<T>(cacheKey);
+          const cached = await offlineDB.getAllRecords<T>(cacheKey as any);
           if (cached.length > 0) {
             setData(cached);
             toast({ title: 'Usando datos offline', description: `Mostrando datos guardados localmente` });

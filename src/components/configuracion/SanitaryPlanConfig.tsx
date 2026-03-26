@@ -126,7 +126,7 @@ export const SanitaryPlanConfig = () => {
       // Insert in batches of 100
       for (let i = 0; i < records.length; i += 100) {
         const batch = records.slice(i, i + 100);
-        const { error } = await supabase.from('vaccination_schedule').insert(batch);
+        const { error } = await supabase.from('vaccination_schedule').insert(batch as any);
         if (error) throw error;
       }
 

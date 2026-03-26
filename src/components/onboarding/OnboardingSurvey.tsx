@@ -120,7 +120,7 @@ export function OnboardingSurvey({ open, onComplete, userId, organizationId }: O
       if (appRole) {
         await supabase
           .from('user_roles')
-          .upsert({ user_id: userId, role: appRole }, { onConflict: 'user_id,role' });
+          .upsert({ user_id: userId, role: appRole } as any, { onConflict: 'user_id,role' });
       }
 
       toast({

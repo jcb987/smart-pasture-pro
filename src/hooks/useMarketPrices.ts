@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export interface MarketPrice {
+  id?: string;
   price_type: 'leche' | 'ganado_pie' | 'novillo' | 'ternero';
   value: number;
   effective_date: string;

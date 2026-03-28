@@ -570,10 +570,6 @@ export function SmartAnimalImporter({
                 </div>
               )}
 
-              <Button variant="outline" onClick={downloadImportLog}>
-                <FileDown className="mr-2 h-4 w-4" />
-                Descargar log de importación
-              </Button>
             </div>
           )}
         </div>

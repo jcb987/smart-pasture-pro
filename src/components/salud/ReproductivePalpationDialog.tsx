@@ -242,7 +242,7 @@ export const ReproductivePalpationDialog = ({
                           className="w-full justify-between font-normal"
                         >
                           {selectedAnimal
-                            ? (() => { const a = animals.find(x => x.id === selectedAnimal); return a ? `${a.tag_id}${a.name ? ` - ${a.name}` : ''}` : 'Seleccionar hembra'; })()
+                            ? (() => { const a = animals.find(x => x.id === selectedAnimal); return a ? `${a.tag_id}${a.name && isNaN(Number(a.name)) ? ` - ${a.name}` : ''}` : 'Seleccionar hembra'; })()
                             : 'Seleccionar hembra'}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -261,7 +261,7 @@ export const ReproductivePalpationDialog = ({
                                 >
                                   <CheckIcon className={cn('mr-2 h-4 w-4', selectedAnimal === animal.id ? 'opacity-100' : 'opacity-0')} />
                                   <span>{animal.tag_id}</span>
-                                  {animal.name && <span className="text-muted-foreground ml-1">({animal.name})</span>}
+                                  {animal.name && isNaN(Number(animal.name)) && <span className="text-muted-foreground ml-1">({animal.name})</span>}
                                   {animal.reproductive_status && (
                                     <Badge variant="outline" className="text-xs ml-auto">{animal.reproductive_status}</Badge>
                                   )}

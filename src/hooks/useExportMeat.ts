@@ -4,15 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface MeatExportRow {
-  fecha: string;
-  arete: string;
-  nombre: string | null;
-  categoria: string | null;
-  peso_kg: number;
-  tipo_pesaje: string;
-  ganancia_diaria_g: number | null;
-  condicion_corporal: number | null;
-  notas: string | null;
+  'Fecha': string;
+  'Arete': string;
+  'Nombre': string;
+  'Categoría': string;
+  'Peso (kg)': number;
+  'Tipo de Pesaje': string;
+  'Ganancia Diaria (g/día)': number | string;
+  'Condición Corporal': number | string;
+  'Observaciones': string;
 }
 
 export function useExportMeat() {
@@ -47,32 +47,32 @@ export function useExportMeat() {
 
       if (error) throw error;
 
+      const fmt = (d: string) => d ? new Date(d).toLocaleDateString('es-CO') : d;
+      const tipoLabel: Record<string, string> = {
+        control: 'Control', ingreso: 'Ingreso', destete: 'Destete',
+        venta: 'Venta', nacimiento: 'Nacimiento',
+      };
       const rows: MeatExportRow[] = (records || []).map(record => ({
-        fecha: record.weight_date,
-        arete: (record.animal as any)?.tag_id || '',
-        nombre: (record.animal as any)?.name || null,
-        categoria: (record.animal as any)?.category || null,
-        peso_kg: record.weight_kg,
-        tipo_pesaje: record.weight_type,
-        ganancia_diaria_g: record.daily_gain ? Math.round(record.daily_gain * 1000) : null,
-        condicion_corporal: record.condition_score,
-        notas: record.notes,
+        'Fecha': fmt(record.weight_date),
+        'Arete': (record.animal as any)?.tag_id || '',
+        'Nombre': (record.animal as any)?.name || '',
+        'Categoría': (record.animal as any)?.category || '',
+        'Peso (kg)': record.weight_kg,
+        'Tipo de Pesaje': tipoLabel[record.weight_type] || record.weight_type,
+        'Ganancia Diaria (g/día)': record.daily_gain ? Math.round(record.daily_gain * 1000) : '',
+        'Condición Corporal': record.condition_score ?? '',
+        'Observaciones': record.notes || '',
       }));
 
       // Create workbook
       const ws = XLSX.utils.json_to_sheet(rows);
-      
+
       ws['!cols'] = [
-        { wch: 12 }, // fecha
-        { wch: 12 }, // arete
-        { wch: 15 }, // nombre
-        { wch: 12 }, // categoria
-        { wch: 10 }, // peso_kg
-        { wch: 14 }, // tipo_pesaje
-        { wch: 16 }, // ganancia_diaria_g
-        { wch: 16 }, // condicion_corporal
-        { wch: 30 }, // notas
+        { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 12 },
+        { wch: 11 }, { wch: 16 }, { wch: 22 }, { wch: 18 }, { wch: 30 },
       ];
+      ws['!freeze'] = { xSplit: 0, ySplit: 1 } as any;
+      ws['!autofilter'] = { ref: 'A1:I1' };
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'ProduccionCarne');

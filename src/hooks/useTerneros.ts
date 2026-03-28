@@ -4,15 +4,22 @@ import { useWeightRecords } from '@/hooks/useWeightRecords';
 import { differenceInDays, parseISO } from 'date-fns';
 
 const CALF_CATEGORIES = ['ternero', 'ternera', 'becerro', 'becerra'];
+const BUFFALO_CATEGORIES = ['bufala', 'bufalo'];
 
 export const useTerneros = () => {
   const { animals, loading: loadingAnimals } = useAnimals();
   const { healthEvents, addHealthEvent, vaccinations } = useHealth();
   const { records: weightRecords, addRecord: addWeightRecord, loading: loadingWeights } = useWeightRecords();
 
-  const terneros = animals.filter(a =>
-    CALF_CATEGORIES.includes(a.category) && a.status === 'activo'
-  );
+  const terneros = animals.filter(a => {
+    if (a.status !== 'activo') return false;
+    if (CALF_CATEGORIES.includes(a.category)) return true;
+    // Incluir búfalos/búfalas jóvenes (< 12 meses) ya que no tienen categoría de cría propia
+    if (BUFFALO_CATEGORIES.includes(a.category) && a.birth_date) {
+      return differenceInDays(new Date(), parseISO(a.birth_date)) < 365;
+    }
+    return false;
+  });
 
   // Alertas de calostro: terneros ≤ 3 días sin nota de calostro en salud
   const colostrumAlerts = terneros.filter(t => {

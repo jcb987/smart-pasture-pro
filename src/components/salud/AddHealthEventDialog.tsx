@@ -483,6 +483,29 @@ export const AddHealthEventDialog = ({
                     )}
                   </div>
                 )}
+                <div className="space-y-2">
+                  <Label>Método de Detección</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Palpación rectal', 'Ecografía', 'Prueba hormonal', 'Visual'].map(method => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setForm({ ...form, diagnosis: form.diagnosis === method ? '' : method })}
+                        className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${form.diagnosis === method ? 'bg-primary text-primary-foreground border-primary' : 'border-border bg-background hover:bg-muted'}`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Veterinario</Label>
+                  <Input
+                    placeholder="Nombre del veterinario"
+                    value={form.veterinarian}
+                    onChange={(e) => setForm({ ...form, veterinarian: e.target.value })}
+                  />
+                </div>
               </div>
             </TabsContent>
 

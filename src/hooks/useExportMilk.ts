@@ -4,17 +4,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface MilkExportRow {
-  fecha: string;
-  arete: string;
-  nombre: string | null;
-  litros_manana: number | null;
-  litros_tarde: number | null;
-  litros_noche: number | null;
-  total_litros: number | null;
-  grasa_pct: number | null;
-  proteina_pct: number | null;
-  celulas_somaticas: number | null;
-  notas: string | null;
+  'Fecha': string;
+  'Arete': string;
+  'Nombre': string;
+  'Litros Mañana': number | string;
+  'Litros Tarde': number | string;
+  'Litros Noche': number | string;
+  'Total Litros': number | string;
+  'Grasa %': number | string;
+  'Proteína %': number | string;
+  'Células Somáticas': number | string;
+  'Observaciones': string;
 }
 
 export function useExportMilk() {
@@ -46,36 +46,31 @@ export function useExportMilk() {
 
       if (error) throw error;
 
+      const fmt = (d: string) => d ? new Date(d).toLocaleDateString('es-CO') : d;
       const rows: MilkExportRow[] = (records || []).map(record => ({
-        fecha: record.production_date,
-        arete: (record.animal as any)?.tag_id || '',
-        nombre: (record.animal as any)?.name || null,
-        litros_manana: record.morning_liters,
-        litros_tarde: record.afternoon_liters,
-        litros_noche: record.evening_liters,
-        total_litros: record.total_liters,
-        grasa_pct: record.fat_percentage,
-        proteina_pct: record.protein_percentage,
-        celulas_somaticas: record.somatic_cell_count,
-        notas: record.notes,
+        'Fecha': fmt(record.production_date),
+        'Arete': (record.animal as any)?.tag_id || '',
+        'Nombre': (record.animal as any)?.name || '',
+        'Litros Mañana': record.morning_liters ?? '',
+        'Litros Tarde': record.afternoon_liters ?? '',
+        'Litros Noche': record.evening_liters ?? '',
+        'Total Litros': record.total_liters ?? '',
+        'Grasa %': record.fat_percentage ?? '',
+        'Proteína %': record.protein_percentage ?? '',
+        'Células Somáticas': record.somatic_cell_count ?? '',
+        'Observaciones': record.notes || '',
       }));
 
       // Create workbook
       const ws = XLSX.utils.json_to_sheet(rows);
-      
+
       ws['!cols'] = [
-        { wch: 12 }, // fecha
-        { wch: 12 }, // arete
-        { wch: 15 }, // nombre
-        { wch: 14 }, // litros_manana
-        { wch: 14 }, // litros_tarde
-        { wch: 14 }, // litros_noche
-        { wch: 14 }, // total_litros
-        { wch: 10 }, // grasa_pct
-        { wch: 12 }, // proteina_pct
-        { wch: 16 }, // celulas_somaticas
-        { wch: 30 }, // notas
+        { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 14 },
+        { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 10 },
+        { wch: 12 }, { wch: 18 }, { wch: 30 },
       ];
+      ws['!freeze'] = { xSplit: 0, ySplit: 1 } as any;
+      ws['!autofilter'] = { ref: 'A1:K1' };
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'ProduccionLeche');

@@ -170,7 +170,7 @@ export const RegisterEventDialog = ({
                 <SelectContent>
                   {females.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
-                      {f.tag_id} {f.name && `- ${f.name}`}
+                      {f.tag_id}{f.name && isNaN(Number(f.name)) ? ` - ${f.name}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

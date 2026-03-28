@@ -14,14 +14,18 @@ interface ExportDialogProps {
 
 const CATEGORIES = [
   { value: 'all', label: 'Todas las categorías' },
-  { value: 'vaca', label: 'Vacas' },
-  { value: 'toro', label: 'Toros' },
+  // Bovinos
+  { value: 'vaca', label: '🐄 Vacas' },
+  { value: 'toro', label: '🐂 Toros' },
   { value: 'novilla', label: 'Novillas' },
   { value: 'novillo', label: 'Novillos' },
   { value: 'ternera', label: 'Terneras' },
   { value: 'ternero', label: 'Terneros' },
   { value: 'becerra', label: 'Becerras' },
   { value: 'becerro', label: 'Becerros' },
+  // Bufalinos
+  { value: 'bufala', label: '🐃 Búfalas' },
+  { value: 'bufalo', label: '🐃 Búfalos' },
 ];
 
 const STATUSES = [
@@ -32,19 +36,12 @@ const STATUSES = [
   { value: 'descartado', label: 'Descartados' },
 ];
 
-const SEX_OPTIONS = [
-  { value: 'all', label: 'Ambos sexos' },
-  { value: 'hembra', label: 'Solo hembras' },
-  { value: 'macho', label: 'Solo machos' },
-];
-
 export const ExportDialog = ({ open, onOpenChange, availableLots }: ExportDialogProps) => {
   const { exportToExcel, exporting } = useExportExcel();
   const [filters, setFilters] = useState<ExportFilters>({
     status: 'all',
     category: undefined,
     lotName: undefined,
-    sex: 'all',
   });
 
   const handleExport = async () => {
@@ -103,25 +100,6 @@ export const ExportDialog = ({ open, onOpenChange, availableLots }: ExportDialog
                 {CATEGORIES.map((c) => (
                   <SelectItem key={c.value} value={c.value}>
                     {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Sexo</Label>
-            <Select
-              value={filters.sex}
-              onValueChange={(value) => setFilters({ ...filters, sex: value as ExportFilters['sex'] })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar sexo" />
-              </SelectTrigger>
-              <SelectContent>
-                {SEX_OPTIONS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
                   </SelectItem>
                 ))}
               </SelectContent>

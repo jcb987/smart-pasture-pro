@@ -12,36 +12,72 @@ import {
   ChevronRight,
   Brain
 } from 'lucide-react';
-import { BirthDelayAlert } from '@/hooks/usePalpationRecords';
+import { BirthDelayAlert, UpcomingBirth } from '@/hooks/usePalpationRecords';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface BirthDelayAlertsCardProps {
   alerts: BirthDelayAlert[];
+  upcomingBirths?: UpcomingBirth[];
   onViewAnimal?: (animalId: string) => void;
 }
 
-export const BirthDelayAlertsCard = ({ 
+export const BirthDelayAlertsCard = ({
   alerts,
-  onViewAnimal 
+  upcomingBirths = [],
+  onViewAnimal,
 }: BirthDelayAlertsCardProps) => {
-  if (alerts.length === 0) {
+  if (alerts.length === 0 && upcomingBirths.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Baby className="h-5 w-5 text-primary" />
-            Alertas de Parto Retrasado
+            Partos y Alertas
           </CardTitle>
           <CardDescription>
-            Monitoreo de animales con fecha de parto vencida
+            Monitoreo de partos próximos y retrasados
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
             <Baby className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No hay alertas de parto retrasado</p>
+            <p>No hay partos próximos ni retrasados</p>
             <p className="text-sm">Todos los partos están dentro del rango esperado</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (alerts.length === 0 && upcomingBirths.length > 0) {
+    return (
+      <Card className="border-blue-400">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Baby className="h-5 w-5 text-blue-600" />
+            Partos Próximos
+            <Badge className="ml-auto bg-blue-500 text-white">{upcomingBirths.length} próximo(s)</Badge>
+          </CardTitle>
+          <CardDescription>
+            Animales con parto esperado en los próximos 14 días
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {upcomingBirths.map(b => (
+              <div key={b.animalId} className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                <div>
+                  <p className="font-medium text-sm">{b.tagId}{b.name ? ` - ${b.name}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(parseISO(b.expectedDate), 'dd MMM yyyy', { locale: es })}
+                  </p>
+                </div>
+                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  En {b.daysUntilBirth} día{b.daysUntilBirth !== 1 ? 's' : ''}
+                </Badge>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -56,7 +92,7 @@ export const BirthDelayAlertsCard = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className={`h-5 w-5 ${urgentCount > 0 ? 'text-destructive' : 'text-amber-600'}`} />
-          Alertas de Parto Retrasado
+          Partos y Alertas
           <Badge variant={urgentCount > 0 ? 'destructive' : 'secondary'} className="ml-auto">
             {alerts.length} alerta(s)
           </Badge>
@@ -66,6 +102,24 @@ export const BirthDelayAlertsCard = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Upcoming births summary */}
+        {upcomingBirths.length > 0 && (
+          <div className="space-y-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+            <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
+              <Baby className="h-4 w-4" />
+              {upcomingBirths.length} parto(s) próximo(s) en los siguientes 14 días
+            </p>
+            <div className="space-y-1">
+              {upcomingBirths.map(b => (
+                <div key={b.animalId} className="flex items-center justify-between text-xs">
+                  <span className="text-blue-700 dark:text-blue-300">{b.tagId}{b.name ? ` - ${b.name}` : ''}</span>
+                  <span className="font-medium text-blue-800 dark:text-blue-200">En {b.daysUntilBirth} día{b.daysUntilBirth !== 1 ? 's' : ''} · {format(parseISO(b.expectedDate), 'dd MMM', { locale: es })}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Summary */}
         <div className="flex gap-4">
           {urgentCount > 0 && (

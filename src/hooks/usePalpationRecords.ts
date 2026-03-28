@@ -94,6 +94,15 @@ export interface BirthDelayAlert {
   suggestedCauses: string[];
 }
 
+export interface UpcomingBirth {
+  animalId: string;
+  tagId: string;
+  name?: string;
+  expectedDate: string;
+  daysUntilBirth: number;
+  species: 'bovino' | 'bufalino';
+}
+
 export const usePalpationRecords = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -183,40 +192,40 @@ export const usePalpationRecords = () => {
   // Calcular alertas de parto retrasado
   const birthDelayAlerts = useMemo((): BirthDelayAlert[] => {
     if (!birthDelayConfig || !pregnantAnimals.length) return [];
-    
+
     const today = new Date();
     const alerts: BirthDelayAlert[] = [];
-    
+
     pregnantAnimals.forEach(animal => {
       if (!animal.expected_calving_date) return;
-      
+
       const expectedDate = parseISO(animal.expected_calving_date);
       const daysOverdue = differenceInDays(today, expectedDate);
-      
+
       // Solo alertar si está pasada la fecha
       if (daysOverdue <= 0) return;
-      
+
       // Determinar especie (asumimos bovino por defecto)
-      const species: 'bovino' | 'bufalino' = animal.breed?.toLowerCase().includes('bufal') 
-        ? 'bufalino' 
+      const species: 'bovino' | 'bufalino' = animal.breed?.toLowerCase().includes('bufal')
+        ? 'bufalino'
         : 'bovino';
-      
+
       // Determinar nivel de alerta
       const isUrgent = daysOverdue >= birthDelayConfig.urgent_days;
       const isWarning = daysOverdue >= birthDelayConfig.warning_days;
-      
+
       if (!isWarning) return;
-      
+
       // Buscar última palpación del animal
       const lastPalpation = palpationRecords.find(p => p.animal_id === animal.id);
-      
+
       // Generar causas sugeridas basadas en IA
       const suggestedCauses = generateSuggestedCauses(
         daysOverdue,
         lastPalpation,
         species
       );
-      
+
       alerts.push({
         animalId: animal.id,
         tagId: animal.tag_id,
@@ -229,10 +238,44 @@ export const usePalpationRecords = () => {
         suggestedCauses,
       });
     });
-    
+
     // Ordenar por días de retraso (más urgentes primero)
     return alerts.sort((a, b) => b.daysOverdue - a.daysOverdue);
   }, [pregnantAnimals, birthDelayConfig, palpationRecords]);
+
+  // Partos próximos (dentro de los próximos 14 días)
+  const upcomingBirths = useMemo((): UpcomingBirth[] => {
+    if (!pregnantAnimals.length) return [];
+
+    const today = new Date();
+    const upcoming: UpcomingBirth[] = [];
+
+    pregnantAnimals.forEach(animal => {
+      if (!animal.expected_calving_date) return;
+
+      const expectedDate = parseISO(animal.expected_calving_date);
+      const daysOverdue = differenceInDays(today, expectedDate);
+      const daysUntilBirth = -daysOverdue; // positive = future
+
+      // Solo incluir partos futuros dentro de 14 días
+      if (daysUntilBirth <= 0 || daysUntilBirth > 14) return;
+
+      const species: 'bovino' | 'bufalino' = animal.breed?.toLowerCase().includes('bufal')
+        ? 'bufalino'
+        : 'bovino';
+
+      upcoming.push({
+        animalId: animal.id,
+        tagId: animal.tag_id,
+        name: animal.name || undefined,
+        expectedDate: animal.expected_calving_date,
+        daysUntilBirth,
+        species,
+      });
+    });
+
+    return upcoming.sort((a, b) => a.daysUntilBirth - b.daysUntilBirth);
+  }, [pregnantAnimals]);
 
   // Agregar registro de palpación
   const addPalpationMutation = useMutation({
@@ -400,6 +443,7 @@ export const usePalpationRecords = () => {
   return {
     palpationRecords,
     birthDelayAlerts,
+    upcomingBirths,
     birthDelayConfig,
     stats,
     isLoading: loadingRecords,

@@ -62,12 +62,13 @@ const Salud = () => {
   const { schedules, stats: parasiteStats, urgentAnimals, upcomingAnimals } = useParasiteControl();
   
   // Palpaciones reproductivas
-  const { 
-    palpationRecords, 
-    birthDelayAlerts, 
-    stats: palpationStats, 
-    addPalpation, 
-    deletePalpation 
+  const {
+    palpationRecords,
+    birthDelayAlerts,
+    upcomingBirths,
+    stats: palpationStats,
+    addPalpation,
+    deletePalpation,
   } = usePalpationRecords();
 
   const stats = getStats();
@@ -273,7 +274,7 @@ const Salud = () => {
                 records={palpationRecords} 
                 onDelete={deletePalpation} 
               />
-              <BirthDelayAlertsCard alerts={birthDelayAlerts} />
+              <BirthDelayAlertsCard alerts={birthDelayAlerts} upcomingBirths={upcomingBirths} />
             </div>
           </TabsContent>
 

@@ -4,19 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface ReproductionExportRow {
-  arete: string;
-  nombre: string | null;
-  categoria: string;
-  estado_reproductivo: string | null;
-  fecha_ultimo_parto: string | null;
-  fecha_ultimo_servicio: string | null;
-  fecha_parto_esperado: string | null;
-  total_partos: number | null;
-  ultimo_evento_tipo: string | null;
-  ultimo_evento_fecha: string | null;
-  toro_servicio: string | null;
-  lote_semen: string | null;
-  notas: string | null;
+  'Arete': string;
+  'Nombre': string;
+  'Categoría': string;
+  'Estado Reproductivo': string;
+  'Último Parto': string;
+  'Último Servicio': string;
+  'Parto Esperado': string;
+  'Total Partos': number | string;
+  'Último Evento': string;
+  'Fecha Último Evento': string;
+  'Toro / Semental': string;
+  'Lote Semen': string;
+  'Notas': string;
 }
 
 export function useExportReproduction() {
@@ -61,44 +61,40 @@ export function useExportReproduction() {
           e.event_type === 'inseminacion' || e.event_type === 'monta_natural'
         );
 
+        const fmt = (d: string | null) => d ? new Date(d).toLocaleDateString('es-CO') : '';
+        const eventTypeLabel: Record<string, string> = {
+          celo: 'Celo', servicio: 'Servicio', inseminacion: 'Inseminación',
+          palpacion: 'Palpación', parto: 'Parto', aborto: 'Aborto', secado: 'Secado',
+        };
         return {
-          arete: animal.tag_id,
-          nombre: animal.name,
-          categoria: animal.category,
-          estado_reproductivo: animal.reproductive_status,
-          fecha_ultimo_parto: animal.last_calving_date,
-          fecha_ultimo_servicio: animal.last_service_date,
-          fecha_parto_esperado: animal.expected_calving_date,
-          total_partos: animal.total_calvings,
-          ultimo_evento_tipo: lastEvent?.event_type || null,
-          ultimo_evento_fecha: lastEvent?.event_date || null,
-          toro_servicio: lastService?.bull 
+          'Arete': animal.tag_id,
+          'Nombre': animal.name || '',
+          'Categoría': animal.category,
+          'Estado Reproductivo': animal.reproductive_status || '',
+          'Último Parto': fmt(animal.last_calving_date),
+          'Último Servicio': fmt(animal.last_service_date),
+          'Parto Esperado': fmt(animal.expected_calving_date),
+          'Total Partos': animal.total_calvings ?? '',
+          'Último Evento': lastEvent ? (eventTypeLabel[lastEvent.event_type] || lastEvent.event_type) : '',
+          'Fecha Último Evento': fmt(lastEvent?.event_date || null),
+          'Toro / Semental': lastService?.bull
             ? `${(lastService.bull as any).tag_id}${(lastService.bull as any).name ? ` - ${(lastService.bull as any).name}` : ''}`
-            : lastService?.semen_batch || null,
-          lote_semen: lastService?.semen_batch || null,
-          notas: lastEvent?.notes || null,
+            : lastService?.semen_batch || '',
+          'Lote Semen': lastService?.semen_batch || '',
+          'Notas': lastEvent?.notes || '',
         };
       });
 
       // Create workbook
       const ws = XLSX.utils.json_to_sheet(rows);
-      
-      // Set column widths
+
       ws['!cols'] = [
-        { wch: 12 }, // arete
-        { wch: 15 }, // nombre
-        { wch: 12 }, // categoria
-        { wch: 18 }, // estado_reproductivo
-        { wch: 18 }, // fecha_ultimo_parto
-        { wch: 20 }, // fecha_ultimo_servicio
-        { wch: 18 }, // fecha_parto_esperado
-        { wch: 12 }, // total_partos
-        { wch: 18 }, // ultimo_evento_tipo
-        { wch: 18 }, // ultimo_evento_fecha
-        { wch: 20 }, // toro_servicio
-        { wch: 15 }, // lote_semen
-        { wch: 30 }, // notas
+        { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 18 },
+        { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
+        { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 30 },
       ];
+      ws['!freeze'] = { xSplit: 0, ySplit: 1 } as any;
+      ws['!autofilter'] = { ref: 'A1:M1' };
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Reproduccion');

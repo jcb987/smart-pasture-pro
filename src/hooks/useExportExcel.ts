@@ -73,14 +73,9 @@ const formatDate = (date: string | null): string => {
 
 const getCategoryLabel = (category: string): string => {
   const labels: Record<string, string> = {
-    vaca: 'Vaca',
-    toro: 'Toro',
-    novilla: 'Novilla',
-    novillo: 'Novillo',
-    ternera: 'Ternera',
-    ternero: 'Ternero',
-    becerra: 'Becerra',
-    becerro: 'Becerro',
+    vaca: 'Vaca', toro: 'Toro', novilla: 'Novilla', novillo: 'Novillo',
+    ternera: 'Ternera', ternero: 'Ternero', becerra: 'Becerra', becerro: 'Becerro',
+    bufala: 'Búfala', bufalo: 'Búfalo',
   };
   return labels[category] || category;
 };
@@ -357,6 +352,8 @@ export const useExportExcel = () => {
         { wch: 30 }, // Notas
       ];
       ws['!cols'] = colWidths;
+      ws['!freeze'] = { xSplit: 0, ySplit: 1 } as any;
+      ws['!autofilter'] = { ref: `A1:AH1` };
 
       // Add worksheet to workbook
       XLSX.utils.book_append_sheet(wb, ws, 'Inventario Ganadero');

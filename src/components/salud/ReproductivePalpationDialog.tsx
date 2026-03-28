@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
@@ -206,8 +206,8 @@ export const ReproductivePalpationDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <TabsList className="grid w-full grid-cols-4 shrink-0">
               <TabsTrigger value="basic" className="flex items-center gap-1">
                 <Info className="h-3 w-3" />
@@ -227,7 +227,7 @@ export const ReproductivePalpationDialog = ({
               </TabsTrigger>
             </TabsList>
             
-            <ScrollArea className="flex-1 min-h-0 pr-4">
+            <div className="flex-1 overflow-y-auto pr-1 mt-1">
               {/* Tab: Básico */}
               <TabsContent value="basic" className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -247,10 +247,10 @@ export const ReproductivePalpationDialog = ({
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
+                      <PopoverContent className="w-[320px] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Buscar por arete o nombre..." />
-                          <CommandList>
+                          <CommandList className="max-h-[200px] overflow-y-auto">
                             <CommandEmpty>No se encontró ningún animal.</CommandEmpty>
                             <CommandGroup>
                               {animals.map((animal) => (
@@ -535,17 +535,27 @@ export const ReproductivePalpationDialog = ({
                       </Alert>
                     )}
                   </>
+                ) : isPregnant === true ? (
+                  <Alert className="bg-green-50 dark:bg-green-950 border-green-200">
+                    <Baby className="h-4 w-4 text-green-600" />
+                    <AlertTitle>Animal Preñada</AlertTitle>
+                    <AlertDescription className="text-sm">
+                      Los ovarios no se evalúan en gestación.
+                      {gestationDays && ` Gestación estimada: ${gestationDays} días (≈${Math.round(Number(gestationDays)/30)} meses).`}
+                      {' '}Los cuerpos lúteos de gestación están presentes y son normales.
+                    </AlertDescription>
+                  </Alert>
                 ) : (
                   <Alert>
                     <Info className="h-4 w-4" />
-                    <AlertTitle>Sección no aplicable</AlertTitle>
+                    <AlertTitle>Seleccione resultado primero</AlertTitle>
                     <AlertDescription>
-                      Los hallazgos de ovarios solo se registran para animales NO preñados.
+                      Vaya a la pestaña Básico y seleccione si el animal está Preñada o Vacía.
                     </AlertDescription>
                   </Alert>
                 )}
               </TabsContent>
-              
+
               {/* Tab: Útero */}
               <TabsContent value="uterus" className="space-y-4 mt-4">
                 {/* Animal context header */}
@@ -625,12 +635,21 @@ export const ReproductivePalpationDialog = ({
                       </CardContent>
                     </Card>
                   </>
+                ) : isPregnant === true ? (
+                  <Alert className="bg-green-50 dark:bg-green-950 border-green-200">
+                    <Baby className="h-4 w-4 text-green-600" />
+                    <AlertTitle>Animal Preñada</AlertTitle>
+                    <AlertDescription className="text-sm">
+                      El útero está ocupado con la gestación. No se evalúan hallazgos uterinos.
+                      {gestationDays && Number(gestationDays) > 60 && ' A partir de los 60 días es posible palpar los placentomas.'}
+                    </AlertDescription>
+                  </Alert>
                 ) : (
                   <Alert>
                     <Info className="h-4 w-4" />
-                    <AlertTitle>Sección no aplicable</AlertTitle>
+                    <AlertTitle>Seleccione resultado primero</AlertTitle>
                     <AlertDescription>
-                      Los hallazgos de útero solo se registran para animales NO preñados.
+                      Vaya a la pestaña Básico y seleccione si el animal está Preñada o Vacía.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -685,18 +704,42 @@ export const ReproductivePalpationDialog = ({
                       ))}
                     </div>
                   </>
+                ) : isPregnant === true ? (
+                  <div className="space-y-3">
+                    <Alert className="bg-green-50 dark:bg-green-950 border-green-200">
+                      <Baby className="h-4 w-4 text-green-600" />
+                      <AlertTitle>Gestante</AlertTitle>
+                      <AlertDescription className="text-sm">
+                        Condición reproductiva: <strong>Gestante</strong>.
+                        {gestationDays && (
+                          <> Días: <strong>{gestationDays}</strong> (trimestre {Math.ceil(Number(gestationDays)/90)}/3).</>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Scale className="h-4 w-4" />
+                        BCS durante gestación — recomendado 3.0–3.5
+                      </Label>
+                      {bcsInterpretation && (
+                        <Badge variant={bcsInterpretation.level === 'success' ? 'default' : 'secondary'} className={bcsInterpretation.color}>
+                          BCS {bodyConditionScore}: {bcsInterpretation.text}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 ) : (
                   <Alert>
                     <Info className="h-4 w-4" />
-                    <AlertTitle>Animal Preñado</AlertTitle>
+                    <AlertTitle>Seleccione resultado primero</AlertTitle>
                     <AlertDescription>
-                      Para animales preñados, la condición reproductiva es "Gestante".
+                      Vaya a la pestaña Básico y seleccione si el animal está Preñada o Vacía.
                     </AlertDescription>
                   </Alert>
                 )}
-                
+
                 <Separator />
-                
+
                 {/* Notas */}
                 <div className="space-y-2">
                   <Label>Observaciones Adicionales</Label>
@@ -708,7 +751,7 @@ export const ReproductivePalpationDialog = ({
                   />
                 </div>
               </TabsContent>
-            </ScrollArea>
+            </div>
           </Tabs>
           
           {/* Summary and Submit */}

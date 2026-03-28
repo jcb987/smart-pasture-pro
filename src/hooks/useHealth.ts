@@ -347,15 +347,6 @@ export const useHealth = () => {
 
   const applyVaccination = async (id: string, appliedDate: string, nextDate?: string) => {
     try {
-      if (!isOnline) {
-        toast({ 
-          title: 'Sin conexión', 
-          description: 'Esta acción requiere conexión a internet',
-          variant: 'destructive'
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('vaccination_schedule')
         .update({
@@ -375,15 +366,6 @@ export const useHealth = () => {
 
   const deleteVaccination = async (id: string) => {
     try {
-      if (!isOnline) {
-        toast({ 
-          title: 'Sin conexión', 
-          description: 'Esta acción requiere conexión a internet',
-          variant: 'destructive'
-        });
-        return;
-      }
-
       const { error } = await supabase.from('vaccination_schedule').delete().eq('id', id);
       if (error) throw error;
       toast({ title: 'Éxito', description: 'Vacunación eliminada' });

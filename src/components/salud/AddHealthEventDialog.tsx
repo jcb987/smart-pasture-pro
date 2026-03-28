@@ -392,19 +392,15 @@ export const AddHealthEventDialog = ({
             <TabsContent value="vacuna" className="space-y-4 mt-0">
               <div className="space-y-2">
                 <Label>Vacuna Aplicada</Label>
-                <Select
-                  value=""
-                  onValueChange={(v) => setForm({ ...form, medication: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selección rápida..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VACCINE_OPTIONS.map(v => (
-                      <SelectItem key={v} value={v}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-1.5 pb-1">
+                  {VACCINE_OPTIONS.map(v => (
+                    <button
+                      key={v} type="button"
+                      onClick={() => setForm({ ...form, medication: v })}
+                      className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${form.medication === v ? 'bg-primary text-primary-foreground border-primary' : 'border-border bg-background hover:bg-muted'}`}
+                    >{v}</button>
+                  ))}
+                </div>
                 <Input
                   placeholder="Nombre de la vacuna (editar o escribir)"
                   value={form.medication}
@@ -414,19 +410,15 @@ export const AddHealthEventDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Dosis</Label>
-                  <Select
-                    value=""
-                    onValueChange={(v) => setForm({ ...form, dosage: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Dosis rápida..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DOSE_OPTIONS.map(d => (
-                        <SelectItem key={d} value={d}>{d}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-wrap gap-1.5 pb-1">
+                    {DOSE_OPTIONS.map(d => (
+                      <button
+                        key={d} type="button"
+                        onClick={() => setForm({ ...form, dosage: d })}
+                        className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${form.dosage === d ? 'bg-primary text-primary-foreground border-primary' : 'border-border bg-background hover:bg-muted'}`}
+                      >{d}</button>
+                    ))}
+                  </div>
                   <Input
                     placeholder="Ej: 5ml"
                     value={form.dosage}

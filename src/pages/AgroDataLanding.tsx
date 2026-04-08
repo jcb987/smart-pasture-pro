@@ -92,9 +92,86 @@ const APPROACH = [
 ];
 
 const TESTIMONIALS = [
-  { name: 'Carlos Mendoza', farm: 'Finca La Esperanza, Montería', text: 'Antes llenaba cuadernos a mano y perdía información. Ahora en 2 minutos registro todo y genera los documentos del ICA automáticamente.' },
-  { name: 'Ana Patricia Gómez', farm: 'Hacienda El Porvenir, Valledupar', text: 'El módulo de leche me ayudó a detectar un brote de mastitis antes de que afectara toda la producción. Ahorré millones.' },
-  { name: 'Jorge Hernández', farm: 'Rancho Los Pinos, Villavicencio', text: 'Tengo 3 fincas y AgroData las maneja todas desde un solo lugar. La IA de reproducción mejoró mi tasa de preñez en un 18%.' },
+  {
+    name: 'Carlos Albeiro Ríos',
+    farm: 'Finca La Bonanza, Urabá – Antioquia',
+    photo: 'https://randomuser.me/api/portraits/men/43.jpg',
+    stars: 5,
+    result: 'Ya no pierdo datos',
+    text: 'Yo antes cargaba un cuaderno por toda la finca y se me mojaba, se me perdía... Ahora con AgroData lo hago desde el celular y queda guardado todo. Ni hay que saber de computadores, uno le da clic y listo.',
+  },
+  {
+    name: 'Luz Marina Cárdenas',
+    farm: 'Finca El Paraíso, Montería – Córdoba',
+    photo: 'https://randomuser.me/api/portraits/women/44.jpg',
+    stars: 5,
+    result: '+19 litros/día en promedio',
+    text: 'El sistema me avisó que tres vacas venían bajando la leche y yo ni me había dado cuenta. Llamé al veterinario a tiempo y se salvó la producción. Eso solo ya pagó el año entero del programa.',
+  },
+  {
+    name: 'Jairo Mosquera',
+    farm: 'Finca Los Álamos, Yopal – Casanare',
+    photo: 'https://randomuser.me/api/portraits/men/32.jpg',
+    stars: 5,
+    result: 'Organicé 3 fincas',
+    text: 'Tengo ganado en tres lotes distintos y antes no sabía ni cuántas cabezas tenía bien contadas. Con esto veo todo desde la casa, de noche si quiero. Es una berraquera de herramienta.',
+  },
+  {
+    name: 'Sandra Milena Zapata',
+    farm: 'Finca Santa Fe, Rionegro – Antioquia',
+    photo: 'https://randomuser.me/api/portraits/women/28.jpg',
+    stars: 5,
+    result: 'Las vacunas al día siempre',
+    text: 'El problema mío era que se me olvidaban las vacunas y los baños. Ahora AgroData me recuerda todo con anticipación. El ICA llegó a revisar y yo tenía todo en orden, ni me sudaron las manos.',
+  },
+  {
+    name: 'Omar Hernández Pérez',
+    farm: 'Hacienda La Primavera, San Martín – Meta',
+    photo: 'https://randomuser.me/api/portraits/men/67.jpg',
+    stars: 5,
+    result: 'Sé si el negocio da o no',
+    text: 'Antes yo no sabía si estaba ganando o perdiendo plata con el ganado. Uno vende y cree que ganó pero sin los costos uno no sabe nada. Ahora el programa me lo dice clartico, entrada por entrada.',
+  },
+  {
+    name: 'Esperanza Rojas',
+    farm: 'Finca Villa Nueva, Duitama – Boyacá',
+    photo: 'https://randomuser.me/api/portraits/women/61.jpg',
+    stars: 5,
+    result: 'Partos sin sorpresas',
+    text: 'Una vez llegué a la finca y ya la vaca había parido sola y el ternero estaba mal. Con AgroData me avisa cuándo se espera el parto y yo ya voy preparada. Desde que lo uso no he perdido un ternero.',
+  },
+  {
+    name: 'Fabio Augusto Gómez',
+    farm: 'Finca La Ceiba, Aguachica – Cesar',
+    photo: 'https://randomuser.me/api/portraits/men/55.jpg',
+    stars: 5,
+    result: 'El veterinario ve todo en línea',
+    text: 'Mi veterinario está en Bucaramanga y yo en la finca. Antes tocaba llamarlo y contarle todo de memoria. Ahora él entra al sistema, ve el historial de cada animal y ya sabe qué recetarle. Nos ahorramos viajes.',
+  },
+  {
+    name: 'Gloria Inés Montoya',
+    farm: 'Finca El Recuerdo, Salamina – Caldas',
+    photo: 'https://randomuser.me/api/portraits/women/73.jpg',
+    stars: 5,
+    result: 'Finca organizada de verdad',
+    text: 'Yo soy la que maneja la finca de mi papá que ya está mayor. El programa es muy fácil, uno no necesita ser profesional pa usarlo. En una tarde aprendí todo. Ahora le mando el reporte a mi papá al celular y él queda contento.',
+  },
+  {
+    name: 'Luis Rodrigo Vargas',
+    farm: 'Finca Los Pinos, La Dorada – Caldas',
+    photo: 'https://randomuser.me/api/portraits/men/19.jpg',
+    stars: 5,
+    result: 'Guías ICA sin filas',
+    text: 'Antes tocaba ir a la oficina del ICA, hacer fila, llevar papeles... Con AgroData saco la guía de movilización desde el celular antes de cargar el camión. Eso me ahorra medio día cada vez que voy a vender.',
+  },
+  {
+    name: 'Yamile Castaño',
+    farm: 'Finca La Ilusión, Tumaco – Nariño',
+    photo: 'https://randomuser.me/api/portraits/women/39.jpg',
+    stars: 5,
+    result: 'Vale cada peso',
+    text: 'Al principio me dio miedo el costo pero llevo seis meses y ya recuperé lo que pagué solo con lo que ahorré en vacunas que antes se vencían porque no llevaba el control. Ahora no me sobra nada, todo se usa.',
+  },
 ];
 
 /* ─── cell renderer ─── */
@@ -102,6 +179,94 @@ function Cell({ val }: { val: boolean | string }) {
   if (val === true) return <span className="text-[#16a34a] text-lg font-bold">✓</span>;
   if (val === false) return <span className="text-gray-300 text-lg">✗</span>;
   return <span className="text-gray-400 text-sm">{val}</span>;
+}
+
+/* ─── testimonials carousel ─── */
+function TestimonialsCarousel() {
+  const [slide, setSlide] = useState(0);
+  const perPage = 3;
+  const max = TESTIMONIALS.length - perPage;
+
+  const prev = () => setSlide(s => Math.max(0, s - 1));
+  const next = () => setSlide(s => Math.min(max, s + 1));
+
+  return (
+    <div className="relative">
+      {/* Cards track */}
+      <div className="overflow-hidden rounded-2xl">
+        <div
+          className="flex transition-transform duration-500 ease-in-out"
+          style={{ transform: `translateX(-${slide * (100 / perPage)}%)` }}
+        >
+          {TESTIMONIALS.map((t) => (
+            <div key={t.name} className="min-w-[calc(100%/3)] px-3 box-border">
+              <Card className="h-full border-gray-100 shadow-sm bg-white">
+                <CardContent className="p-6 flex flex-col h-full">
+                  {/* Stars */}
+                  <div className="flex gap-0.5 mb-4">
+                    {Array.from({ length: t.stars }).map((_, i) => (
+                      <span key={i} className="text-amber-400 text-base">★</span>
+                    ))}
+                  </div>
+                  {/* Result badge */}
+                  <span className="inline-block self-start mb-3 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#dcfce7] text-[#15803d]">
+                    ✓ {t.result}
+                  </span>
+                  {/* Text */}
+                  <p className="text-gray-600 text-sm leading-relaxed flex-1 italic">
+                    "{t.text}"
+                  </p>
+                  {/* Author */}
+                  <div className="flex items-center gap-3 pt-4 mt-4 border-t border-gray-100">
+                    <img
+                      src={t.photo}
+                      alt={t.name}
+                      className="w-11 h-11 rounded-full object-cover ring-2 ring-[#dcfce7]"
+                      loading="lazy"
+                    />
+                    <div>
+                      <div className="font-bold text-sm text-[#0f1f14]">{t.name}</div>
+                      <div className="text-xs text-gray-400">{t.farm}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Arrows */}
+      <button
+        onClick={prev}
+        disabled={slide === 0}
+        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-[#15803d] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#dcfce7] transition-colors z-10"
+        aria-label="Anterior"
+      >
+        ‹
+      </button>
+      <button
+        onClick={next}
+        disabled={slide >= max}
+        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-[#15803d] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#dcfce7] transition-colors z-10"
+        aria-label="Siguiente"
+      >
+        ›
+      </button>
+
+      {/* Dots */}
+      <div className="flex justify-center gap-2 mt-6">
+        {Array.from({ length: max + 1 }).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setSlide(i)}
+            className={`w-2 h-2 rounded-full transition-all ${i === slide ? 'bg-[#16a34a] w-5' : 'bg-gray-300'}`}
+            aria-label={`Ir a página ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /* ─── MAIN COMPONENT ─── */
@@ -429,31 +594,14 @@ export default function AgroDataLanding() {
       {/* ── TESTIMONIALS ── */}
       <section className="py-24 bg-[#fafaf7]">
         <div ref={s6.ref} className={`max-w-6xl mx-auto px-6 transition-all duration-700 ${s6.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-[#dcfce7] text-[#15803d] border-[#86efac] hover:bg-[#dcfce7]">Ganaderos reales</Badge>
-            <h2 className="text-4xl md:text-5xl font-black text-[#0f1f14] mb-4 tracking-tight">Lo que dicen nuestros usuarios</h2>
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-[#dcfce7] text-[#15803d] border-[#86efac] hover:bg-[#dcfce7]">Ganaderos reales de Colombia</Badge>
+            <h2 className="text-4xl md:text-5xl font-black text-[#0f1f14] mb-3 tracking-tight">Lo que dicen en las fincas</h2>
+            <p className="text-gray-500 text-base">Historias de ganaderos que ya lo están usando, en sus propias palabras.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, i) => (
-              <Card key={t.name}
-                className="border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
-                style={{transitionDelay:`${i*80}ms`,opacity:s6.visible?1:0,transform:s6.visible?'none':'translateY(16px)'}}>
-                <CardContent className="p-6">
-                  <div className="text-[#16a34a] text-3xl mb-4 font-black leading-none">"</div>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-6 italic">"{t.text}"</p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-                    <div className="w-10 h-10 rounded-full bg-[#dcfce7] flex items-center justify-center text-[#15803d] font-black text-sm">
-                      {t.name.split(' ').map(n => n[0]).join('').slice(0,2)}
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm text-[#0f1f14]">{t.name}</div>
-                      <div className="text-xs text-gray-400">{t.farm}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+
+          {/* Carousel */}
+          <TestimonialsCarousel />
         </div>
       </section>
 

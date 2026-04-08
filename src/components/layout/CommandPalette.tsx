@@ -139,7 +139,6 @@ export const CommandPalette = ({ open, onOpenChange }: CommandPaletteProps) => {
             >
               <action.icon className="h-4 w-4 text-muted-foreground" />
               <span>{action.title}</span>
-              <CommandShortcut>⌘{action.shortcut}</CommandShortcut>
             </CommandItem>
           ))}
         </CommandGroup>

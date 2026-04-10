@@ -77,6 +77,8 @@ export const RegisterEventDialog = ({
   const [createCalf, setCreateCalf] = useState(true);
   const [calfTagId, setCalfTagId] = useState('');
   const [calfName, setCalfName] = useState('');
+  const [tagSuggestion, setTagSuggestion] = useState('');
+  const [tagManuallyEdited, setTagManuallyEdited] = useState(false);
 
   // Reset fields when dialog opens/closes
   useEffect(() => {
@@ -85,6 +87,30 @@ export const RegisterEventDialog = ({
       setEventType(defaultEventType || '');
     }
   }, [open, defaultAnimalId, defaultEventType]);
+
+  // Auto-suggest calf tag based on mother, father, date and sex
+  useEffect(() => {
+    if (eventType !== 'parto' || !createCalf) return;
+
+    const mother = females.find(f => f.id === animalId);
+    const father = bulls.find(b => b.id === fatherId);
+    const year = eventDate ? eventDate.slice(2, 4) : '';
+    const motherNum = mother?.tag_id?.match(/\d+/)?.[0] || '';
+    const fatherNum = father?.tag_id?.match(/\d+/)?.[0] || '';
+    const sexChar = calfSex === 'macho' ? 'M' : calfSex === 'hembra' ? 'H' : '';
+
+    let suggestion = '';
+    if (year && motherNum) {
+      suggestion = fatherNum
+        ? `${year}-${motherNum}${fatherNum.slice(0, 2)}${sexChar ? '-' + sexChar : ''}`
+        : `${year}-${motherNum}${sexChar ? '-' + sexChar : ''}`;
+    }
+
+    setTagSuggestion(suggestion);
+    if (!tagManuallyEdited && suggestion) {
+      setCalfTagId(suggestion);
+    }
+  }, [animalId, fatherId, eventDate, calfSex, createCalf, eventType]);
 
   const handleSubmit = () => {
     if (!animalId || !eventType || !eventDate) return;
@@ -95,9 +121,9 @@ export const RegisterEventDialog = ({
     // Validate insemination fields - require semen batch
     if (eventType === 'inseminacion' && !semenBatch) return;
 
-    // Validate birth fields - require father
+    // Validate birth fields
     if (eventType === 'parto') {
-      if (!birthType || !calfSex || !fatherId) return;
+      if (!birthType || !calfSex) return;
       if (createCalf && !calfTagId) return;
     }
 
@@ -142,6 +168,8 @@ export const RegisterEventDialog = ({
     setCreateCalf(true);
     setCalfTagId('');
     setCalfName('');
+    setTagSuggestion('');
+    setTagManuallyEdited(false);
   };
 
   const showServiceFields = eventType === 'servicio';
@@ -308,10 +336,10 @@ export const RegisterEventDialog = ({
               
               {/* Padre */}
               <div className="space-y-2">
-                <Label>Padre / Semental *</Label>
-                <Select value={fatherId} onValueChange={setFatherId}>
-                  <SelectTrigger className={!fatherId ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Seleccionar padre (obligatorio)" />
+                <Label>Padre / Semental <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <Select value={fatherId} onValueChange={(v) => { setFatherId(v); setTagManuallyEdited(false); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar padre (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
                     {bulls.map((b) => (
@@ -321,7 +349,6 @@ export const RegisterEventDialog = ({
                     ))}
                   </SelectContent>
                 </Select>
-                {!fatherId && <p className="text-xs text-destructive">El padre es obligatorio para trazabilidad genética</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -386,9 +413,24 @@ export const RegisterEventDialog = ({
                       <Label>Arete de la Cría *</Label>
                       <Input
                         value={calfTagId}
-                        onChange={(e) => setCalfTagId(e.target.value)}
+                        onChange={(e) => {
+                          setCalfTagId(e.target.value);
+                          setTagManuallyEdited(e.target.value !== tagSuggestion);
+                        }}
                         placeholder="Ej: 2024-001"
                       />
+                      {tagSuggestion && tagManuallyEdited && (
+                        <button
+                          type="button"
+                          className="text-xs text-primary underline"
+                          onClick={() => { setCalfTagId(tagSuggestion); setTagManuallyEdited(false); }}
+                        >
+                          Sugerido: {tagSuggestion}
+                        </button>
+                      )}
+                      {tagSuggestion && !tagManuallyEdited && (
+                        <p className="text-xs text-muted-foreground">Sugerido automáticamente</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>Nombre (opcional)</Label>
@@ -426,7 +468,7 @@ export const RegisterEventDialog = ({
               !eventType || 
               (showServiceFields && !bullId) ||
               (showInseminationFields && !semenBatch) ||
-              (showBirthFields && (!birthType || !calfSex || !fatherId)) ||
+              (showBirthFields && (!birthType || !calfSex)) ||
               (showBirthFields && createCalf && !calfTagId)
             }
           >

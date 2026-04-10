@@ -52,6 +52,8 @@ const Documentos = () => {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
   const [selectedAnimals, setSelectedAnimals] = useState<string[]>([]);
   const [animalSearch, setAnimalSearch] = useState('');
+  const [vacAnimalSearch, setVacAnimalSearch] = useState('');
+  const [vacAnimalDropdownOpen, setVacAnimalDropdownOpen] = useState(false);
   const [resolveDialogEvent, setResolveDialogEvent] = useState<string | null>(null);
   const [extendDate, setExtendDate] = useState('');
 
@@ -398,7 +400,7 @@ const Documentos = () => {
         </Dialog>
 
         {/* Vaccination Certificate Dialog */}
-        <Dialog open={openDialog === 'cert_vacunacion'} onOpenChange={() => setOpenDialog(null)}>
+        <Dialog open={openDialog === 'cert_vacunacion'} onOpenChange={() => { setOpenDialog(null); setVacAnimalSearch(''); setVacAnimalDropdownOpen(false); }}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -410,14 +412,55 @@ const Documentos = () => {
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label>Animal</Label>
-                <Select value={vacForm.animalId} onValueChange={v => setVacForm(p => ({ ...p, animalId: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar animal..." /></SelectTrigger>
-                  <SelectContent>
-                    {activeAnimals.map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.tag_id}{a.name ? ` - ${a.name}` : ''}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {(() => {
+                  const selectedAnimal = activeAnimals.find(a => a.id === vacForm.animalId);
+                  const filteredVacAnimals = activeAnimals.filter(a => {
+                    const q = vacAnimalSearch.toLowerCase();
+                    return !q || a.tag_id.toLowerCase().includes(q) || (a.name?.toLowerCase().includes(q) ?? false);
+                  });
+                  return (
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          value={vacAnimalSearch || (selectedAnimal && !vacAnimalDropdownOpen ? `${selectedAnimal.tag_id}${selectedAnimal.name ? ` - ${selectedAnimal.name}` : ''}` : vacAnimalSearch)}
+                          onChange={e => {
+                            setVacAnimalSearch(e.target.value);
+                            setVacAnimalDropdownOpen(true);
+                            if (!e.target.value) setVacForm(p => ({ ...p, animalId: '' }));
+                          }}
+                          onFocus={() => { setVacAnimalDropdownOpen(true); setVacAnimalSearch(''); }}
+                          placeholder="Buscar por arete o nombre..."
+                          className="pl-8 h-9 text-sm"
+                        />
+                      </div>
+                      {vacAnimalDropdownOpen && (
+                        <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {filteredVacAnimals.length === 0 ? (
+                            <p className="text-xs text-muted-foreground text-center py-3">Sin resultados</p>
+                          ) : (
+                            filteredVacAnimals.map(a => (
+                              <button
+                                key={a.id}
+                                type="button"
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                                onClick={() => {
+                                  setVacForm(p => ({ ...p, animalId: a.id }));
+                                  setVacAnimalSearch('');
+                                  setVacAnimalDropdownOpen(false);
+                                }}
+                              >
+                                <span className="font-medium">{a.tag_id}</span>
+                                {a.name && <span className="text-muted-foreground">{a.name}</span>}
+                                <span className="text-xs text-muted-foreground ml-auto">{a.category}</span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">

@@ -156,7 +156,7 @@ export const AddWeightRecordDialog = ({ open, onOpenChange, onSubmit }: AddWeigh
               <Label>Condición Corporal (1-5)</Label>
               <Input
                 type="number"
-                step="0.5"
+                step="0.1"
                 min="1"
                 max="5"
                 placeholder="3.0"

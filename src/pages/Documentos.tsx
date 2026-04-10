@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { FileCheck, Truck, Syringe, Download, Loader2, Trash2, MapPin, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { FileCheck, Truck, Syringe, Download, Loader2, Trash2, MapPin, Clock, CheckCircle, AlertTriangle, Search } from 'lucide-react';
 import { useDocumentos } from '@/hooks/useDocumentos';
 import { useAnimals } from '@/hooks/useAnimals';
 import { useHealth } from '@/hooks/useHealth';
@@ -51,6 +51,7 @@ const Documentos = () => {
 
   const [openDialog, setOpenDialog] = useState<string | null>(null);
   const [selectedAnimals, setSelectedAnimals] = useState<string[]>([]);
+  const [animalSearch, setAnimalSearch] = useState('');
   const [resolveDialogEvent, setResolveDialogEvent] = useState<string | null>(null);
   const [extendDate, setExtendDate] = useState('');
 
@@ -86,6 +87,10 @@ const Documentos = () => {
   }, [farmSettings]);
 
   const activeAnimals = animals.filter(a => a.status === 'activo');
+  const filteredAnimals = activeAnimals.filter(a => {
+    const q = animalSearch.toLowerCase();
+    return !q || a.tag_id.toLowerCase().includes(q) || (a.name?.toLowerCase().includes(q) ?? false);
+  });
 
   const selectedMobilityOption = MOBILITY_TYPE_OPTIONS.find(o => o.value === movForm.mobility_type);
 
@@ -243,7 +248,7 @@ const Documentos = () => {
         )}
 
         {/* Movement Guide Dialog */}
-        <Dialog open={openDialog === 'guia_movilizacion'} onOpenChange={() => setOpenDialog(null)}>
+        <Dialog open={openDialog === 'guia_movilizacion'} onOpenChange={() => { setOpenDialog(null); setAnimalSearch(''); }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -350,8 +355,20 @@ const Documentos = () => {
                     <Button variant="outline" size="sm" onClick={selectNone}>Ninguno</Button>
                   </div>
                 </div>
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    value={animalSearch}
+                    onChange={e => setAnimalSearch(e.target.value)}
+                    placeholder="Buscar por arete o nombre..."
+                    className="pl-8 h-8 text-sm"
+                  />
+                </div>
                 <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
-                  {activeAnimals.map(a => (
+                  {filteredAnimals.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-3">Sin resultados</p>
+                  )}
+                  {filteredAnimals.map(a => (
                     <div key={a.id} className="flex items-center gap-2 hover:bg-muted/50 rounded px-2 py-1">
                       <Checkbox
                         checked={selectedAnimals.includes(a.id)}

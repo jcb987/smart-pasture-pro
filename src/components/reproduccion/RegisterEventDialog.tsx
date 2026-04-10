@@ -97,13 +97,12 @@ export const RegisterEventDialog = ({
     const year = eventDate ? eventDate.slice(2, 4) : '';
     const motherNum = mother?.tag_id?.match(/\d+/)?.[0] || '';
     const fatherNum = father?.tag_id?.match(/\d+/)?.[0] || '';
-    const sexChar = calfSex === 'macho' ? 'M' : calfSex === 'hembra' ? 'H' : '';
 
     let suggestion = '';
     if (year && motherNum) {
       suggestion = fatherNum
-        ? `${year}-${motherNum}${fatherNum.slice(0, 2)}${sexChar ? '-' + sexChar : ''}`
-        : `${year}-${motherNum}${sexChar ? '-' + sexChar : ''}`;
+        ? `${year}-${motherNum}${fatherNum.slice(0, 2)}`
+        : `${year}-${motherNum}`;
     }
 
     setTagSuggestion(suggestion);

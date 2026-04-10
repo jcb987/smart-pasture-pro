@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import { useAnimals } from '@/hooks/useAnimals';
 import { useMilkProduction } from '@/hooks/useMilkProduction';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -39,14 +41,37 @@ const Dashboard = () => {
   const milkRevenue = estimateMilkRevenue(milkStats.monthTotal);
   const hasMarketPrices = prices.length > 0;
 
+  const [animKey, setAnimKey] = useState(0);
+
+  const handleRefresh = useCallback(() => {
+    setAnimKey(k => k + 1);
+    refresh();
+  }, [refresh]);
+
   const formatLastUpdated = () => {
     return format(lastUpdated, "'Actualizado' HH:mm", { locale: es });
   };
 
+  // Staggered slide-up animation helper
+  const slideUp = (delay: number) => ({
+    key: animKey,
+    style: {
+      animation: `dashSlideUp 0.45s ease-out ${delay}ms both`,
+    } as React.CSSProperties,
+  });
+
   return (
     <DashboardLayout>
+      {/* Keyframe styles */}
+      <style>{`
+        @keyframes dashSlideUp {
+          from { opacity: 0; transform: translateY(32px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
       <div className="space-y-6">
-        {/* Header */}
+        {/* Header — sin botón Actualizar */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
@@ -54,18 +79,10 @@ const Dashboard = () => {
               Vista general de tu ganadería • {formatLastUpdated()}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span className="ml-2 hidden sm:inline">Actualizar</span>
-          </Button>
         </div>
 
-        {/* Weather + Main KPIs */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        {/* Weather + Main KPIs — delay más alto = aparece último (ola de abajo arriba) */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5" {...slideUp(300)}>
           <WeatherWidget className="md:col-span-2 lg:col-span-1" />
           
           <Card className="border-l-4 border-l-primary">
@@ -123,7 +140,7 @@ const Dashboard = () => {
         </div>
 
         {/* Secondary KPIs */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3" {...slideUp(200)}>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -182,7 +199,7 @@ const Dashboard = () => {
         </div>
 
         {/* F9: Valorización del Hato */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3" {...slideUp(100)}>
           <Card className={hasMarketPrices ? 'border-l-4 border-l-emerald-500' : ''}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -262,7 +279,7 @@ const Dashboard = () => {
         </div>
 
         {/* Alerts and Recent Events */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2" {...slideUp(0)}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -348,7 +365,7 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <Card>
+        <Card {...slideUp(0)}>
           <CardHeader>
             <CardTitle>Acciones Rápidas</CardTitle>
             <CardDescription>Accede rápidamente a las funciones más usadas</CardDescription>
@@ -376,6 +393,24 @@ const Dashboard = () => {
         </Card>
       </div>
 
+      {/* Botón flotante Actualizar — abajo a la derecha, encima del FAB */}
+      <button
+        onClick={handleRefresh}
+        disabled={loading}
+        title="Actualizar datos"
+        className={cn(
+          'fixed bottom-24 right-6 z-50 h-12 w-12 rounded-full shadow-lg',
+          'bg-background border border-border',
+          'flex items-center justify-center',
+          'hover:bg-muted transition-colors',
+          'disabled:opacity-60'
+        )}
+      >
+        {loading
+          ? <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          : <RefreshCw className="h-5 w-5 text-primary" />
+        }
+      </button>
     </DashboardLayout>
   );
 };

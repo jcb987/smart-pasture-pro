@@ -62,20 +62,20 @@ export const ReproductiveTable = ({ females, events, onRegisterEvent, onViewHist
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <Table>
+    <div className="border rounded-lg overflow-x-auto">
+      <Table className="min-w-[860px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Arete</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Categoría</TableHead>
-            <TableHead>Estado Reproductivo</TableHead>
-            <TableHead>Días Abiertos</TableHead>
-            <TableHead>Días Gestación</TableHead>
-            <TableHead>Fecha Parto Esperado</TableHead>
-            <TableHead>Último Evento</TableHead>
-            <TableHead>Partos</TableHead>
-            <TableHead className="w-[80px]">Acciones</TableHead>
+            <TableHead className="min-w-[90px]">Arete</TableHead>
+            <TableHead className="min-w-[90px]">Nombre</TableHead>
+            <TableHead className="min-w-[90px]">Categoría</TableHead>
+            <TableHead className="min-w-[120px]">Estado</TableHead>
+            <TableHead className="min-w-[100px]">Días Abiertos</TableHead>
+            <TableHead className="min-w-[100px]">Días Gestación</TableHead>
+            <TableHead className="min-w-[130px]">Fecha Parto</TableHead>
+            <TableHead className="min-w-[100px]">Último Evento</TableHead>
+            <TableHead className="min-w-[60px]">Partos</TableHead>
+            <TableHead className="w-[60px]">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

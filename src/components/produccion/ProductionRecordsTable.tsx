@@ -151,9 +151,9 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
+        <div className="overflow-x-auto overflow-y-auto max-h-72 border rounded-lg">
+        <Table className="min-w-[480px]">
+          <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
               <TableHead>Fecha</TableHead>
               <TableHead>Animal</TableHead>
@@ -164,7 +164,7 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
             </TableRow>
           </TableHeader>
           <TableBody>
-            {weightRecords.slice(0, 100).map((record) => (
+            {weightRecords.slice(0, 200).map((record) => (
               <TableRow key={record.id}>
                 <TableCell>{formatDateStr(record.weight_date)}</TableCell>
                 <TableCell>
@@ -201,9 +201,9 @@ export const ProductionRecordsTable = ({ type, records, onDelete }: ProductionRe
           </TableBody>
         </Table>
         </div>
-        {weightRecords.length > 100 && (
+        {weightRecords.length > 200 && (
           <p className="text-xs text-muted-foreground text-center pt-2">
-            Mostrando 100 de {weightRecords.length} registros
+            Mostrando 200 de {weightRecords.length} registros
           </p>
         )}
       </CardContent>

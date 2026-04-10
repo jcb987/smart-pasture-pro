@@ -21,7 +21,6 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import { WeatherWidget } from '@/components/dashboard/WeatherWidget';
-import { AIChatWidget } from '@/components/ai/AIChatWidget';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useMarketPrices } from '@/hooks/useMarketPrices';
 import { useAnimals } from '@/hooks/useAnimals';
@@ -39,14 +38,6 @@ const Dashboard = () => {
   const herdValue = calculateHerdValue(animals);
   const milkRevenue = estimateMilkRevenue(milkStats.monthTotal);
   const hasMarketPrices = prices.length > 0;
-
-  const aiContext = {
-    totalAnimals: kpis.totalAnimales,
-    animalsInLactation: kpis.hembrasLactancia,
-    dailyProduction: kpis.produccionDiaria,
-    alertsCount: kpis.alertasActivas,
-    fertilityRate: kpis.tasaFertilidad,
-  };
 
   const formatLastUpdated = () => {
     return format(lastUpdated, "'Actualizado' HH:mm", { locale: es });
@@ -385,12 +376,6 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* AI Chat Widget */}
-      <AIChatWidget 
-        context={aiContext}
-        title="Asistente Ganadero"
-        placeholder="Pregunta sobre tu hato..."
-      />
     </DashboardLayout>
   );
 };

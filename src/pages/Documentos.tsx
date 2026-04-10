@@ -180,7 +180,7 @@ const Documentos = () => {
                 </CardTitle>
                 <CardDescription>{dt.description}</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex justify-end">
                 <Button onClick={() => { setOpenDialog(dt.id); setSelectedAnimals([]); }} className="gap-2">
                   <Download className="h-4 w-4" />
                   Generar PDF

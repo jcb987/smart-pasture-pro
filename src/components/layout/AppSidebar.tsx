@@ -248,7 +248,7 @@ export function AppSidebar({ activeSection, onSectionChange }: AppSidebarProps) 
             {showFounderMenu ? (
               <Shield className="h-5 w-5 text-white" />
             ) : (
-              <Leaf className="h-5 w-5 text-primary-foreground" />
+              <img src="/logo.png" alt="Agro Data" className="h-5 w-5 object-contain rounded" />
             )}
           </div>
           {!collapsed && (
